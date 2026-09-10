@@ -13,5 +13,8 @@ node_modules/
 web/.next/
 web/out/
 
+# Docker 部署：PostgreSQL 目录挂载数据
+postgres_data/
+
 # OS
 .DS_Store

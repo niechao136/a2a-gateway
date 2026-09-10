@@ -1,3 +1,14 @@
+# ===== a2a-gateway 部署编排 =====
+# - 前端 / 后端各自构建为独立镜像
+# - nginx 作为统一入口反向代理前后端
+# - 对外仅暴露 nginx 的 ${GATEWAY_PORT:-10099} 端口
+# - PostgreSQL 数据使用宿主机目录挂载（./postgres_data）
+#
+# 使用方式：
+#   cp .env.example .env   # 按需修改
+#   docker compose up -d --build
+#   浏览器访问 http://<host>:10099
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,15 +18,81 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-a2a}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-a2a_secret}
       POSTGRES_DB: ${POSTGRES_DB:-a2a_gateway}
+    # 仅绑定宿主机回环，方便本地用客户端调试；生产可整段删除
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # 目录挂载（bind mount）：数据落在宿主机 ./postgres_data 目录
+      - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-a2a}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-a2a} -d ${POSTGRES_DB:-a2a_gateway}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-volumes:
-  postgres_data:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: a2a-gateway-backend:latest
+    container_name: a2a-gateway-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # 容器内通过服务名 postgres 访问数据库（覆盖 .env 里的 localhost 连接串）
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-a2a}:${POSTGRES_PASSWORD:-a2a_secret}@postgres:5432/${POSTGRES_DB:-a2a_gateway}
+      CHECKPOINT_DB_URL: postgresql://${POSTGRES_USER:-a2a}:${POSTGRES_PASSWORD:-a2a_secret}@postgres:5432/${POSTGRES_DB:-a2a_gateway}
+      # 默认 Agent 绑定的 Hermes A2A 目标
+      HERMES_A2A_URL: ${HERMES_A2A_URL:-http://host.docker.internal:8080/}
+      HERMES_A2A_TOKEN: ${HERMES_A2A_TOKEN:-}
+      # LLM（OpenAI 兼容端点）
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      # 管理员认证
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-this}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
+      # 经 nginx 统一入口访问时的来源（CORS）
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:10099}
+    # 让容器可通过 host.docker.internal 访问宿主机服务（Linux 需要此映射，Docker Desktop 自带）
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: a2a-gateway-frontend:latest
+    container_name: a2a-gateway-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: a2a-gateway-nginx
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      # 唯一对外端口
+      - "${GATEWAY_PORT:-10099}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
