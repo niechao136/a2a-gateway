@@ -1,5 +1,13 @@
 # 多 Agent 平台开发 TODO
 
+> ## 当前进度（2026-09-10）
+> - ✅ **Phase 0**（技术选型/脚手架/DB/Checkpointer/A2A SDK）—— 除前端 MUI 接入（归 Phase 3）外完成
+> - ✅ **Phase 1**（Agent 数据模型/CRUD/默认 Agent 初始化/A2A Client 封装/LangGraph 图+工厂缓存/缓存失效）—— input-required 按结论二期再做
+> - ✅ **Phase 2**（动态路由+SSE 流式/历史 API/管理中心 API/JWT 认证/统一错误处理）—— 完成
+> - ⏳ **下一步**：Phase 3（前端对话界面）+ Phase 5（A2A 连通性联调）
+> - 后端启动：`docker compose up -d`（启 PostgreSQL）→ `uv run python -m a2a_gateway.main`（开发模式 reload）
+> - API 文档：`http://localhost:8000/docs`
+
 ## 项目概述
 
 一个基于 LangGraph 的多 Agent 平台：
@@ -18,6 +26,19 @@
 | 自定义 Agent 部署方式 | 所有 Agent 共享同一个后端进程，按路由动态加载配置（非每个 Agent 独立进程） |
 | LangGraph 与 Hermes 的关系 | 增强模式：LangGraph Agent 自带记忆/工具，A2A 调用 Hermes 是其工具之一，而非纯转发网关 |
 | 权限模型 | 单用户/管理员模式，暂不做多租户 |
+
+### 待讨论 8 问题的最终结论（已与用户确认 ✅）
+
+| 编号 | 问题 | 最终方案 |
+|---|---|---|
+| 1 | Agent 配置持久化存储 | PostgreSQL（Docker Compose 搭建） |
+| 2 | LangGraph Checkpointer | Postgres Checkpointer（与配置库共用同一 PostgreSQL） |
+| 3 | 自定义 Agent 是否对外暴露 A2A Server | 仅作 Client，不对外暴露（简化 MVP） |
+| 4 | 管理员认证方式 | JWT 完整账号体系 |
+| 5 | 前后端会话/访客身份 | Cookie/localStorage 匿名 session（无需登录即可对话） |
+| 6 | 工具集是否可配置 | 每 Agent 可单独勾选启用工具 |
+| 7 | 流式响应协议 | SSE |
+| 8 | input-required 人工确认 | 二期再做，MVP 不支持 |
 
 ---
 
@@ -38,53 +59,55 @@
 
 ## Phase 0：项目初始化与技术选型确认
 
-- [ ] 与用户确认上述 8 个待讨论问题的最终方案
-- [ ] 初始化 monorepo 或前后端分离仓库结构（讨论：monorepo 还是分仓库）
-- [ ] 后端项目脚手架：FastAPI + LangGraph + uv/poetry 依赖管理
-- [ ] 前端项目脚手架：Next.js（App Router）+ TypeScript + Material UI
-- [ ] 确定数据库（PostgreSQL）并搭建本地开发环境（Docker Compose）
-- [ ] 确定 LangGraph Checkpointer 方案并接入
-- [ ] 确定 A2A Python SDK（`a2a-sdk`）版本并加入依赖
+- [x] 与用户确认上述 8 个待讨论问题的最终方案 ✅（结论见上表）
+- [x] 初始化 monorepo 或前后端分离仓库结构（讨论：monorepo 还是分仓库）→ 采用 monorepo：根目录后端（Python/uv）+ `web/` 前端（Next.js）
+- [x] 后端项目脚手架：FastAPI + LangGraph + uv/poetry 依赖管理 ✅（`pyproject.toml` + `uv sync`，88 包已安装，editable 模式安装）
+- [ ] 前端项目脚手架：Next.js（App Router）+ TypeScript + Material UI（已有 Next.js 16 脚手架，待接入 MUI —— 见 Phase 3）
+- [x] 确定数据库（PostgreSQL）并搭建本地开发环境（Docker Compose）✅（`docker-compose.yml` + `.env`/`.env.example`）
+- [x] 确定 LangGraph Checkpointer 方案并接入 ✅（`AsyncPostgresSaver`，`agent_factory.get_checkpointer`）
+- [x] 确定 A2A Python SDK（`a2a-sdk`）版本并加入依赖 ✅（`a2a-sdk`，已封装 `A2AClientWrapper`）
 
 ---
 
 ## Phase 1：后端核心 —— LangGraph Agent 工厂
 
-- [ ] 设计 Agent 配置数据模型（数据库表）：
+- [x] 设计 Agent 配置数据模型（数据库表）：
   - `id`, `slug`（路由标识，`/` 为默认 Agent 保留）, `name`, `description`
   - `a2a_targets`（绑定的 A2A 目标列表：URL、认证 token）
   - `system_prompt`（可选覆盖）
-  - `enabled_tools`（待讨论问题 6 确定后实现）
+  - `enabled_tools`（每 Agent 可勾选，见问题 6 结论）
   - `status`（draft / published）
   - `created_at`, `updated_at`
-- [ ] 实现 Agent 配置的 CRUD 数据访问层（Repository）
-- [ ] 设计"默认 Agent"的初始化逻辑：应用启动时若不存在 `slug='/'` 的记录，自动创建，绑定服务器 Hermes 的 A2A 地址（读取环境变量 `HERMES_A2A_URL`、`HERMES_A2A_TOKEN`）
-- [ ] 实现 LangGraph 图定义（所有 Agent 共用同一套图结构）：
-  - 节点设计：对话节点、工具调用节点、（可选）记忆检索节点
-  - 工具层：封装 A2A 调用为标准 LangChain/LangGraph Tool（`a2a_call_hermes` 或更通用的 `a2a_call(target, message)`）
-  - 工具需处理：发现（可选，若目标固定可跳过）、发送消息、流式接收、超时重试
-- [ ] 实现"Agent 实例工厂"：根据 Agent 配置（含缓存机制，避免每次请求都重新构建图）动态生成绑定了对应 A2A 目标 / system_prompt / 工具集的 LangGraph 图实例
-- [ ] 实现配置变更后的缓存失效机制（管理中心修改配置后，无需重启进程即可生效）
-- [ ] 实现 A2A 调用中 `input-required` 状态的处理策略（按待讨论问题 8 的结论实现：MVP 阶段是否透传给前端）
+  → `src/a2a_gateway/models.py`（`AgentConfig` + `AdminUser`，`Base` 声明式映射）
+- [x] 实现 Agent 配置的 CRUD 数据访问层（Repository）✅ `src/a2a_gateway/repository.py`
+- [x] 设计"默认 Agent"的初始化逻辑：应用启动时若不存在 `slug='/'` 的记录，自动创建，绑定服务器 Hermes 的 A2A 地址（读取环境变量 `HERMES_A2A_URL`、`HERMES_A2A_TOKEN`）✅ `ensure_default_agent()`
+- [x] 实现 LangGraph 图定义（所有 Agent 共用同一套图结构）：
+  - 节点设计：对话节点、工具调用节点（（可选）记忆检索节点由 Checkpointer 承担）→ 用 `create_react_agent`
+  - 工具层：封装 A2A 调用为标准 LangChain/LangGraph Tool → `src/a2a_gateway/tools.py`（`a2a_call` + 可选工具注册表）
+  - 工具需处理：发现（Card 解析）、发送消息、流式接收、超时重试 → `src/a2a_gateway/a2a_client.py`（错误分类 network/timeout/target_error）
+- [x] 实现"Agent 实例工厂"：根据 Agent 配置（含缓存机制，避免每次请求都重新构建图）动态生成绑定了对应 A2A 目标 / system_prompt / 工具集的 LangGraph 图实例 ✅ `src/a2a_gateway/agent_factory.py`（按 `(id, updated_at)` 缓存）
+- [x] 实现配置变更后的缓存失效机制（管理中心修改配置后，无需重启进程即可生效）✅ `updated_at` 自动失效 + `invalidate_agent()` 显式失效
+- [ ] 实现 A2A 调用中 `input-required` 状态的处理策略（按问题 8 结论：**二期再做**，MVP 不透传）
 
 ---
 
 ## Phase 2：后端核心 —— FastAPI 路由与 API
 
-- [ ] 动态路由设计：
-  - `POST /api/chat/{slug}`（`slug` 为空或 `/` 时命中默认 Agent）：接收用户消息，返回流式响应
-  - 路由处理逻辑：根据 `slug` 查询 Agent 配置 → 未找到或未发布则返回 404 → 找到则调用对应 Agent 实例
-- [ ] 实现流式响应端点（按待讨论问题 7 的结论：SSE 或 WebSocket）
-- [ ] 实现会话历史 API：`GET /api/chat/{slug}/history`（按待讨论问题 5 的结论确定是否需要登录）
-- [ ] 管理中心 API（`/api/admin/...`，需管理员认证）：
+- [x] 动态路由设计：
+  - `POST /api/chat/{slug}`（`slug` 为空或 `/` 时命中默认 Agent）：接收用户消息，返回流式响应 → `POST /api/chat`（默认）+ `POST /api/chat/{slug}`（自定义）
+  - 路由处理逻辑：根据 `slug` 查询 Agent 配置 → 未找到或未发布则返回 404 → 找到则调用对应 Agent 实例 ✅ `_resolve_agent` + `get_agent_instance`
+- [x] 实现流式响应端点（按问题 7 结论：SSE）✅ `routes/chat.py`（`EventSourceResponse`，事件 `token/tool_start/tool_end/done/error`）
+- [x] 实现会话历史 API：`GET /api/chat/{slug}/history`（按问题 5 结论：匿名 session，无需登录）✅ `GET /api/chat/history` + `GET /api/chat/{slug}/history`（从 Checkpointer 提取）
+- [x] 管理中心 API（`/api/admin/...`，需管理员认证）✅ `routes/admin.py`：
   - `GET /api/admin/agents`：列出所有自定义 Agent
   - `POST /api/admin/agents`：创建 Agent（校验 `slug` 唯一性，禁止使用 `/` 或已占用路径）
   - `PUT /api/admin/agents/{id}`：更新 Agent 配置
   - `DELETE /api/admin/agents/{id}`：删除 Agent
   - `POST /api/admin/agents/{id}/publish` / `unpublish`：发布/下线
-  - `POST /api/admin/agents/{id}/test`：管理中心内直接测试对话（不经过公开路由）
-- [ ] 管理员认证中间件（按待讨论问题 4 的结论实现）
-- [ ] 统一错误处理与日志（尤其是 A2A 调用失败、超时、目标不可达的情况，参考之前排查 Hermes A2A 网络问题的经验，确保日志里能清楚定位是"配置问题"还是"网络问题"还是"目标 Agent 内部错误"）
+  - `POST /api/admin/agents/{id}/test`：管理中心内直接测试对话（不经过公开路由，draft 也可测）
+  - 额外：`POST /api/admin/agents/test-connection`（连通性测试）、`POST /api/admin/login`（JWT 颁发）
+- [x] 管理员认证中间件（按问题 4 结论：JWT 完整账号体系）✅ `deps.get_current_admin`（Bearer token 校验），除 `/login` 外全部受保护；`auth.py`（JWT + bcrypt）
+- [x] 统一错误处理与日志（A2A 调用失败、超时、目标不可达的分类定位）✅ `main.py` 全局异常兜底；`A2ATargetError` 三分类（network/timeout/target_error）；流式错误友好提示不暴露底层
 
 ---
 
