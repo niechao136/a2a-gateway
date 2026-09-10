@@ -1,11 +1,13 @@
 # 多 Agent 平台开发 TODO
 
 > ## 当前进度（2026-09-10）
-> - ✅ **Phase 0**（技术选型/脚手架/DB/Checkpointer/A2A SDK）—— 除前端 MUI 接入（归 Phase 3）外完成
+> - ✅ **Phase 0**（技术选型/脚手架/DB/Checkpointer/A2A SDK）
 > - ✅ **Phase 1**（Agent 数据模型/CRUD/默认 Agent 初始化/A2A Client 封装/LangGraph 图+工厂缓存/缓存失效）—— input-required 按结论二期再做
-> - ✅ **Phase 2**（动态路由+SSE 流式/历史 API/管理中心 API/JWT 认证/统一错误处理）—— 完成
-> - ⏳ **下一步**：Phase 3（前端对话界面）+ Phase 5（A2A 连通性联调）
-> - 后端启动：`docker compose up -d`（启 PostgreSQL）→ `uv run python -m a2a_gateway.main`（开发模式 reload）
+> - ✅ **Phase 2**（动态路由+SSE 流式/历史 API/管理中心 API/JWT 认证/统一错误处理）
+> - ✅ **Phase 3**（前端对话界面：动态路由/MUI 对话组件/SSE 客户端/404+错误态/匿名 session/响应式）—— next build 通过
+> - ⏳ **下一步**：Phase 4（前端管理中心）+ Phase 5（A2A 连通性联调）
+> - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
+> - 前端启动：`cd web && npm run dev` → `http://localhost:3000`
 > - API 文档：`http://localhost:8000/docs`
 
 ## 项目概述
@@ -113,12 +115,12 @@
 
 ## Phase 3：前端 —— 公开对话界面
 
-- [ ] Next.js 动态路由：`app/[[...slug]]/page.tsx`，根据路径匹配默认 Agent 或自定义 Agent
-- [ ] 对话界面组件（Material UI）：消息气泡、输入框、发送按钮、流式打字机效果
-- [ ] 对接后端流式接口（SSE/WebSocket 客户端封装）
-- [ ] 加载态、错误态处理（Agent 不存在 / 未发布 → 友好的 404 页面；A2A 目标不可达 → 提示用户稍后重试，而不是暴露底层错误）
-- [ ] （按待讨论问题 5 的结论）匿名访客 session 管理 / 历史记录展示
-- [ ] 响应式布局，适配移动端
+- [x] Next.js 动态路由：`app/[[...slug]]/page.tsx`，根据路径匹配默认 Agent 或自定义 Agent ✅（可选 catch-all 同时匹配 `/` 与 `/{slug}`；删除旧 `app/page.tsx` 避免路由冲突）
+- [x] 对话界面组件（Material UI）：消息气泡、输入框、发送按钮、流式打字机效果 ✅ `components/ChatPage.tsx` + `MessageBubble.tsx` + `ChatInput.tsx`
+- [x] 对接后端流式接口（SSE 客户端封装）✅ `lib/api.ts`（`streamChat` 基于 fetch + ReadableStream 解析 SSE 事件：token/tool_start/tool_end/done/error）
+- [x] 加载态、错误态处理（Agent 不存在 / 未发布 → 友好的 404 页面；A2A 目标不可达 → 提示用户稍后重试，而不是暴露底层错误）✅ `page.tsx` 404 页 + ChatPage error Alert
+- [x] （按问题 5 结论）匿名访客 session 管理 / 历史记录展示 ✅ `lib/session.ts`（localStorage 按 slug 存 thread_id）+ 页面加载时从后端拉取历史
+- [x] 响应式布局，适配移动端 ✅ MUI sx 响应式断点（`px: { xs: 1, sm: 3 }`）+ 输入框多行自适应
 
 ---
 
