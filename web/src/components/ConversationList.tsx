@@ -69,7 +69,7 @@ export default function ConversationList({
         </Typography>
       </Box>
 
-      <Box sx={{ flex: 1, overflowY: "auto", px: 1, pb: 1 }}>
+      <Box sx={{ flex: 1, overflowY: "auto", scrollbarGutter: "stable", px: 1, pb: 1 }}>
         {conversations.length === 0 ? (
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 4, px: 2, gap: 1 }}>
             <ForumOutlinedIcon sx={{ color: "text.disabled" }} />

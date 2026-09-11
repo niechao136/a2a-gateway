@@ -227,7 +227,7 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
   );
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", bgcolor: "grey.50" }}>
+    <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default" }}>
       {/* 桌面端常驻侧边栏 */}
       {isDesktop && (
         <Box
@@ -300,6 +300,7 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
           sx={{
             flex: 1,
             overflowY: "auto",
+            scrollbarGutter: "stable",
             px: { xs: 1, sm: 3 },
             py: 2,
           }}

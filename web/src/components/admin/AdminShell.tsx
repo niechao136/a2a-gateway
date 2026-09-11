@@ -167,6 +167,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             borderColor: "divider",
             height: "100vh",
             overflowY: "auto",
+            scrollbarGutter: "stable",
           }}
         >
           {sidebar}
@@ -215,7 +216,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </Toolbar>
         </AppBar>
 
-        <Container maxWidth="lg" sx={{ py: 3, flex: 1, overflowY: "auto" }}>
+        <Container
+          maxWidth="lg"
+          sx={{ py: 3, flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarGutter: "stable" }}
+        >
           {children}
         </Container>
       </Box>
