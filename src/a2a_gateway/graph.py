@@ -12,7 +12,7 @@ from langgraph.prebuilt import create_react_agent
 
 from .llm import build_llm
 from .models import AgentConfig
-from .tools import OPTIONAL_TOOLS, RESERVED_TOOL_NAMES, make_mcp_call_tool, make_mcp_tools
+from .tools import make_mcp_call_tool, make_mcp_tools
 
 # MCP 服务连接快照：由 repository.mcp_server_snapshot 生成，结构为
 #   {"name": str, "transport": str, "url": str, "command": str,
@@ -36,7 +36,6 @@ DEFAULT_SYSTEM_PROMPT = (
 
 
 def build_tools(
-    agent: AgentConfig,
     a2a_tools: list[StructuredTool],
     *,
     mcp_servers: list[McpServerConfig] | None = None,
@@ -44,16 +43,10 @@ def build_tools(
 ) -> list[StructuredTool]:
     """根据 Agent 配置构造工具集。
 
-    组成：A2A 工具（每个目标一个，含描述） + 勾选的可选工具 + 绑定的 MCP 工具。
+    组成：A2A 工具（每个目标一个，含描述） + 绑定的 MCP 工具。
+    原先的「可选工具集」（web_search 等）已由 MCP 服务替代并移除。
     """
     tools: list[StructuredTool] = list(a2a_tools)
-
-    for name in agent.enabled_tools or []:
-        if name in RESERVED_TOOL_NAMES:
-            continue
-        factory = OPTIONAL_TOOLS.get(name)
-        if factory is not None:
-            tools.append(factory())
 
     # MCP：勾选的服务上的每个工具都绑定成独立工具
     index = mcp_tool_index or {}
@@ -84,9 +77,7 @@ def build_graph(
     @param a2a_tools 已按目标构造好的 A2A 工具（含各自描述）
     """
     llm = build_llm()
-    tools = build_tools(
-        agent, a2a_tools, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index
-    )
+    tools = build_tools(a2a_tools, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index)
     prompt = agent.system_prompt or DEFAULT_SYSTEM_PROMPT
     return create_react_agent(
         llm,

@@ -37,7 +37,6 @@ def make_agent():
             "mcp_server_ids": [],
             "mcp_servers": [],
             "system_prompt": None,
-            "enabled_tools": [],
             "status": AgentStatus.DRAFT,
             "created_at": _now(),
             "updated_at": _now(),

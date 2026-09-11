@@ -65,7 +65,7 @@ async def test_list_agents_serializes_status_by_value(auth_client, monkeypatch, 
 
 
 async def test_create_agent_rejects_reserved_slug(auth_client):
-    payload = {"slug": "/", "name": "x", "a2a_targets": [], "enabled_tools": []}
+    payload = {"slug": "/", "name": "x", "a2a_targets": []}
     resp = await auth_client.post("/api/admin/agents", json=payload)
     assert resp.status_code == 400
 
@@ -76,7 +76,7 @@ async def test_create_agent_rejects_duplicate_slug(auth_client, monkeypatch, mak
 
     monkeypatch.setattr(admin_mod, "get_agent_by_slug", fake_get)
 
-    payload = {"slug": "demo", "name": "x", "a2a_targets": [], "enabled_tools": []}
+    payload = {"slug": "demo", "name": "x", "a2a_targets": []}
     resp = await auth_client.post("/api/admin/agents", json=payload)
     assert resp.status_code == 409
 
@@ -91,7 +91,7 @@ async def test_create_agent_ok(auth_client, monkeypatch, make_agent):
     monkeypatch.setattr(admin_mod, "get_agent_by_slug", fake_get)
     monkeypatch.setattr(admin_mod, "create_agent", fake_create)
 
-    payload = {"slug": "demo", "name": "Demo", "a2a_targets": [], "enabled_tools": []}
+    payload = {"slug": "demo", "name": "Demo", "a2a_targets": []}
     resp = await auth_client.post("/api/admin/agents", json=payload)
     assert resp.status_code == 201
     assert resp.json()["slug"] == "demo"

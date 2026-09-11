@@ -22,7 +22,6 @@ export interface Agent {
   /** 由 a2a_target_ids 解析出的绑定快照（只读） */
   a2a_targets: A2ATargetInput[];
   system_prompt: string | null;
-  enabled_tools: string[];
   status: "draft" | "published";
   created_at: string;
   updated_at: string;
@@ -38,7 +37,6 @@ export interface AgentCreatePayload {
   /** 兼容字段：直接传 url/token（未传 a2a_target_ids 时生效） */
   a2a_targets?: A2ATargetInput[];
   system_prompt?: string | null;
-  enabled_tools?: string[];
 }
 
 export type AgentUpdatePayload = Partial<Omit<AgentCreatePayload, "slug">> & {
@@ -389,7 +387,5 @@ export function adminAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** 可选工具（与后端 tools.py 的 OPTIONAL_TOOLS 保持一致）。 */
-export const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = [
-  { name: "web_search", label: "网页搜索", description: "在网页上搜索信息（MVP 阶段为占位实现）" },
-];
+// 注：原先的「可选工具集」（如 web_search）已移除，其功能由 MCP 服务替代。
+// Agent 的能力扩展统一通过「MCP 管理」勾选服务后自动绑定工具完成。

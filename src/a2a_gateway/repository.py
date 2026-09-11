@@ -128,7 +128,6 @@ async def create_agent(session: AsyncSession, data: AgentCreate) -> AgentConfig:
         mcp_server_ids=mcp_ids,
         mcp_servers=mcp_snapshot,
         system_prompt=data.system_prompt,
-        enabled_tools=data.enabled_tools,
         status=AgentStatus.DRAFT,
     )
     session.add(agent)
@@ -160,8 +159,6 @@ async def update_agent(
         agent.description = data.description
     if data.system_prompt is not None:
         agent.system_prompt = data.system_prompt
-    if data.enabled_tools is not None:
-        agent.enabled_tools = data.enabled_tools
     if data.status is not None:
         agent.status = AgentStatus(data.status)
 
@@ -459,7 +456,6 @@ async def ensure_default_agent(session: AsyncSession) -> AgentConfig:
         mcp_server_ids=[],
         mcp_servers=[],
         system_prompt=None,
-        enabled_tools=[],
         status=AgentStatus.PUBLISHED,
     )
     session.add(default)

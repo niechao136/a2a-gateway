@@ -49,8 +49,6 @@ class AgentConfig(Base, BaseMixin):
     a2a_target_ids: Mapped[list] = mapped_column(JSONB, default=list)
     # 可选覆盖 system prompt
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # 启用的工具名称集合（按待讨论问题 6：每 Agent 可勾选）
-    enabled_tools: Mapped[list] = mapped_column(JSONB, default=list)
     # 在「MCP 管理」中勾选的 MCP 服务 id 列表
     mcp_server_ids: Mapped[list] = mapped_column(JSONB, default=list)
     # 由 mcp_server_ids 解析而来的连接快照，供运行时构造 MCP 工具（不对外暴露）

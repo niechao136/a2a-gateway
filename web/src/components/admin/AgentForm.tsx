@@ -15,13 +15,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  A2AEndpoint,
-  Agent,
-  AgentCreatePayload,
-  AVAILABLE_TOOLS,
-  McpServer,
-} from "@/lib/adminApi";
+import { A2AEndpoint, Agent, AgentCreatePayload, McpServer } from "@/lib/adminApi";
 
 /** slug 允许字母、数字、- 和 _，且首尾必须是字母或数字。 */
 const SLUG_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
@@ -63,7 +57,6 @@ export default function AgentForm({
   const [selectedMcpIds, setSelectedMcpIds] = useState<number[]>(
     initial?.mcp_server_ids ?? [],
   );
-  const [enabledTools, setEnabledTools] = useState<string[]>(initial?.enabled_tools ?? []);
   const [errors, setErrors] = useState<{ slug?: string; name?: string }>({});
 
   /**
@@ -87,12 +80,6 @@ export default function AgentForm({
   const toggleMcpServer = (id: number) => {
     setSelectedMcpIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  };
-
-  const toggleTool = (toolName: string) => {
-    setEnabledTools((prev) =>
-      prev.includes(toolName) ? prev.filter((t) => t !== toolName) : [...prev, toolName],
     );
   };
 
@@ -120,7 +107,6 @@ export default function AgentForm({
       a2a_target_ids: selectedTargetIds,
       mcp_server_ids: selectedMcpIds,
       system_prompt: systemPrompt.trim() ? systemPrompt : null,
-      enabled_tools: enabledTools,
     });
   };
 
@@ -328,39 +314,7 @@ export default function AgentForm({
           />
         </Box>
 
-        <Divider />
-
-        {/* 工具集 */}
-        <Box>
-          <Typography variant="subtitle1" gutterBottom>
-            工具集
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            核心工具 a2a_call（调用勾选的 A2A 目标）与 mcp_call（调用勾选的 MCP 服务工具）默认启用，无需勾选。
-          </Typography>
-          <Stack sx={{ mt: 1 }}>
-            {AVAILABLE_TOOLS.map((tool) => (
-              <FormControlLabel
-                key={tool.name}
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={enabledTools.includes(tool.name)}
-                    onChange={() => toggleTool(tool.name)}
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2">{tool.label}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {tool.description}
-                    </Typography>
-                  </Box>
-                }
-              />
-            ))}
-          </Stack>
-        </Box>
+        {/* 工具集已移除：能力扩展统一由「MCP 管理」勾选服务后自动绑定工具 */}
 
         <Box sx={{ display: "flex", gap: 1.5 }}>
           <Button

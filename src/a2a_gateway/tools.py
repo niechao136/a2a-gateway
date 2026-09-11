@@ -8,7 +8,6 @@
 """
 
 import re
-from collections.abc import Callable
 from typing import Any
 
 from langchain_core.tools import StructuredTool
@@ -19,9 +18,6 @@ from .mcp_client import call_tool as mcp_invoke
 from .mcp_client import connection_from_snapshot, format_tools_for_prompt
 from .notifier import notify_alert
 from .schemas import A2ATarget
-
-# 由本模块直接构造、不参与 enabled_tools 勾选的核心工具名
-RESERVED_TOOL_NAMES = ("a2a_call", "mcp_call")
 
 
 def _safe_identifier(raw: str, fallback: str, limit: int = 48) -> str:
@@ -252,28 +248,5 @@ def make_mcp_call_tool(
     )
 
 
-# ---------------------------------------------------------------------------
-# 可选工具
-# ---------------------------------------------------------------------------
-class WebSearchArgs(BaseModel):
-    query: str = Field(description="搜索关键词")
-
-
-def make_web_search_tool() -> StructuredTool:
-    """占位网页搜索工具（MVP 阶段返回提示，二期接入真实搜索）。"""
-
-    async def _acall(query: str) -> str:
-        return f"（网页搜索工具未接入，查询：{query}）"
-
-    return StructuredTool.from_function(
-        coroutine=_acall,
-        name="web_search",
-        description="在网页上搜索信息并返回结果（MVP 阶段占位）。",
-        args_schema=WebSearchArgs,
-    )
-
-
-# 可选工具名 → 构造函数
-OPTIONAL_TOOLS: dict[str, Callable[[], StructuredTool]] = {
-    "web_search": make_web_search_tool,
-}
+# 注：原先的「可选工具集」（web_search 等）已移除，其功能由 MCP 服务替代。
+# Agent 的能力扩展统一通过「MCP 管理」勾选服务后自动绑定工具完成。

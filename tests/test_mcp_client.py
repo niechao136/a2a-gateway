@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 from a2a_gateway import mcp_client as mc
+from a2a_gateway import tools as tools_mod
 from a2a_gateway.graph import DEFAULT_SYSTEM_PROMPT, build_tools
 from a2a_gateway.mcp_client import _format_error, connection_from_snapshot, format_tools_for_prompt
 from a2a_gateway.repository import mcp_server_snapshot
@@ -202,13 +203,12 @@ def test_make_a2a_tools_without_description_uses_default():
 # ---------------------------------------------------------------------------
 # 图工具集
 # ---------------------------------------------------------------------------
-def test_build_tools_without_a2a_or_mcp(make_agent):
-    assert build_tools(make_agent(), []) == []
+def test_build_tools_without_a2a_or_mcp():
+    assert build_tools([]) == []
 
 
-def test_build_tools_binds_mcp_tools_when_index_available(make_agent):
+def test_build_tools_binds_mcp_tools_when_index_available():
     tools = build_tools(
-        make_agent(),
         [],
         mcp_servers=[{"name": "S1"}],
         mcp_tool_index={
@@ -218,30 +218,28 @@ def test_build_tools_binds_mcp_tools_when_index_available(make_agent):
     assert [t.name for t in tools] == ["mcp_S1__echo"]
 
 
-def test_build_tools_falls_back_to_mcp_call_when_no_tools_probed(make_agent):
+def test_build_tools_falls_back_to_mcp_call_when_no_tools_probed():
     """服务不可达、拿不到工具清单时，退化为通用 mcp_call 保留可用能力。"""
-    tools = build_tools(make_agent(), [], mcp_servers=[{"name": "S1"}])
+    tools = build_tools([], mcp_servers=[{"name": "S1"}])
     assert [t.name for t in tools] == ["mcp_call"]
 
 
-def test_build_tools_combines_a2a_optional_and_mcp(make_agent):
+def test_build_tools_combines_a2a_and_mcp():
     a2a_tools, _ = make_a2a_tools([A2ATarget(url="http://h/", name="H")])
     tools = build_tools(
-        make_agent(enabled_tools=["web_search"]),
         a2a_tools,
         mcp_servers=[{"name": "S1"}],
         mcp_tool_index={
             "S1": [{"name": "echo", "description": "回声", "inputSchema": {"type": "object"}}]
         },
     )
-    assert [t.name for t in tools] == ["a2a_call", "web_search", "mcp_S1__echo"]
+    assert [t.name for t in tools] == ["a2a_call", "mcp_S1__echo"]
 
 
-def test_build_tools_ignores_reserved_core_tool_names(make_agent):
-    """a2a_call / mcp_call 由本模块直接构造，enabled_tools 里出现也只构造一次。"""
-    agent = make_agent(enabled_tools=["a2a_call", "mcp_call", "web_search"])
-    names = [t.name for t in build_tools(agent, [])]
-    assert names == ["web_search"]
+def test_web_search_and_optional_tools_removed():
+    """预置的 web_search 占位工具与可选工具集已由 MCP 替代并移除。"""
+    assert not hasattr(tools_mod, "make_web_search_tool")
+    assert not hasattr(tools_mod, "OPTIONAL_TOOLS")
 
 
 def test_make_mcp_call_tool_args_schema():

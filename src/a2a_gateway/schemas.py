@@ -163,7 +163,6 @@ class AgentBase(BaseModel):
         description="解析后的 A2A 绑定快照（只读）。兼容历史客户端：未传 a2a_target_ids 时可直接传本字段",
     )
     system_prompt: str | None = None
-    enabled_tools: list[str] = Field(default_factory=list)
 
 
 class AgentCreate(AgentBase):
@@ -177,7 +176,6 @@ class AgentUpdate(BaseModel):
     mcp_server_ids: list[int] | None = None
     a2a_targets: list[A2ATarget] | None = None
     system_prompt: str | None = None
-    enabled_tools: list[str] | None = None
     status: Literal["draft", "published"] | None = None
 
 
