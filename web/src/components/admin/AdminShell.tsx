@@ -106,7 +106,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const sidebar = (
     <Box
       sx={{
-        width: SIDEBAR_WIDTH,
+        width: "100%",
         height: "100%",
         display: "flex",
         flexDirection: "column",
@@ -167,6 +167,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             borderColor: "divider",
             height: "100vh",
             overflowY: "auto",
+            overflowX: "hidden",
             scrollbarGutter: "stable",
           }}
         >
