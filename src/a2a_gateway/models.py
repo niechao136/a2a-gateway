@@ -47,7 +47,16 @@ class AgentConfig(Base, BaseMixin):
     # 启用的工具名称集合（按待讨论问题 6：每 Agent 可勾选）
     enabled_tools: Mapped[list] = mapped_column(JSONB, default=list)
     status: Mapped[AgentStatus] = mapped_column(
-        Enum(AgentStatus), default=AgentStatus.DRAFT, server_default="draft"
+        Enum(
+            AgentStatus,
+            name="agentstatus",
+            # 关键：SQLAlchemy 默认用「成员名」(DRAFT/PUBLISHED) 建 PG 枚举，
+            # 而业务代码与 server_default 用的是「成员值」(draft/published)，
+            # 这里改为按成员值建，避免 invalid input value for enum agentstatus。
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=AgentStatus.DRAFT,
+        server_default=AgentStatus.DRAFT.value,
     )
 
 
