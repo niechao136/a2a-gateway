@@ -1,9 +1,11 @@
 """MCP 客户端纯函数、MCP 工具绑定与 A2A 工具构造测试（不发起真实连接）。"""
 
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
+from a2a_gateway import mcp_client as mc
 from a2a_gateway.graph import DEFAULT_SYSTEM_PROMPT, build_tools
-from a2a_gateway.mcp_client import connection_from_snapshot, format_tools_for_prompt
+from a2a_gateway.mcp_client import _format_error, connection_from_snapshot, format_tools_for_prompt
 from a2a_gateway.repository import mcp_server_snapshot
 from a2a_gateway.schemas import A2ATarget
 from a2a_gateway.tools import json_schema_to_model, make_a2a_tools, make_mcp_call_tool, make_mcp_tools
@@ -245,6 +247,94 @@ def test_build_tools_ignores_reserved_core_tool_names(make_agent):
 def test_make_mcp_call_tool_args_schema():
     tool = make_mcp_call_tool([{"name": "S1"}])
     assert set(tool.args.keys()) == {"server", "tool", "arguments"}
+
+
+# ---------------------------------------------------------------------------
+# 传输层兼容性（回归）
+# ---------------------------------------------------------------------------
+async def test_streamable_http_accepts_two_item_streams(monkeypatch):
+    """mcp 2.x 的 streamable_http_client 只 yield (read, write)。
+
+    早期版本会 yield 三个值，若按三元组解包会在 2.x 下抛
+    "ValueError: not enough values to unpack"，且被 anyio 包成 ExceptionGroup 难以定位。
+    """
+    captured: dict = {}
+
+    @asynccontextmanager
+    async def fake_streamable_http_client(url, http_client=None, **kwargs):
+        yield ("read-stream", "write-stream")
+
+    class FakeSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def initialize(self):
+            return SimpleNamespace(serverInfo=SimpleNamespace(name="Fake"))
+
+        async def list_tools(self):
+            return SimpleNamespace(tools=[])
+
+    def fake_session_factory(read, write, **kwargs):
+        captured["streams"] = (read, write)
+        return FakeSession()
+
+    monkeypatch.setattr(mc, "streamable_http_client", fake_streamable_http_client)
+    monkeypatch.setattr(mc, "ClientSession", fake_session_factory)
+
+    conn = mc.McpConnection(name="S", transport="streamable_http", url="http://m/mcp")
+    ok, message = await mc.test_connection(conn)
+    assert ok is True, message
+    assert captured["streams"] == ("read-stream", "write-stream")
+
+
+async def test_streamable_http_accepts_three_item_streams(monkeypatch):
+    """旧版 mcp 会多 yield 一个 get_session_id，按下标取值同样兼容。"""
+    captured: dict = {}
+
+    @asynccontextmanager
+    async def fake_streamable_http_client(url, http_client=None, **kwargs):
+        yield ("read-stream", "write-stream", "get-session-id")
+
+    class FakeSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def initialize(self):
+            return SimpleNamespace(serverInfo=SimpleNamespace(name="Fake"))
+
+        async def list_tools(self):
+            return SimpleNamespace(tools=[])
+
+    def fake_session_factory(read, write, **kwargs):
+        captured["streams"] = (read, write)
+        return FakeSession()
+
+    monkeypatch.setattr(mc, "streamable_http_client", fake_streamable_http_client)
+    monkeypatch.setattr(mc, "ClientSession", fake_session_factory)
+
+    conn = mc.McpConnection(name="S", transport="streamable_http", url="http://m/mcp")
+    ok, message = await mc.test_connection(conn)
+    assert ok is True, message
+    assert captured["streams"] == ("read-stream", "write-stream")
+
+
+def test_format_error_unwraps_exception_group():
+    """异常必须展开子异常，否则只看到 "unhandled errors in a TaskGroup"。"""
+    inner = ValueError("not enough values to unpack (expected 3, got 2)")
+    group = ExceptionGroup("unhandled errors in a TaskGroup", [inner])
+    text = _format_error(group)
+    assert "ExceptionGroup" in text
+    assert "not enough values to unpack" in text
+
+
+def test_format_error_keeps_plain_exception():
+    assert "boom" in _format_error(RuntimeError("boom"))
 
 
 def test_default_prompt_mentions_selection_guidance():

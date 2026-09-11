@@ -18,7 +18,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
+try:
+    # mcp 2.x 内置了 httpx2（httpx 的分支版本），其 http_client 参数要求该类型
+    import httpx2 as _httpx
+except ImportError:  # 旧版 mcp 依赖标准 httpx
+    import httpx as _httpx
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
@@ -88,18 +93,31 @@ async def _open_session(conn: McpConnection):
             async with ClientSession(read, write) as session:
                 yield session
     else:
-        # streamable_http 只接受 http_client，因此自建带鉴权头的 httpx 客户端
-        http_client = httpx.AsyncClient(headers=headers or None, timeout=httpx.Timeout(60.0))
+        # streamable_http 不接受 headers，只能自建带鉴权头的客户端
+        http_client = _httpx.AsyncClient(headers=headers or None, timeout=_httpx.Timeout(60.0))
         try:
-            async with streamable_http_client(url, http_client=http_client) as (
-                read,
-                write,
-                _,
-            ):
+            async with streamable_http_client(url, http_client=http_client) as streams:
+                # mcp 2.x 只 yield (read, write)，早期版本还会多 yield 一个 get_session_id；
+                # 用下标取值可同时兼容两种形态（按元组解包会在其中一种下报 ValueError）
+                read, write = streams[0], streams[1]
                 async with ClientSession(read, write) as session:
                     yield session
         finally:
             await http_client.aclose()
+
+
+def _format_error(error: BaseException) -> str:
+    """把异常渲染为可读文本。
+
+    anyio 会把真实异常包进 ExceptionGroup，直接 str() 只能看到
+    "unhandled errors in a TaskGroup"，必须展开子异常才能定位问题。
+    """
+    if isinstance(error, BaseExceptionGroup):
+        lines = [f"{type(error).__name__}: {error}"]
+        for sub in error.exceptions:
+            lines.append(f"  └─ {_format_error(sub)}")
+        return "\n".join(lines)
+    return f"{type(error).__name__}: {error}"
 
 
 def _render_content(result: Any) -> str:
@@ -138,7 +156,7 @@ async def test_connection(conn: McpConnection, timeout: float = PROBE_TIMEOUT) -
         raise
     except Exception as exc:
         logger.warning("MCP 连通性测试失败 name=%s: %s", conn.name, exc)
-        return False, f"连接失败：{type(exc).__name__}: {exc}"
+        return False, f"连接失败：{_format_error(exc)}"
 
 
 async def list_tools(
@@ -164,7 +182,7 @@ async def list_tools(
         raise
     except Exception as exc:
         logger.warning("MCP 工具列表获取失败 name=%s: %s", conn.name, exc)
-        return False, [], f"获取工具列表失败：{type(exc).__name__}: {exc}"
+        return False, [], f"获取工具列表失败：{_format_error(exc)}"
 
 
 async def call_tool(
@@ -186,7 +204,7 @@ async def call_tool(
         logger.warning(
             "MCP 工具调用失败 name=%s tool=%s: %s", conn.name, tool_name, exc
         )
-        return f"MCP 调用失败（{conn.name}·{tool_name}）：{type(exc).__name__}: {exc}"
+        return f"MCP 调用失败（{conn.name}·{tool_name}）：{_format_error(exc)}"
 
 
 def format_tools_for_prompt(server_name: str, tools: list[dict]) -> str:
