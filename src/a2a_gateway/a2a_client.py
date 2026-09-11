@@ -73,7 +73,7 @@ class A2AClientWrapper:
         """把底层异常统一转换为带分类的 A2ATargetError。"""
         if isinstance(error, A2ATargetError):
             return error
-        if isinstance(error, A2AClientTimeoutError):
+        if isinstance(error, A2AClientTimeoutError | httpx.TimeoutException):
             return A2ATargetError("timeout", f"A2A 调用超时：{error}")
         if isinstance(error, A2AClientError):
             return A2ATargetError("target_error", f"目标 Agent 内部错误：{error}")
