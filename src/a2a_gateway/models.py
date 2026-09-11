@@ -1,13 +1,15 @@
 """ORM 数据模型。
 
-- AgentConfig：自定义/默认 Agent 的配置（路由、A2A 目标、system_prompt、工具集、状态）
+- A2AEndpoint：「A2A 管理」中维护的 A2A 服务注册表
+- McpServer：「MCP 管理」中维护的 MCP 服务注册表
+- AgentConfig：自定义/默认 Agent 的配置（路由、绑定的 A2A/MCP 资源、system_prompt、工具集、状态）
 - AdminUser：管理中心登录账号（JWT 认证）
 """
 
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -41,11 +43,18 @@ class AgentConfig(Base, BaseMixin):
     name: Mapped[str] = mapped_column(String(128))
     description: Mapped[str] = mapped_column(Text, default="")
     # 绑定的 A2A 目标列表：[{"url": "...", "token": "..."}]
+    # 由 a2a_target_ids 解析而来，是运行时的实际绑定（a2a_client 只读这里）
     a2a_targets: Mapped[list] = mapped_column(JSONB, default=list)
+    # 在「A2A 管理」中勾选的 A2A 目标 id 列表（Agent 侧只做选择，不再手填 url/token）
+    a2a_target_ids: Mapped[list] = mapped_column(JSONB, default=list)
     # 可选覆盖 system prompt
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 启用的工具名称集合（按待讨论问题 6：每 Agent 可勾选）
     enabled_tools: Mapped[list] = mapped_column(JSONB, default=list)
+    # 在「MCP 管理」中勾选的 MCP 服务 id 列表
+    mcp_server_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    # 由 mcp_server_ids 解析而来的连接快照，供运行时构造 MCP 工具（不对外暴露）
+    mcp_servers: Mapped[list] = mapped_column(JSONB, default=list)
     status: Mapped[AgentStatus] = mapped_column(
         Enum(
             AgentStatus,
@@ -58,6 +67,47 @@ class AgentConfig(Base, BaseMixin):
         default=AgentStatus.DRAFT,
         server_default=AgentStatus.DRAFT.value,
     )
+
+
+class A2AEndpoint(Base, BaseMixin):
+    """A2A 服务注册表（「A2A 管理」维护）。
+
+    Agent 不再手填 url/token，而是在此注册后由 Agent 侧勾选绑定。
+    与运行时绑定 `AgentConfig.a2a_targets`（解析后的快照）区分：
+    这里是「可复用的服务定义」，那里是「某个 Agent 实际使用的连接」。
+    """
+
+    __tablename__ = "a2a_endpoints"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    url: Mapped[str] = mapped_column(String(512))
+    token: Mapped[str] = mapped_column(String(512), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    # 临时停用时不再参与解析（保留 Agent 上的勾选，重新启用即恢复）
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class McpServer(Base, BaseMixin):
+    """MCP 服务注册表（「MCP 管理」维护）。
+
+    transport 取值：stdio / sse / streamable_http
+      - stdio           → 用 command + args + env 启动本地进程
+      - sse             → 连接 url（SSE 传输）
+      - streamable_http → 连接 url（Streamable HTTP 传输，推荐）
+    """
+
+    __tablename__ = "mcp_servers"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    transport: Mapped[str] = mapped_column(String(32), default="streamable_http")
+    url: Mapped[str] = mapped_column(String(512), default="")
+    command: Mapped[str] = mapped_column(String(512), default="")
+    args: Mapped[list] = mapped_column(JSONB, default=list)
+    env: Mapped[dict] = mapped_column(JSONB, default=dict)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class AdminUser(Base, BaseMixin):

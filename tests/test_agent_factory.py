@@ -12,7 +12,7 @@ async def test_graph_cache_reuse_and_invalidation(monkeypatch, make_agent):
     async def fake_checkpointer():
         return object()
 
-    def fake_build_graph(agent, wrapper, checkpointer=None):
+    def fake_build_graph(agent, wrapper, checkpointer=None, **kwargs):
         calls["n"] += 1
         return f"graph-{calls['n']}"
 

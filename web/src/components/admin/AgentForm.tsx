@@ -1,28 +1,26 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Alert,
   Box,
   Button,
   Checkbox,
+  Chip,
   CircularProgress,
   Divider,
   FormControlLabel,
-  IconButton,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
-import BoltIcon from "@mui/icons-material/Bolt";
 import {
-  A2ATargetInput,
+  A2AEndpoint,
   Agent,
   AgentCreatePayload,
   AVAILABLE_TOOLS,
-  adminApi,
+  McpServer,
 } from "@/lib/adminApi";
 
 /** slug 允许字母、数字、- 和 _，且首尾必须是字母或数字。 */
@@ -30,16 +28,14 @@ const SLUG_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 /** 系统保留 slug（与后端 RESERVED_SLUGS + 路由中的 default 别名一致）。 */
 const RESERVED_SLUGS = ["/", "", "default"];
 
-interface TestState {
-  loading?: boolean;
-  ok?: boolean;
-  message?: string;
-}
-
 interface AgentFormProps {
   initial?: Agent | null;
   /** 已存在的 slug 列表，用于提交前的前端冲突提示 */
   existingSlugs?: string[];
+  /** 「A2A 管理」中登记的目标，供勾选绑定 */
+  a2aEndpoints?: A2AEndpoint[];
+  /** 「MCP 管理」中登记的服务，供勾选启用 */
+  mcpServers?: McpServer[];
   submitting?: boolean;
   submitLabel?: string;
   onSubmit: (payload: AgentCreatePayload) => void | Promise<void>;
@@ -48,6 +44,8 @@ interface AgentFormProps {
 export default function AgentForm({
   initial = null,
   existingSlugs = [],
+  a2aEndpoints = [],
+  mcpServers = [],
   submitting = false,
   submitLabel = "保存",
   onSubmit,
@@ -58,46 +56,38 @@ export default function AgentForm({
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(initial?.system_prompt ?? "");
-  const [targets, setTargets] = useState<A2ATargetInput[]>(
-    initial?.a2a_targets?.length
-      ? initial.a2a_targets.map((t) => ({ url: t.url, token: t.token }))
-      : [{ url: "", token: "" }],
+  // 选择式绑定：只保存注册表 id，url/token 由后端解析
+  const [selectedTargetIds, setSelectedTargetIds] = useState<number[]>(
+    initial?.a2a_target_ids ?? [],
+  );
+  const [selectedMcpIds, setSelectedMcpIds] = useState<number[]>(
+    initial?.mcp_server_ids ?? [],
   );
   const [enabledTools, setEnabledTools] = useState<string[]>(initial?.enabled_tools ?? []);
   const [errors, setErrors] = useState<{ slug?: string; name?: string }>({});
-  const [tests, setTests] = useState<Record<number, TestState>>({});
 
-  const updateTarget = (idx: number, patch: Partial<A2ATargetInput>) => {
-    setTargets((prev) => prev.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
-    setTests((prev) => ({ ...prev, [idx]: {} }));
+  /**
+   * 历史 Agent 可能带着「不在注册表里」的内嵌目标（例如脚本直接创建）。
+   * 这些目标在当前勾选下无法保留，明确提示，避免保存后静默丢失绑定。
+   */
+  const unmatchedTargets = useMemo(() => {
+    if (!initial) return [];
+    const selectedUrls = new Set(
+      a2aEndpoints.filter((ep) => selectedTargetIds.includes(ep.id)).map((ep) => ep.url),
+    );
+    return (initial.a2a_targets ?? []).filter((t) => !selectedUrls.has(t.url));
+  }, [initial, a2aEndpoints, selectedTargetIds]);
+
+  const toggleTarget = (id: number) => {
+    setSelectedTargetIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
-  const addTarget = () => setTargets((prev) => [...prev, { url: "", token: "" }]);
-
-  const removeTarget = (idx: number) => {
-    setTargets((prev) => prev.filter((_, i) => i !== idx));
-    setTests({});
-  };
-
-  const handleTest = async (idx: number) => {
-    const target = targets[idx];
-    if (!target.url.trim()) {
-      setTests((prev) => ({ ...prev, [idx]: { ok: false, message: "请先填写 A2A 目标 URL" } }));
-      return;
-    }
-    setTests((prev) => ({ ...prev, [idx]: { loading: true } }));
-    try {
-      const res = await adminApi.testConnection({
-        url: target.url.trim(),
-        token: target.token.trim(),
-      });
-      setTests((prev) => ({ ...prev, [idx]: { ok: res.ok, message: res.message } }));
-    } catch (err) {
-      setTests((prev) => ({
-        ...prev,
-        [idx]: { ok: false, message: err instanceof Error ? err.message : "测试失败" },
-      }));
-    }
+  const toggleMcpServer = (id: number) => {
+    setSelectedMcpIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
   const toggleTool = (toolName: string) => {
@@ -127,9 +117,8 @@ export default function AgentForm({
       slug: slug.trim(),
       name: name.trim(),
       description: description.trim(),
-      a2a_targets: targets
-        .map((t) => ({ url: t.url.trim(), token: t.token.trim() }))
-        .filter((t) => t.url),
+      a2a_target_ids: selectedTargetIds,
+      mcp_server_ids: selectedMcpIds,
       system_prompt: systemPrompt.trim() ? systemPrompt : null,
       enabled_tools: enabledTools,
     });
@@ -186,78 +175,139 @@ export default function AgentForm({
 
         <Divider />
 
-        {/* A2A 目标配置 */}
+        {/* A2A 目标：从注册表勾选 */}
         <Box>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-            <Typography variant="subtitle1">A2A 目标</Typography>
-            <Button size="small" startIcon={<AddIcon />} onClick={addTarget}>
-              添加目标
-            </Button>
-          </Box>
+          <Typography variant="subtitle1" gutterBottom>
+            A2A 目标
+          </Typography>
           <Typography variant="caption" color="text.secondary">
-            Agent 将通过 A2A 协议调用这里配置的远端 Agent。
+            Agent 将通过 A2A 协议调用这里勾选的远端 Agent。目标在「A2A 管理」中统一维护。
           </Typography>
 
-          <Stack spacing={2} sx={{ mt: 1.5 }}>
-            {targets.map((target, idx) => {
-              const test = tests[idx] || {};
-              return (
-                <Box
-                  key={idx}
-                  sx={{ p: 2, border: 1, borderColor: "divider", borderRadius: 1 }}
-                >
-                  <Stack spacing={1.5}>
-                    <TextField
-                      label="目标 URL"
-                      fullWidth
+          {unmatchedTargets.length > 0 && (
+            <Alert severity="warning" sx={{ mt: 1.5 }}>
+              该 Agent 存在未在注册表中登记的 A2A 目标（
+              {unmatchedTargets.map((t) => t.url).join("、")}），保存后将按当前勾选重建绑定。
+            </Alert>
+          )}
+
+          {a2aEndpoints.length === 0 ? (
+            <Alert
+              severity="info"
+              sx={{ mt: 1.5 }}
+              action={
+                <Button component={Link} href="/admin/a2a" size="small">
+                  前往 A2A 管理
+                </Button>
+              }
+            >
+              还没有注册任何 A2A 目标
+            </Alert>
+          ) : (
+            <Stack sx={{ mt: 1 }}>
+              {a2aEndpoints.map((endpoint) => (
+                <FormControlLabel
+                  key={endpoint.id}
+                  control={
+                    <Checkbox
                       size="small"
-                      value={target.url}
-                      onChange={(e) => updateTarget(idx, { url: e.target.value })}
-                      placeholder="http://host:port/"
+                      checked={selectedTargetIds.includes(endpoint.id)}
+                      onChange={() => toggleTarget(endpoint.id)}
+                      disabled={!endpoint.enabled}
                     />
-                    <TextField
-                      label="认证 Token（Bearer）"
-                      fullWidth
-                      size="small"
-                      value={target.token}
-                      onChange={(e) => updateTarget(idx, { token: e.target.value })}
-                      placeholder="可留空"
-                    />
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={
-                          test.loading ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : (
-                            <BoltIcon />
-                          )
-                        }
-                        disabled={!!test.loading}
-                        onClick={() => handleTest(idx)}
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2">
+                        {endpoint.name}
+                        {!endpoint.enabled && (
+                          <Chip size="small" label="已停用" sx={{ ml: 0.5, height: 18 }} />
+                        )}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontFamily: "monospace", display: "block" }}
                       >
-                        测试连接
-                      </Button>
-                      {targets.length > 1 && (
-                        <IconButton size="small" color="error" onClick={() => removeTarget(idx)}>
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                      {test.message && (
-                        <Alert
-                          severity={test.ok ? "success" : "error"}
-                          sx={{ py: 0, flex: 1, "& .MuiAlert-message": { py: 0.5 } }}
-                        >
-                          {test.message}
-                        </Alert>
+                        {endpoint.url}
+                      </Typography>
+                      {endpoint.description && (
+                        <Typography variant="caption" color="text.secondary">
+                          {endpoint.description}
+                        </Typography>
                       )}
                     </Box>
-                  </Stack>
-                </Box>
-              );
-            })}
-          </Stack>
+                  }
+                />
+              ))}
+            </Stack>
+          )}
+        </Box>
+
+        <Divider />
+
+        {/* MCP 服务：从注册表勾选 */}
+        <Box>
+          <Typography variant="subtitle1" gutterBottom>
+            MCP 服务
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            勾选后，Agent 可通过 mcp_call 工具调用这些服务上的工具。服务在「MCP 管理」中统一维护。
+          </Typography>
+
+          {mcpServers.length === 0 ? (
+            <Alert
+              severity="info"
+              sx={{ mt: 1.5 }}
+              action={
+                <Button component={Link} href="/admin/mcp" size="small">
+                  前往 MCP 管理
+                </Button>
+              }
+            >
+              还没有注册任何 MCP 服务
+            </Alert>
+          ) : (
+            <Stack sx={{ mt: 1 }}>
+              {mcpServers.map((server) => (
+                <FormControlLabel
+                  key={server.id}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={selectedMcpIds.includes(server.id)}
+                      onChange={() => toggleMcpServer(server.id)}
+                      disabled={!server.enabled}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2">
+                        {server.name}
+                        {!server.enabled && (
+                          <Chip size="small" label="已停用" sx={{ ml: 0.5, height: 18 }} />
+                        )}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {server.transport}
+                        {server.url ? ` · ${server.url}` : ""}
+                        {server.command ? ` · ${server.command}` : ""}
+                      </Typography>
+                      {server.description && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: "block" }}
+                        >
+                          {server.description}
+                        </Typography>
+                      )}
+                    </Box>
+                  }
+                />
+              ))}
+            </Stack>
+          )}
         </Box>
 
         <Divider />
@@ -286,7 +336,7 @@ export default function AgentForm({
             工具集
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            核心工具 a2a_call（调用绑定的 A2A 目标）默认启用，无需勾选。
+            核心工具 a2a_call（调用勾选的 A2A 目标）与 mcp_call（调用勾选的 MCP 服务工具）默认启用，无需勾选。
           </Typography>
           <Stack sx={{ mt: 1 }}>
             {AVAILABLE_TOOLS.map((tool) => (

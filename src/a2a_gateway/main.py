@@ -21,7 +21,7 @@ from .database import async_engine
 from .migrations import run_migrations
 from .models import Base
 from .repository import ensure_default_admin, ensure_default_agent
-from .routes import admin, chat
+from .routes import admin, chat, registry
 from .database import AsyncSessionLocal
 
 logging.basicConfig(
@@ -80,6 +80,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 app.include_router(chat.router)
 app.include_router(admin.router)
+app.include_router(registry.router)
 
 
 @app.get("/health")

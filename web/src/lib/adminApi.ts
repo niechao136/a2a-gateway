@@ -15,6 +15,11 @@ export interface Agent {
   slug: string;
   name: string;
   description: string;
+  /** 在「A2A 管理」中勾选的目标 id（选择式绑定） */
+  a2a_target_ids: number[];
+  /** 在「MCP 管理」中勾选的服务 id（选择式绑定） */
+  mcp_server_ids: number[];
+  /** 由 a2a_target_ids 解析出的绑定快照（只读） */
   a2a_targets: A2ATargetInput[];
   system_prompt: string | null;
   enabled_tools: string[];
@@ -27,14 +32,85 @@ export interface AgentCreatePayload {
   slug: string;
   name: string;
   description?: string;
-  a2a_targets: A2ATargetInput[];
+  /** 优先使用：从「A2A 管理」注册表勾选的 id */
+  a2a_target_ids?: number[];
+  mcp_server_ids?: number[];
+  /** 兼容字段：直接传 url/token（未传 a2a_target_ids 时生效） */
+  a2a_targets?: A2ATargetInput[];
   system_prompt?: string | null;
-  enabled_tools: string[];
+  enabled_tools?: string[];
 }
 
 export type AgentUpdatePayload = Partial<Omit<AgentCreatePayload, "slug">> & {
   status?: "draft" | "published";
 };
+
+// ---------------------------------------------------------------------------
+// A2A 目标注册表
+// ---------------------------------------------------------------------------
+export interface A2AEndpoint {
+  id: number;
+  name: string;
+  url: string;
+  token: string;
+  description: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface A2AEndpointCreatePayload {
+  name: string;
+  url: string;
+  token?: string;
+  description?: string;
+  enabled?: boolean;
+}
+
+export type A2AEndpointUpdatePayload = Partial<A2AEndpointCreatePayload>;
+
+// ---------------------------------------------------------------------------
+// MCP 服务注册表
+// ---------------------------------------------------------------------------
+export type McpTransport = "stdio" | "sse" | "streamable_http";
+
+export const MCP_TRANSPORT_LABELS: Record<McpTransport, string> = {
+  stdio: "stdio（本地进程）",
+  sse: "sse（远端 SSE）",
+  streamable_http: "streamable http（推荐）",
+};
+
+export interface McpServer {
+  id: number;
+  name: string;
+  description: string;
+  transport: McpTransport;
+  url: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface McpServerCreatePayload {
+  name: string;
+  description?: string;
+  transport: McpTransport;
+  url?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  enabled?: boolean;
+}
+
+export type McpServerUpdatePayload = Partial<McpServerCreatePayload>;
+
+export interface McpToolInfo {
+  name: string;
+  description: string;
+}
 
 export interface TokenResponse {
   access_token: string;
@@ -196,6 +272,73 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ message: JSON.stringify(target) }),
     });
+  },
+
+  // ---- A2A 目标注册表 ----
+  listA2AEndpoints(): Promise<A2AEndpoint[]> {
+    return request<A2AEndpoint[]>("/api/admin/a2a-endpoints");
+  },
+
+  createA2AEndpoint(payload: A2AEndpointCreatePayload): Promise<A2AEndpoint> {
+    return request<A2AEndpoint>("/api/admin/a2a-endpoints", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateA2AEndpoint(id: number, payload: A2AEndpointUpdatePayload): Promise<A2AEndpoint> {
+    return request<A2AEndpoint>(`/api/admin/a2a-endpoints/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** 删除目标；被 Agent 引用时后端返回 409，可用 force=true 自动解绑。 */
+  deleteA2AEndpoint(id: number, force = false): Promise<void> {
+    const suffix = force ? "?force=true" : "";
+    return request<void>(`/api/admin/a2a-endpoints/${id}${suffix}`, { method: "DELETE" });
+  },
+
+  testA2AEndpoint(id: number): Promise<{ ok: boolean; message: string }> {
+    return request<{ ok: boolean; message: string }>(`/api/admin/a2a-endpoints/${id}/test`, {
+      method: "POST",
+    });
+  },
+
+  // ---- MCP 服务注册表 ----
+  listMcpServers(): Promise<McpServer[]> {
+    return request<McpServer[]>("/api/admin/mcp-servers");
+  },
+
+  createMcpServer(payload: McpServerCreatePayload): Promise<McpServer> {
+    return request<McpServer>("/api/admin/mcp-servers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateMcpServer(id: number, payload: McpServerUpdatePayload): Promise<McpServer> {
+    return request<McpServer>(`/api/admin/mcp-servers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteMcpServer(id: number, force = false): Promise<void> {
+    const suffix = force ? "?force=true" : "";
+    return request<void>(`/api/admin/mcp-servers/${id}${suffix}`, { method: "DELETE" });
+  },
+
+  testMcpServer(id: number): Promise<{ ok: boolean; message: string }> {
+    return request<{ ok: boolean; message: string }>(`/api/admin/mcp-servers/${id}/test`, {
+      method: "POST",
+    });
+  },
+
+  listMcpServerTools(id: number): Promise<{ ok: boolean; tools: McpToolInfo[]; message: string }> {
+    return request<{ ok: boolean; tools: McpToolInfo[]; message: string }>(
+      `/api/admin/mcp-servers/${id}/tools`,
+    );
   },
 };
 

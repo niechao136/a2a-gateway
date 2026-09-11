@@ -2,9 +2,9 @@
 
 节点（由 create_react_agent 内置）：
 - 对话节点：调用 LLM，决定是否调用工具
-- 工具调用节点：执行工具（a2a_call 等）
+- 工具调用节点：执行工具（a2a_call / mcp_call / web_search 等）
 
-差异点通过 AgentConfig 注入：A2A 目标、system_prompt、启用工具集。
+差异点通过 AgentConfig 注入：A2A 目标、MCP 服务、system_prompt、启用工具集。
 """
 
 from langgraph.prebuilt import create_react_agent
@@ -12,24 +12,34 @@ from langgraph.prebuilt import create_react_agent
 from .a2a_client import A2AClientWrapper
 from .llm import build_llm
 from .models import AgentConfig
-from .tools import OPTIONAL_TOOLS, make_a2a_tool
+from .tools import OPTIONAL_TOOLS, make_a2a_tool, make_mcp_call_tool
 
 DEFAULT_SYSTEM_PROMPT = (
     "你是一个增强型对话 Agent。当用户的问题需要远端专家 Agent（通过 A2A 协议绑定的目标，"
     "如 Hermes）的能力时，调用 a2a_call 工具将请求委托给远端 Agent，并将其回复整理后返回给用户。"
-    "对于一般性对话或你能直接回答的问题，直接回复即可。"
+    "当用户的问题需要外部工具能力时，调用 mcp_call 工具访问已启用的 MCP 服务，"
+    "按其说明选择对应的 server 与 tool。对于一般性对话或你能直接回答的问题，直接回复即可。"
 )
 
 
-def build_tools(agent: AgentConfig, wrapper: A2AClientWrapper) -> list:
-    """根据 Agent 配置构造工具集：始终包含 a2a_call + 勾选的可选工具。"""
+def build_tools(
+    agent: AgentConfig,
+    wrapper: A2AClientWrapper,
+    *,
+    mcp_servers: list[dict] | None = None,
+    mcp_tool_index: dict[str, list[dict]] | None = None,
+) -> list:
+    """根据 Agent 配置构造工具集：a2a_call + 勾选的可选工具 + MCP（若已启用）。"""
     tools = [make_a2a_tool(wrapper)]
     for name in agent.enabled_tools or []:
-        if name == "a2a_call":
+        # 核心工具由本函数直接构造，不参与 enabled_tools 勾选
+        if name in ("a2a_call", "mcp_call"):
             continue
         factory = OPTIONAL_TOOLS.get(name)
         if factory is not None:
             tools.append(factory())
+    if mcp_servers:
+        tools.append(make_mcp_call_tool(mcp_servers, mcp_tool_index))
     return tools
 
 
@@ -38,10 +48,14 @@ def build_graph(
     wrapper: A2AClientWrapper,
     *,
     checkpointer,
+    mcp_servers: list[dict] | None = None,
+    mcp_tool_index: dict[str, list[dict]] | None = None,
 ):
     """根据 Agent 配置构建 LangGraph 图实例（共用同一套图结构）。"""
     llm = build_llm()
-    tools = build_tools(agent, wrapper)
+    tools = build_tools(
+        agent, wrapper, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index
+    )
     prompt = agent.system_prompt or DEFAULT_SYSTEM_PROMPT
     return create_react_agent(
         llm,

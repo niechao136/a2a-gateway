@@ -21,7 +21,7 @@ import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import AgentForm from "@/components/admin/AgentForm";
 import TestChatDialog from "@/components/admin/TestChatDialog";
-import { Agent, AgentCreatePayload, adminApi } from "@/lib/adminApi";
+import { A2AEndpoint, Agent, AgentCreatePayload, McpServer, adminApi } from "@/lib/adminApi";
 
 interface EditAgentPageProps {
   params: Promise<{ id: string }>;
@@ -33,6 +33,9 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   const router = useRouter();
 
   const [agent, setAgent] = useState<Agent | null>(null);
+  // 注册表数据：供 Agent 表单勾选绑定
+  const [a2aEndpoints, setA2aEndpoints] = useState<A2AEndpoint[]>([]);
+  const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -43,9 +46,15 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await adminApi.listAgents();
+      const [list, endpoints, servers] = await Promise.all([
+        adminApi.listAgents(),
+        adminApi.listA2AEndpoints(),
+        adminApi.listMcpServers(),
+      ]);
       const found = list.find((a) => a.id === agentId) ?? null;
       setAgent(found);
+      setA2aEndpoints(endpoints);
+      setMcpServers(servers);
       if (!found) setError("Agent 不存在或已被删除");
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
@@ -175,6 +184,8 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
         <Paper variant="outlined" sx={{ p: 3 }}>
           <AgentForm
             initial={agent}
+            a2aEndpoints={a2aEndpoints}
+            mcpServers={mcpServers}
             submitting={submitting}
             submitLabel="保存修改"
             onSubmit={handleSubmit}
