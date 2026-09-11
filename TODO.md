@@ -8,7 +8,8 @@
 > - ✅ **Phase 4**（前端管理中心：登录/Agent 列表/创建编辑表单/A2A 连通性测试/发布下线/工具勾选/测试对话/slug 校验）
 > - ✅ **Phase 5**（A2A Client 封装/连通性测试/Hermes 全链路联调均已完成；含 Gemini 3 thought_signature 兼容层与瞬时错误自动重试）
 > - ✅ **Phase 6**（容器化 + nginx 统一入口 + 环境变量清单 + Alembic 迁移 + 可选告警 Webhook 已完成；安全组/防火墙清单待补）
-> - ⏳ **下一步**：Phase 7（后端单元/集成测试、前端组件测试、端到端测试）
+> - ✅ **Phase 7**（后端单元 40 用例 + 前端 vitest 7 用例 + 端到端冒烟脚本，均已实测通过；顺带修复前端 SSE CRLF 解析缺陷）
+> - ⏳ **下一步**：管理中心表单校验的前端用例（需先把校验逻辑抽为纯函数）、云安全组核对、二期功能（长任务 Task 轮询 / input-required）
 > - ⚠️ **注意**：LLM 使用 Gemini 3 系列（OpenAI 兼容端点）时，函数调用必须回传 `thought_signature`，否则第二轮报 400；已在 `src/a2a_gateway/llm.py` 内置兼容适配层（入站捕获 + 出站回填），对其它 OpenAI 兼容端点透明。
 > - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
 > - 前端启动：`cd web && npm run dev` → `http://localhost:3000`
@@ -180,10 +181,32 @@
 
 ## Phase 7：测试
 
-- [ ] 后端单元测试：Agent 配置 CRUD、路由匹配逻辑、A2A 工具封装的 mock 测试
-- [ ] 后端集成测试：针对一个本地起的测试 A2A Agent（可复用之前提到的 `a2a-samples` Helloworld Agent）验证完整链路
-- [ ] 前端组件测试：对话流式渲染、管理中心表单校验
-- [ ] 端到端测试：创建自定义 Agent → 发布 → 通过自定义路由对话 → 验证消息确实经由 A2A 到达绑定的目标
+- [x] 后端单元测试：Agent 配置 CRUD、路由匹配逻辑、A2A 工具封装的 mock 测试 ✅ `tests/`（pytest，**40 用例**，全部无外部依赖 —— 不连库、不触发 lifespan、不发真实网络请求）
+  - `test_config.py`：连接串拼装 / 覆盖优先级 / 迁移连接串
+  - `test_a2a_client.py`：错误分类、瞬时错误重试、已产出内容不重试、连通性失败
+  - `test_llm_thought_signature.py`：Gemini 思考签名入站捕获 / 出站回填 / 幂等补丁
+  - `test_notifier.py`：未配置退化为日志、配置后推送 payload、推送失败被吞掉
+  - `test_admin_api.py`：登录、鉴权 401、CRUD、slug 保留/冲突、发布下线、连通性测试
+  - `test_chat_api.py`：路由解析 404、SSE 事件契约、错误事件不泄露细节、历史读取
+  - `test_agent_factory.py`：图实例缓存复用、按 `updated_at` 自动失效、显式失效
+  - 运行：`uv sync --extra dev && uv run pytest -q`
+- [x] 后端集成测试：针对真实 A2A 目标验证完整链路 ✅ 由 `tests/e2e_smoke.py` 覆盖（真实 LLM + 真实 Hermes A2A），已在 devops-43 实测通过
+- [ ] 前端测试：对话流式渲染 + 管理中心表单校验
+  - [x] SSE 流式解析（含 **CRLF 回归用例**）✅ vitest `web/src/lib/api.test.ts`（7 用例），运行：`cd web && npm test`
+  - [ ] 管理中心表单校验用例：需先把 `AgentForm` 内联的校验逻辑抽为纯函数（`web/src/lib/agentValidation.ts`）再补测
+- [x] 端到端测试：创建自定义 Agent → 发布 → 通过自定义路由对话 → 验证消息确实经由 A2A 到达绑定的目标 ✅ `tests/e2e_smoke.py` 实测通过（SSE 含 `tool_start`/`tool_end`/`token`/`done`，取回 Hermes 真实回复，并自动清理测试 Agent）
+  - 运行（容器内，管理员账号取自环境变量）：`docker cp tests/e2e_smoke.py a2a-gateway-backend:/tmp/ && docker compose exec -T backend python /tmp/e2e_smoke.py`
+
+---
+
+## 🐞 Phase 7 发现并修复的真实缺陷（回归价值高）
+
+1. **前端 SSE 解析不支持 CRLF（严重）**
+   `web/src/lib/api.ts` 原先用 `buffer.split("\n\n")` 切分事件块，而 sse-starlette 实际使用 `\r\n\r\n` —— 该序列中不存在 `\n\n`，导致**事件块永远切不出来**：对话界面不显示任何流式内容、也不保存 `thread_id`。
+   已改为 `/\r?\n\r?\n/`（并支持 `\r?\n` 行分隔），同时新增 `splitSSEBlocks` / `parseSSEBlock` 纯函数与 vitest 回归用例。
+
+2. **httpx 超时被误分类为 network**
+   `a2a_client._classify` 只处理了 `A2AClientTimeoutError`，`httpx.TimeoutException` 会落到 `httpx.HTTPError` 分支被标成 `network`，影响告警语义。已修正为 `timeout`。
 
 ---
 
