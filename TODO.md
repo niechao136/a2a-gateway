@@ -6,9 +6,10 @@
 > - ✅ **Phase 2**（动态路由+SSE 流式/历史 API/管理中心 API/JWT 认证/统一错误处理）
 > - ✅ **Phase 3**（前端对话界面：动态路由/MUI 对话组件/SSE 客户端/404+错误态/匿名 session/响应式/**对话历史侧边栏+多会话管理**）
 > - ✅ **Phase 4**（前端管理中心：登录/Agent 列表/创建编辑表单/A2A 连通性测试/发布下线/工具勾选/测试对话/slug 校验）
-> - 🔄 **Phase 5**（A2A Client 封装 + 管理中心连通性测试已打通；Task 轮询/重试、Hermes 全链路联调待做）
+> - ✅ **Phase 5**（A2A Client 封装/连通性测试/Hermes 全链路联调均已完成；含 Gemini 3 thought_signature 兼容层与瞬时错误自动重试）
 > - 🔄 **Phase 6**（前后端容器化 + nginx 统一入口 + 环境变量清单已完成；Alembic/监控/防火墙待做）
-> - ⏳ **下一步**：Phase 5（Hermes 全链路联调 + 重试/轮询）→ Phase 6（Alembic 迁移）→ Phase 7（测试）
+> - ⏳ **下一步**：Phase 6（Alembic 迁移 + 监控告警）→ Phase 7（测试）
+> - ⚠️ **注意**：LLM 使用 Gemini 3 系列（OpenAI 兼容端点）时，函数调用必须回传 `thought_signature`，否则第二轮报 400；已在 `src/a2a_gateway/llm.py` 内置兼容适配层（入站捕获 + 出站回填），对其它 OpenAI 兼容端点透明。
 > - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
 > - 前端启动：`cd web && npm run dev` → `http://localhost:3000`
 > - 管理中心：`http://localhost:3000/admin`（账号见 `ADMIN_USERNAME` / `ADMIN_PASSWORD`）
@@ -147,12 +148,12 @@
 
 ## Phase 5：A2A 集成细节
 
-- [ ] 实现/验证 A2A Client 封装（基于 `a2a-sdk`），支持：🔄 核心已完成，长任务场景待补
+- [x] 实现/验证 A2A Client 封装（基于 `a2a-sdk`），支持：✅ 已完成
   - [x] 目标 Agent Card 获取与缓存 ✅ `A2AClientWrapper`（客户端实例按 Agent 配置缓存，Card 随连接建立解析）
   - [x] 消息发送与流式结果接收 ✅ `stream_message`
-  - [ ] Task 状态轮询（针对长任务）
-  - [ ] 错误重试与超时控制 —— 超时（httpx 60s）与错误三分类已完成，**自动重试待补**
-- [ ] 默认 Agent 与服务器 Hermes 的 A2A 连接联调 —— 已在 devops-43 配置 `HERMES_A2A_URL=http://43.156.187.79:9900` + `HERMES_A2A_TOKEN` 并验证端点可达（HTTP 200），**完整对话链路待联调验证**
+  - [x] 错误重试与超时控制 ✅ 超时（httpx 60s）+ 错误三分类（network/timeout/target_error）+ **瞬时错误最多重试 2 次**（已产出内容后不重试，避免重复输出）
+  - [ ] Task 状态轮询（针对长任务）—— MVP 暂不需要，二期按需补
+- [x] 默认 Agent 与服务器 Hermes 的 A2A 连接联调 ✅ 已在 devops-43 配置 `HERMES_A2A_URL=http://43.156.187.79:9900` + token，**全链路已验证通过**：用户消息 → LLM 决策 → `a2a_call` → Hermes → 取回回复 → 流式返回用户（SSE 事件：tool_start / tool_end / token / done）
 - [x] 自定义 Agent 绑定任意 A2A 目标的连通性测试功能（管理中心"测试连接"按钮）
 - [ ] （若待讨论问题 8 确定支持）`input-required` 状态在前端的呈现与用户确认交互
 

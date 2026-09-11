@@ -6,6 +6,7 @@
 - A2AClientError → 目标 Agent 内部错误
 """
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 
@@ -67,22 +68,61 @@ class A2AClientWrapper:
             raise A2ATargetError("network", f"无法连接到 {self.target.url}：{e}") from e
         return self._client
 
-    async def stream_message(self, text: str) -> AsyncIterator[str]:
-        """向目标发送文本消息，流式返回文本片段。"""
-        client = await self._ensure_client()
+    @staticmethod
+    def _classify(error: Exception) -> A2ATargetError:
+        """把底层异常统一转换为带分类的 A2ATargetError。"""
+        if isinstance(error, A2ATargetError):
+            return error
+        if isinstance(error, A2AClientTimeoutError):
+            return A2ATargetError("timeout", f"A2A 调用超时：{error}")
+        if isinstance(error, A2AClientError):
+            return A2ATargetError("target_error", f"目标 Agent 内部错误：{error}")
+        if isinstance(error, httpx.HTTPError):
+            return A2ATargetError("network", f"A2A 网络错误：{error}")
+        return A2ATargetError("target_error", f"A2A 调用异常：{error}")
+
+    async def stream_message(
+        self,
+        text: str,
+        *,
+        retries: int = 2,
+        backoff: float = 0.5,
+    ) -> AsyncIterator[str]:
+        """向目标发送文本消息，流式返回文本片段。
+
+        对「网络 / 超时」类瞬时错误做有限重试；一旦已有内容产出则不再重试，
+        避免向调用方重复输出。目标内部错误（target_error）不重试。
+        """
         message = new_text_message(text, role=Role.ROLE_USER)
         request = SendMessageRequest(message=message)
-        try:
-            async for response in client.send_message(request):
-                chunk = get_stream_response_text(response)
-                if chunk:
-                    yield chunk
-        except A2AClientTimeoutError as e:
-            raise A2ATargetError("timeout", f"A2A 调用超时：{e}") from e
-        except A2AClientError as e:
-            raise A2ATargetError("target_error", f"目标 Agent 内部错误：{e}") from e
-        except httpx.HTTPError as e:
-            raise A2ATargetError("network", f"A2A 网络错误：{e}") from e
+
+        for attempt in range(retries + 1):
+            yielded = False
+            try:
+                client = await self._ensure_client()
+                async for response in client.send_message(request):
+                    chunk = get_stream_response_text(response)
+                    if chunk:
+                        yielded = True
+                        yield chunk
+                return
+            except Exception as error:  # noqa: BLE001 — 统一分类后决定是否重试
+                classified = self._classify(error)
+                if (
+                    yielded
+                    or attempt >= retries
+                    or classified.kind not in ("network", "timeout")
+                ):
+                    raise classified from error
+                delay = backoff * (attempt + 1)
+                logger.warning(
+                    "A2A 调用失败（%s），%.1fs 后进行第 %d 次重试：%s",
+                    classified.kind,
+                    delay,
+                    attempt + 1,
+                    classified.detail,
+                )
+                await asyncio.sleep(delay)
 
     async def test_connection(self) -> tuple[bool, str]:
         """连通性测试，返回 (是否成功, 说明)。"""
