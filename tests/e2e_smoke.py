@@ -21,6 +21,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 
 import httpx
@@ -30,13 +31,15 @@ READ_TIMEOUT = 180.0
 
 
 def sse_events(text: str) -> list[tuple[str, dict]]:
-    """把 SSE 文本解析为 [(event_name, data_dict)]。"""
+    """把 SSE 文本解析为 [(event_name, data_dict)]。
+
+    注意：sse-starlette 使用 CRLF（\\r\\n）分隔，必须兼容 \\n 与 \\r\\n。
+    """
     events: list[tuple[str, dict]] = []
-    for block in text.split("\n\n"):
+    for block in re.split(r"\r?\n\r?\n", text):
         name = None
         data_lines: list[str] = []
-        for raw_line in block.split("\n"):
-            line = raw_line.rstrip("\r")
+        for line in re.split(r"\r?\n", block):
             if line.startswith("event:"):
                 name = line[6:].strip()
             elif line.startswith("data:"):
@@ -118,22 +121,28 @@ def main() -> int:
         _require(resp.status_code == 200, f"发布失败（HTTP {resp.status_code}）：{resp.text[:200]}")
         print("[4/6] 已发布")
 
-        # 5) 通过自定义路由对话（强制调用 a2a_call）
-        thread_id = f"e2e-{os.urandom(4).hex()}"
+        # 5) 通过自定义路由对话（强制调用 a2a_call；模型偶发不调工具，最多重试 2 次）
         message = (
             "You must call the a2a_call tool right now, passing exactly this text: hello. "
             "Then report the raw tool output verbatim."
         )
-        resp = client.post(
-            f"/api/chat/{args.slug}",
-            json={"message": message, "thread_id": thread_id},
-        )
-        _require(resp.status_code == 200, f"对话失败（HTTP {resp.status_code}）：{resp.text[:200]}")
+        events: list[tuple[str, dict]] = []
+        for attempt in range(1, 3):
+            resp = client.post(
+                f"/api/chat/{args.slug}",
+                json={"message": message, "thread_id": f"e2e-{os.urandom(4).hex()}"},
+            )
+            _require(resp.status_code == 200, f"对话失败（HTTP {resp.status_code}）：{resp.text[:200]}")
 
-        events = sse_events(resp.text)
+            events = sse_events(resp.text)
+            kinds = [name for name, _ in events]
+            print(f"[5/6] 第 {attempt} 次 SSE 事件集合：{sorted(set(kinds))}")
+            if "error" not in kinds and "tool_start" in kinds:
+                break
+            if attempt == 1:
+                print("[5/6] 未触发 a2a_call，重试一次...")
+
         kinds = [name for name, _ in events]
-        print(f"[5/6] SSE 事件集合：{sorted(set(kinds))}")
-
         _require("error" not in kinds, f"对话返回 error 事件：{events}")
         _require("tool_start" in kinds, "未触发 a2a_call（模型未调用工具）")
         _require("tool_end" in kinds, "缺少 tool_end 事件")

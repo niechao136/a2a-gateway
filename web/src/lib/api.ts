@@ -25,6 +25,33 @@ export type SSEEvent =
   | { type: "error"; detail: string };
 
 /**
+ * 从缓冲区中切出完整的 SSE 事件块，返回 [完整块列表, 剩余未完成内容]。
+ *
+ * SSE 以「空行」分隔事件块，而 sse-starlette 使用 CRLF（\r\n），
+ * 所以必须同时兼容 \n 与 \r\n —— 只用 "\n\n" 切分会永远切不出块。
+ */
+export function splitSSEBlocks(buffer: string): [string[], string] {
+  const blocks = buffer.split(/\r?\n\r?\n/);
+  const rest = blocks.pop() || "";
+  return [blocks, rest];
+}
+
+/** 解析单个 SSE 块的 event 名与 data 内容；无 data 时返回 null。 */
+export function parseSSEBlock(block: string): { event: string; data: string } | null {
+  let eventName = "message";
+  const dataLines: string[] = [];
+  for (const line of block.split(/\r?\n/)) {
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trim());
+    }
+  }
+  if (dataLines.length === 0) return null;
+  return { event: eventName, data: dataLines.join("\n") };
+}
+
+/**
  * 解析 SSE 响应流并回调事件。返回最终的 thread_id。
  */
 async function consumeSSE(
@@ -42,23 +69,15 @@ async function consumeSSE(
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    // SSE 事件以 \n\n 分隔
-    const blocks = buffer.split("\n\n");
-    buffer = blocks.pop() || "";
+    // SSE 事件块以「空行」分隔（兼容 \n 与 \r\n，见 splitSSEBlocks）
+    const [blocks, rest] = splitSSEBlocks(buffer);
+    buffer = rest;
 
     for (const block of blocks) {
-      const lines = block.split("\n");
-      let eventName = "message";
-      const dataLines: string[] = [];
-      for (const line of lines) {
-        if (line.startsWith("event:")) {
-          eventName = line.slice(6).trim();
-        } else if (line.startsWith("data:")) {
-          dataLines.push(line.slice(5).trim());
-        }
-      }
-      const raw = dataLines.join("\n");
-      if (!raw) continue;
+      const parsedBlock = parseSSEBlock(block);
+      if (!parsedBlock) continue;
+      const eventName = parsedBlock.event;
+      const raw = parsedBlock.data;
 
       try {
         const parsed = JSON.parse(raw);
