@@ -166,7 +166,15 @@
 - [x] 数据库迁移脚本（Alembic）✅ `alembic.ini` + `alembic/env.py` + 基线迁移 `0001_initial`；应用启动时自动执行 `upgrade head`，并**自动接管** create_all 建出的历史库（stamp 基线），迁移失败回退 create_all 保证可用性
 - [x] 环境变量清单整理 ✅ `.env.example` + `docker-compose.yml`（组件式 `POSTGRES_*`、`LLM_*`、`HERMES_A2A_*`、`JWT_*`/`ADMIN_*`、`GATEWAY_PORT`、`ALERT_WEBHOOK_*`）
 - [x] 日志与监控接入（至少保证 A2A 调用失败、Agent 加载失败有告警）✅ 分级日志 + 错误三分类 + **可选告警 Webhook**（`ALERT_WEBHOOK_URL`，未配置时退化为 ERROR 日志）；覆盖 A2A 调用失败 / Agent 加载失败 / 对话流式失败
-- [ ] 云服务器安全组/防火墙规则梳理 —— 当前对外仅暴露 nginx `10099`，Postgres 不对外（正式安全组清单待补）
+- [ ] 云服务器安全组/防火墙规则梳理 —— 已梳理端口清单，待与云控制台实际规则核对：
+
+  | 端口 | 用途 | 期望策略 |
+  |---|---|---|
+  | `10099` | nginx 统一入口（前端页面 / API / 管理中心） | ✅ 对外放行 |
+  | `22` | SSH 运维 | ✅ 仅限来源 IP |
+  | `9900` | Hermes A2A 目标 | ⚠️ 仅对后端主机/内网放行（勿对公网裸暴露） |
+  | `5432` | PostgreSQL | ❌ 禁止对外（编排已不发布宿主机端口） |
+  | `8000` / `3000` | backend / frontend 容器端口 | ❌ 仅容器内网（compose 内 `expose`，不 `ports`） |
 
 ---
 
