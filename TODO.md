@@ -1,14 +1,19 @@
 # 多 Agent 平台开发 TODO
 
-> ## 当前进度（2026-09-10）
+> ## 当前进度（2026-09-11）
 > - ✅ **Phase 0**（技术选型/脚手架/DB/Checkpointer/A2A SDK）
 > - ✅ **Phase 1**（Agent 数据模型/CRUD/默认 Agent 初始化/A2A Client 封装/LangGraph 图+工厂缓存/缓存失效）—— input-required 按结论二期再做
 > - ✅ **Phase 2**（动态路由+SSE 流式/历史 API/管理中心 API/JWT 认证/统一错误处理）
-> - ✅ **Phase 3**（前端对话界面：动态路由/MUI 对话组件/SSE 客户端/404+错误态/匿名 session/响应式）—— next build 通过
-> - ⏳ **下一步**：Phase 4（前端管理中心）+ Phase 5（A2A 连通性联调）
+> - ✅ **Phase 3**（前端对话界面：动态路由/MUI 对话组件/SSE 客户端/404+错误态/匿名 session/响应式/**对话历史侧边栏+多会话管理**）
+> - ✅ **Phase 4**（前端管理中心：登录/Agent 列表/创建编辑表单/A2A 连通性测试/发布下线/工具勾选/测试对话/slug 校验）
+> - 🔄 **Phase 5**（A2A Client 封装 + 管理中心连通性测试已打通；Task 轮询/重试、Hermes 全链路联调待做）
+> - 🔄 **Phase 6**（前后端容器化 + nginx 统一入口 + 环境变量清单已完成；Alembic/监控/防火墙待做）
+> - ⏳ **下一步**：Phase 5（Hermes 全链路联调 + 重试/轮询）→ Phase 6（Alembic 迁移）→ Phase 7（测试）
 > - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
 > - 前端启动：`cd web && npm run dev` → `http://localhost:3000`
+> - 管理中心：`http://localhost:3000/admin`（账号见 `ADMIN_USERNAME` / `ADMIN_PASSWORD`）
 > - API 文档：`http://localhost:8000/docs`
+> - 生产部署（devops-43）：nginx 统一入口 `http://43.156.187.79:10099`
 
 ## 项目概述
 
@@ -121,45 +126,46 @@
 - [x] 加载态、错误态处理（Agent 不存在 / 未发布 → 友好的 404 页面；A2A 目标不可达 → 提示用户稍后重试，而不是暴露底层错误）✅ `page.tsx` 404 页 + ChatPage error Alert
 - [x] （按问题 5 结论）匿名访客 session 管理 / 历史记录展示 ✅ `lib/session.ts`（localStorage 按 slug 存 thread_id）+ 页面加载时从后端拉取历史
 - [x] 响应式布局，适配移动端 ✅ MUI sx 响应式断点（`px: { xs: 1, sm: 3 }`）+ 输入框多行自适应
+- [x] 对话历史侧边栏：多会话列表（按 slug 存 localStorage）、新建/切换/删除会话、按首条消息自动命名、旧 session 数据自动迁移 ✅ `lib/conversations.ts` + `components/ConversationList.tsx`（桌面常驻 + 移动端抽屉）
 
 ---
 
 ## Phase 4：前端 —— 管理中心
 
-- [ ] 管理员登录页面
-- [ ] Agent 列表页：展示所有自定义 Agent（名称、路由、状态、绑定的 A2A 目标）
-- [ ] Agent 创建/编辑表单：
-  - 基本信息（名称、描述、自定义路由 slug）
-  - A2A 目标配置（URL、认证方式、可测试连通性）
-  - System Prompt 编辑
-  - （按待讨论问题 6）工具集勾选
-- [ ] 发布/下线操作与状态提示
-- [ ] 管理中心内的即时测试对话窗口（复用公开对话组件）
-- [ ] 路由 slug 冲突校验的前端提示（禁止占用 `/` 或已存在的 slug）
+- [x] 管理员登录页面 ✅ `app/admin/login/page.tsx`（JWT 存 localStorage）
+- [x] Agent 列表页：展示所有自定义 Agent（名称、路由、状态、绑定的 A2A 目标）✅ `app/admin/page.tsx`
+- [x] Agent 创建/编辑表单 ✅ `components/admin/AgentForm.tsx` + `app/admin/agents/new`、`app/admin/agents/[id]/edit`
+  - [x] 基本信息（名称、描述、自定义路由 slug）
+  - [x] A2A 目标配置（URL、认证方式、可测试连通性）✅ 每个目标独立「测试连接」按钮
+  - [x] System Prompt 编辑
+  - [x] （按待讨论问题 6）工具集勾选 ✅ `a2a_call` 默认启用，可选工具来自后端 `OPTIONAL_TOOLS`
+- [x] 发布/下线操作与状态提示 ✅ 列表页与编辑页均支持，带 Snackbar 反馈
+- [x] 管理中心内的即时测试对话窗口（复用公开对话组件）✅ `components/admin/TestChatDialog.tsx`（draft 状态也可测）
+- [x] 路由 slug 冲突校验的前端提示（禁止占用 `/` 或已存在的 slug）✅ 前端正则 + 保留字 + 已存在校验，后端 409 兜底
 
 ---
 
 ## Phase 5：A2A 集成细节
 
-- [ ] 实现/验证 A2A Client 封装（基于 `a2a-sdk`），支持：
-  - 目标 Agent Card 获取与缓存
-  - 消息发送与流式结果接收
-  - Task 状态轮询（针对长任务）
-  - 错误重试与超时控制
-- [ ] 默认 Agent 与服务器 Hermes 的 A2A 连接联调（复用之前已经跑通的 Hermes A2A 配置：`A2A_PEER_TOKENS`/`A2A_BEARER_TOKEN`，把本项目的后端注册为一个可信 peer）
-- [ ] 自定义 Agent 绑定任意 A2A 目标的连通性测试功能（管理中心"测试连接"按钮）
+- [ ] 实现/验证 A2A Client 封装（基于 `a2a-sdk`），支持：🔄 核心已完成，长任务场景待补
+  - [x] 目标 Agent Card 获取与缓存 ✅ `A2AClientWrapper`（客户端实例按 Agent 配置缓存，Card 随连接建立解析）
+  - [x] 消息发送与流式结果接收 ✅ `stream_message`
+  - [ ] Task 状态轮询（针对长任务）
+  - [ ] 错误重试与超时控制 —— 超时（httpx 60s）与错误三分类已完成，**自动重试待补**
+- [ ] 默认 Agent 与服务器 Hermes 的 A2A 连接联调 —— 已在 devops-43 配置 `HERMES_A2A_URL=http://43.156.187.79:9900` + `HERMES_A2A_TOKEN` 并验证端点可达（HTTP 200），**完整对话链路待联调验证**
+- [x] 自定义 Agent 绑定任意 A2A 目标的连通性测试功能（管理中心"测试连接"按钮）
 - [ ] （若待讨论问题 8 确定支持）`input-required` 状态在前端的呈现与用户确认交互
 
 ---
 
 ## Phase 6：部署与运维
 
-- [ ] 后端容器化（Dockerfile）
-- [ ] 前端容器化 / 静态部署方案确定（Vercel 还是自托管，需讨论）
+- [x] 后端容器化（Dockerfile）✅ 多阶段构建 + 镜像内置健康检查（`Dockerfile`）
+- [x] 前端容器化 / 静态部署方案确定 ✅ 自托管 Next.js standalone（`web/Dockerfile`）+ nginx 统一反向代理
 - [ ] 数据库迁移脚本（Alembic）
-- [ ] 环境变量清单整理（`HERMES_A2A_URL`、`HERMES_A2A_TOKEN`、数据库连接串、管理员凭证等）
-- [ ] 日志与监控接入（至少保证 A2A 调用失败、Agent 加载失败有告警）
-- [ ] 云服务器安全组/防火墙规则梳理（复用之前配置 Hermes A2A 端口时的经验，确认新增端口的放行范围）
+- [x] 环境变量清单整理 ✅ `.env.example` + `docker-compose.yml`（组件式 `POSTGRES_*`、`LLM_*`、`HERMES_A2A_*`、`JWT_*`/`ADMIN_*`、`GATEWAY_PORT`）
+- [ ] 日志与监控接入（至少保证 A2A 调用失败、Agent 加载失败有告警）—— 已有分级日志与错误三分类，告警接入待做
+- [ ] 云服务器安全组/防火墙规则梳理 —— 当前对外仅暴露 nginx `10099`，Postgres 不对外
 
 ---
 
