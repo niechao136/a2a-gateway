@@ -7,7 +7,6 @@
 
 import json
 import logging
-from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from langchain_core.messages import HumanMessage
@@ -49,7 +48,7 @@ async def _stream_chat(agent: AgentConfig, message: str, thread_id: str):
         yield {"event": "error", "data": json.dumps({"detail": "Agent 加载失败"}, ensure_ascii=False)}
         return
 
-    config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     try:
         async for event in graph.astream_events(
             {"messages": [HumanMessage(content=message)]},
@@ -130,10 +129,10 @@ async def chat_history_custom(slug: str, thread_id: str):
     return await _get_history(thread_id)
 
 
-async def _get_history(thread_id: str) -> list[dict]:
+async def _get_history(thread_id: str) -> list[dict[str, str]]:
     """从 Checkpointer 提取会话历史消息。"""
     checkpointer = await get_checkpointer()
-    config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     try:
         tuple_ = await checkpointer.aget_tuple(config)
     except Exception:

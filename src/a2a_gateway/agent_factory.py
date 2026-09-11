@@ -46,7 +46,7 @@ async def get_checkpointer() -> AsyncPostgresSaver:
     return _checkpointer
 
 
-async def _probe_mcp_tools(snapshots: list[dict]) -> dict[str, list[dict]]:
+async def _probe_mcp_tools(snapshots: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """并发探测各 MCP 服务的工具清单，用于把可用工具写进 mcp_call 的说明。
 
     尽力而为：任一服务探测失败只会导致该项没有工具清单，不影响图实例构建。
@@ -55,7 +55,7 @@ async def _probe_mcp_tools(snapshots: list[dict]) -> dict[str, list[dict]]:
     if not snapshots:
         return {}
 
-    async def probe(snapshot: dict) -> tuple[str, bool, list[dict]]:
+    async def probe(snapshot: dict[str, Any]) -> tuple[str, bool, list[dict[str, Any]]]:
         name = snapshot.get("name") or ""
         try:
             ok, tools, _ = await list_tools(connection_from_snapshot(snapshot))
