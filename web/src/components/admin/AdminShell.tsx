@@ -4,7 +4,7 @@ import { useEffect, useState, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppBar, Box, Button, CircularProgress, Container, Toolbar, Typography } from "@mui/material";
-import { getAdminToken, setAdminToken } from "@/lib/adminApi";
+import { hasValidAdminToken, setAdminToken } from "@/lib/adminApi";
 
 const LOGIN_PATH = "/admin/login";
 
@@ -21,7 +21,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    const hasToken = !!getAdminToken();
+    // 用「未过期」判定：token 过期时直接回到登录页，避免打开后满屏 401
+    const hasToken = hasValidAdminToken();
     setAuthed(hasToken);
     setReady(true);
     if (!isLoginPage && !hasToken) {

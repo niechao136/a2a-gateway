@@ -1,8 +1,18 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Button, CircularProgress, Paper, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Link as MuiLink,
+  Paper,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { adminApi, setAdminToken } from "@/lib/adminApi";
 
 export default function AdminLoginPage() {
@@ -89,6 +99,18 @@ export default function AdminLoginPage() {
           >
             {loading ? "登录中..." : "登录"}
           </Button>
+        </Box>
+
+        <Box sx={{ mt: 2, textAlign: "center" }}>
+          <MuiLink
+            component={NextLink}
+            href="/"
+            variant="caption"
+            color="text.secondary"
+            underline="hover"
+          >
+            返回对话页
+          </MuiLink>
         </Box>
       </Paper>
     </Box>

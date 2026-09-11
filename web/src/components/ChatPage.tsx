@@ -18,6 +18,7 @@ import AddCommentOutlinedIcon from "@mui/icons-material/AddCommentOutlined";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import ConversationList from "./ConversationList";
+import AdminEntry from "./AdminEntry";
 import { streamChat, fetchHistory, ChatMessage, SSEEvent } from "@/lib/api";
 import {
   Conversation,
@@ -220,6 +221,7 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
       onSelect={handleSelect}
       onNew={handleNew}
       onDelete={handleDelete}
+      footer={<AdminEntry variant="button" showUsername />}
     />
   );
 
@@ -287,6 +289,7 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
               <AddCommentOutlinedIcon />
             </IconButton>
           </Tooltip>
+          <AdminEntry variant="icon" />
         </Box>
 
         {/* 消息区 */}

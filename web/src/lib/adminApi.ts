@@ -64,6 +64,62 @@ export function setAdminToken(token: string | null): void {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+/**
+ * 解析 JWT 的 payload（**纯函数，不校验签名**）。
+ *
+ * 仅用于界面展示（显示当前登录用户名、判断是否过期）；真正的鉴权始终由后端完成。
+ * 支持 base64url 与 UTF-8，返回 null 表示 token 结构非法或内容无法解析。
+ */
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  // base64url → base64，并补齐 padding
+  const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+
+  try {
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/** 判断 JWT payload 是否已失效（无法解析 / 已过期）。无 exp 时交给后端兜底 401。 */
+export function isJwtExpired(
+  payload: Record<string, unknown> | null,
+  now: number = Date.now(),
+): boolean {
+  if (!payload) return true;
+  const exp = payload.exp;
+  if (typeof exp !== "number") return false;
+  return exp * 1000 <= now;
+}
+
+/**
+ * 读取本地登录态，供对话页入口等 UI 使用。
+ * 登录态存于 localStorage，服务端渲染阶段读不到（会返回未登录）。
+ */
+export function readAdminAuth(): { loggedIn: boolean; username: string | null } {
+  const token = getAdminToken();
+  if (!token) return { loggedIn: false, username: null };
+
+  const payload = decodeJwtPayload(token);
+  if (isJwtExpired(payload)) return { loggedIn: false, username: null };
+
+  const sub = payload?.sub;
+  return { loggedIn: true, username: typeof sub === "string" && sub ? sub : null };
+}
+
+/** 本地是否存在「未过期」的管理中心 token（仅用于界面展示，后端仍会独立校验）。 */
+export function hasValidAdminToken(): boolean {
+  return readAdminAuth().loggedIn;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getAdminToken();
   const resp = await fetch(`${API_BASE}${path}`, {

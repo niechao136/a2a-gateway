@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import {
   Box,
   Button,
@@ -23,6 +24,8 @@ interface ConversationListProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  /** 底部自定义区域（如「登录 / 管理中心」入口） */
+  footer?: ReactNode;
 }
 
 /** 把时间戳格式化为「今天显示时分，否则显示月/日」。 */
@@ -43,6 +46,7 @@ export default function ConversationList({
   onSelect,
   onNew,
   onDelete,
+  footer,
 }: ConversationListProps) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
@@ -129,7 +133,8 @@ export default function ConversationList({
       </Box>
 
       <Divider />
-      <Box sx={{ p: 1.5 }}>
+      <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+        {footer}
         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
           当前 Agent：{agentName}
         </Typography>
