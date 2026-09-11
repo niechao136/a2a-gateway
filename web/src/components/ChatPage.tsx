@@ -19,6 +19,7 @@ import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import ConversationList from "./ConversationList";
 import AdminEntry from "./AdminEntry";
+import ThemeToggleButton from "./ThemeToggleButton";
 import { streamChat, fetchHistory, ChatMessage, SSEEvent } from "@/lib/api";
 import {
   Conversation,
@@ -289,6 +290,7 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
               <AddCommentOutlinedIcon />
             </IconButton>
           </Tooltip>
+          <ThemeToggleButton />
           <AdminEntry variant="icon" />
         </Box>
 

@@ -27,6 +27,8 @@ import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import { hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
+import { useColorMode } from "@/components/ThemeRegistry";
+import ThemeToggleButton from "@/components/ThemeToggleButton";
 
 const LOGIN_PATH = "/admin/login";
 const SIDEBAR_WIDTH = 240;
@@ -152,8 +154,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
-      {/* 桌面端常驻侧边栏 */}
+    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden", bgcolor: "background.default" }}>
+      {/* 桌面端常驻侧边栏（固定不随内容滚动） */}
       {isDesktop && (
         <Box
           component="aside"
@@ -163,9 +165,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             bgcolor: "background.paper",
             borderRight: 1,
             borderColor: "divider",
-            position: "sticky",
-            top: 0,
             height: "100vh",
+            overflowY: "auto",
           }}
         >
           {sidebar}
@@ -183,12 +184,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </Drawer>
       )}
 
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
         <AppBar
           position="static"
           color="default"
           elevation={0}
-          sx={{ borderBottom: 1, borderColor: "divider" }}
+          sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0 }}
         >
           <Toolbar sx={{ gap: 1 }}>
             {!isDesktop && (
@@ -204,6 +205,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <Typography variant="h6" sx={{ flexGrow: 1, fontSize: 17 }} noWrap>
               管理中心
             </Typography>
+            <ThemeToggleButton />
             <Button component={Link} href="/" size="small">
               返回对话
             </Button>
@@ -213,7 +215,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </Toolbar>
         </AppBar>
 
-        <Container maxWidth="lg" sx={{ py: 3, flex: 1 }}>
+        <Container maxWidth="lg" sx={{ py: 3, flex: 1, overflowY: "auto" }}>
           {children}
         </Container>
       </Box>
