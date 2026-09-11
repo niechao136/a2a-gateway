@@ -1,27 +1,64 @@
-"""应用配置：从环境变量 / .env 加载。"""
+"""应用配置：环境变量 + 可选的环境变量文件（python-dotenv）。
 
+加载策略（真实环境变量优先，不会被文件覆盖）：
+1. 进程环境变量：shell export / docker run -e / docker compose environment / K8s env 等
+2. 环境变量文件（可选，通过 load_dotenv 载入）：
+   - 默认自动查找 .env（从本文件所在目录逐级向上，找到才加载，找不到静默跳过）
+   - 可用 DOTENV_PATH 指定文件；多个文件用 os.pathsep 分隔（Windows ';' / POSIX ':'）
+
+数据库配置有两种方式（完整连接串优先级更高）：
+1. 组件式：POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB / POSTGRES_HOST / POSTGRES_PORT，
+   应用会自动拼接出 DATABASE_URL（asyncpg）与 CHECKPOINT_DB_URL（psycopg）。
+2. 完整连接串：DATABASE_URL / CHECKPOINT_DB_URL（如连接外部已有数据库）。
+"""
+
+import os
 from functools import lru_cache
+from typing import ClassVar
+from urllib.parse import quote_plus
 
-from pydantic import Field
+from dotenv import load_dotenv
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _load_env_files() -> None:
+    """加载环境变量文件（可选）。
+
+    - 未设置 DOTENV_PATH 时：自动查找 .env（向上逐级查找，找不到不报错）
+    - 设置 DOTENV_PATH 时：按 os.pathsep 分隔加载一个或多个文件
+    - override=False：已存在的真实环境变量优先，不会被文件覆盖
+    """
+    dotenv_path = os.getenv("DOTENV_PATH")
+    if not dotenv_path:
+        _ = load_dotenv(override=False)
+        return
+    for path in dotenv_path.split(os.pathsep):
+        path = path.strip()
+        if path:
+            _ = load_dotenv(path, override=False)
+
+
+# 模块导入时即完成环境变量装载（幂等，重复调用安全）
+_load_env_files()
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
+        # 文件已由 load_dotenv 载入到进程环境变量，这里统一从环境变量读取
         extra="ignore",
     )
 
-    # 数据库
-    database_url: str = Field(
-        default="postgresql+asyncpg://a2a:a2a_secret@localhost:5432/a2a_gateway",
-        alias="DATABASE_URL",
-    )
-    checkpoint_db_url: str = Field(
-        default="postgresql://a2a:a2a_secret@localhost:5432/a2a_gateway",
-        alias="CHECKPOINT_DB_URL",
-    )
+    # 数据库（组件式配置）
+    postgres_user: str = Field(default="a2a", alias="POSTGRES_USER")
+    postgres_password: str = Field(default="a2a_secret", alias="POSTGRES_PASSWORD")
+    postgres_db: str = Field(default="a2a_gateway", alias="POSTGRES_DB")
+    postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
+    postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
+
+    # 完整连接串（可选；若设置则优先于上面的组件式配置）
+    database_url: str = Field(default="", alias="DATABASE_URL")
+    checkpoint_db_url: str = Field(default="", alias="CHECKPOINT_DB_URL")
 
     # 默认 Agent 绑定的 Hermes A2A 目标
     hermes_a2a_url: str = Field(default="http://localhost:8080/", alias="HERMES_A2A_URL")
@@ -43,6 +80,23 @@ class Settings(BaseSettings):
     app_host: str = Field(default="0.0.0.0", alias="APP_HOST")
     app_port: int = Field(default=8000, alias="APP_PORT")
     frontend_origin: str = Field(default="http://localhost:3000", alias="FRONTEND_ORIGIN")
+
+    @model_validator(mode="after")
+    def _fill_db_urls(self) -> "Settings":
+        """未显式提供完整连接串时，用组件式配置拼接。"""
+        if not self.database_url:
+            self.database_url = self._build_db_url("postgresql+asyncpg")
+        if not self.checkpoint_db_url:
+            self.checkpoint_db_url = self._build_db_url("postgresql")
+        return self
+
+    def _build_db_url(self, scheme: str) -> str:
+        user = quote_plus(self.postgres_user)
+        password = quote_plus(self.postgres_password)
+        return (
+            f"{scheme}://{user}:{password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
     @property
     def sync_db_url(self) -> str:

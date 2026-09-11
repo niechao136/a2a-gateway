@@ -18,9 +18,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-a2a}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-a2a_secret}
       POSTGRES_DB: ${POSTGRES_DB:-a2a_gateway}
-    # 仅绑定宿主机回环，方便本地用客户端调试；生产可整段删除
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    # 不向宿主机暴露任何端口：仅在同一 Compose 网络内通过服务名 postgres:5432 访问。
+    # 如需用本机客户端直连调试，临时加回：
+    #   ports:
+    #     - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       # 目录挂载（bind mount）：数据落在宿主机 ./postgres_data 目录
       - ./postgres_data:/var/lib/postgresql/data
@@ -41,9 +42,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # 容器内通过服务名 postgres 访问数据库（覆盖 .env 里的 localhost 连接串）
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-a2a}:${POSTGRES_PASSWORD:-a2a_secret}@postgres:5432/${POSTGRES_DB:-a2a_gateway}
-      CHECKPOINT_DB_URL: postgresql://${POSTGRES_USER:-a2a}:${POSTGRES_PASSWORD:-a2a_secret}@postgres:5432/${POSTGRES_DB:-a2a_gateway}
+      # 数据库：容器内通过服务名 postgres 访问，连接串由应用按以下组件自动拼接
+      POSTGRES_USER: ${POSTGRES_USER:-a2a}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-a2a_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-a2a_gateway}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
       # 默认 Agent 绑定的 Hermes A2A 目标
       HERMES_A2A_URL: ${HERMES_A2A_URL:-http://host.docker.internal:8080/}
       HERMES_A2A_TOKEN: ${HERMES_A2A_TOKEN:-}
