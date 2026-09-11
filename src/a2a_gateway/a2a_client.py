@@ -27,6 +27,7 @@ from a2a.helpers.proto_helpers import (
 )
 from a2a.types.a2a_pb2 import Role, SendMessageRequest
 
+from .auth_scheme import apply_query_auth, build_headers
 from .schemas import A2ATarget
 
 logger = logging.getLogger(__name__)
@@ -52,13 +53,15 @@ class A2AClientWrapper:
     async def _ensure_client(self) -> Client:
         if self._client is not None:
             return self._client
-        headers: dict[str, str] = {}
-        if self.target.token:
-            headers["Authorization"] = f"Bearer {self.target.token}"
+        # 按配置的鉴权方式生成请求头；query 方式则把密钥拼到 URL 上
+        headers = build_headers(self.target.auth_type, self.target.auth_name, self.target.token)
+        url = apply_query_auth(
+            self.target.url, self.target.auth_type, self.target.auth_name, self.target.token
+        )
         self._httpx_client = httpx.AsyncClient(headers=headers, timeout=60.0)
         config = ClientConfig(httpx_client=self._httpx_client)
         try:
-            self._client = await create_client(self.target.url, config)
+            self._client = await create_client(url, config)
         except (AgentCardResolutionError, _CardErr) as e:
             raise A2ATargetError(
                 "network",

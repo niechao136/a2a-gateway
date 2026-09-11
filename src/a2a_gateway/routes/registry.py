@@ -26,6 +26,7 @@ from ..schemas import (
     McpServerCreate,
     McpServerOut,
     McpServerUpdate,
+    validate_auth,
     validate_mcp_transport,
 )
 
@@ -77,6 +78,16 @@ async def update_a2a_endpoint(
         raise HTTPException(404, "A2A 目标不存在")
     if data.name is not None and not data.name.strip():
         raise HTTPException(400, "名称不能为空")
+
+    # 鉴权方式与密钥必须匹配（与 A2AEndpointCreate 的校验保持一致）
+    if data.auth_type is not None or data.auth_name is not None or data.token is not None:
+        auth_type = data.auth_type or endpoint.auth_type
+        auth_name = data.auth_name if data.auth_name is not None else endpoint.auth_name
+        token = data.token if data.token is not None else endpoint.token
+        try:
+            validate_auth(auth_type, auth_name, token)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
 
     new_name = data.name.strip() if data.name else endpoint.name
     if new_name != endpoint.name:
@@ -181,6 +192,16 @@ async def update_mcp_server(
         command = data.command if data.command is not None else server.command
         try:
             validate_mcp_transport(transport, url, command)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+
+    # 鉴权方式与密钥必须匹配（与 McpServerCreate 的校验保持一致）
+    if data.auth_type is not None or data.auth_name is not None or data.token is not None:
+        auth_type = data.auth_type or server.auth_type
+        auth_name = data.auth_name if data.auth_name is not None else server.auth_name
+        token = data.token if data.token is not None else server.token
+        try:
+            validate_auth(auth_type, auth_name, token)
         except ValueError as exc:
             raise HTTPException(400, str(exc))
 

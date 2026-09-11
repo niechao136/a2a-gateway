@@ -19,6 +19,10 @@ import {
   TextField,
 } from "@mui/material";
 import {
+  AUTH_NAME_LABELS,
+  AUTH_NAME_PLACEHOLDERS,
+  AUTH_TYPE_LABELS,
+  AuthType,
   MCP_TRANSPORT_LABELS,
   McpServer,
   McpServerCreatePayload,
@@ -80,15 +84,27 @@ export default function McpServerDialog({
   const [command, setCommand] = useState(initial?.command ?? "");
   const [argsText, setArgsText] = useState((initial?.args ?? []).join("\n"));
   const [envText, setEnvText] = useState(envToText(initial?.env));
+  // 验证凭据
+  const [token, setToken] = useState(initial?.token ?? "");
+  const [authType, setAuthType] = useState<AuthType>(initial?.auth_type ?? "bearer");
+  const [authName, setAuthName] = useState(initial?.auth_name ?? "");
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
-  const [errors, setErrors] = useState<{ name?: string; url?: string; command?: string }>({});
+  const [errors, setErrors] = useState<{
+    name?: string;
+    url?: string;
+    command?: string;
+    token?: string;
+    authName?: string;
+  }>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isStdio = transport === "stdio";
+  const nameLabel = AUTH_NAME_LABELS[authType];
+  const needsAuthName = !!nameLabel;
 
   const validate = (): boolean => {
-    const next: { name?: string; url?: string; command?: string } = {};
+    const next: typeof errors = {};
     const n = name.trim();
     if (!n) next.name = "请填写名称";
     else if (n !== initial?.name && existingNames.includes(n)) {
@@ -98,6 +114,12 @@ export default function McpServerDialog({
       if (!command.trim()) next.command = "stdio 传输需要填写启动命令";
     } else if (!url.trim()) {
       next.url = "该传输方式需要填写服务 URL";
+    }
+    if (authType !== "none" && !token.trim()) {
+      next.token = `${AUTH_TYPE_LABELS[authType]} 需要填写密钥`;
+    }
+    if (needsAuthName && !authName.trim()) {
+      next.authName = `请填写${nameLabel}`;
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -117,6 +139,9 @@ export default function McpServerDialog({
         command: isStdio ? command.trim() : "",
         args: isStdio ? parseLines(argsText) : [],
         env: isStdio ? parseEnv(envText) : {},
+        token: token.trim(),
+        auth_type: authType,
+        auth_name: needsAuthName ? authName.trim() : "",
         enabled,
       };
       if (isEdit && initial) await adminApi.updateMcpServer(initial.id, payload);
@@ -194,6 +219,7 @@ export default function McpServerDialog({
                 minRows={2}
                 value={envText}
                 onChange={(e) => setEnvText(e.target.value)}
+                helperText="鉴权密钥会以 MCP_AUTH_TOKEN 注入，可在命令中直接引用"
                 placeholder={"API_KEY=xxx"}
               />
             </>
@@ -211,6 +237,55 @@ export default function McpServerDialog({
             />
           )}
 
+          {/* ---- 验证 ---- */}
+          <FormControl fullWidth size="small">
+            <InputLabel id="mcp-auth-type-label">鉴权方式</InputLabel>
+            <Select
+              labelId="mcp-auth-type-label"
+              label="鉴权方式"
+              value={authType}
+              onChange={(e) => setAuthType(e.target.value as AuthType)}
+            >
+              {(Object.keys(AUTH_TYPE_LABELS) as AuthType[]).map((value) => (
+                <MenuItem key={value} value={value}>
+                  {AUTH_TYPE_LABELS[value]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {needsAuthName && (
+            <TextField
+              label={nameLabel}
+              required
+              fullWidth
+              size="small"
+              value={authName}
+              onChange={(e) => setAuthName(e.target.value)}
+              error={!!errors.authName}
+              helperText={errors.authName}
+              placeholder={AUTH_NAME_PLACEHOLDERS[authType]}
+            />
+          )}
+
+          {authType !== "none" && (
+            <TextField
+              label={authType === "basic" ? "密码" : "密钥"}
+              required
+              fullWidth
+              size="small"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              error={!!errors.token}
+              helperText={
+                errors.token ??
+                (isStdio
+                  ? "stdio 无法携带 HTTP 头，密钥会以环境变量 MCP_AUTH_TOKEN 注入子进程"
+                  : "密钥会按鉴权方式放到请求头或查询参数中")
+              }
+            />
+          )}
+
           <TextField
             label="描述"
             fullWidth
@@ -219,6 +294,7 @@ export default function McpServerDialog({
             minRows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            placeholder="例如：提供本地文件读写能力"
           />
 
           <FormControlLabel

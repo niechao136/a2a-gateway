@@ -34,6 +34,22 @@ DEFAULT_ENDPOINT_NAME = "Hermes（默认）"
 # ---------------------------------------------------------------------------
 # 绑定解析
 # ---------------------------------------------------------------------------
+def a2a_target_snapshot(endpoint: A2AEndpoint) -> dict:
+    """A2A 目标快照：运行时构造工具所需的全部信息。
+
+    description 会写进工具说明，让大模型知道「该目标擅长什么」，
+    从而在绑定了多个目标时选出正确的那个。
+    """
+    return {
+        "url": endpoint.url,
+        "token": endpoint.token,
+        "name": endpoint.name or "",
+        "description": endpoint.description or "",
+        "auth_type": endpoint.auth_type or "bearer",
+        "auth_name": endpoint.auth_name or "",
+    }
+
+
 async def resolve_a2a_targets(session: AsyncSession, ids: list[int]) -> list[dict]:
     """按勾选顺序解析 A2A 目标；已删除或被停用的条目自动跳过。"""
     if not ids:
@@ -47,7 +63,7 @@ async def resolve_a2a_targets(session: AsyncSession, ids: list[int]) -> list[dic
         endpoint = by_id.get(endpoint_id)
         if endpoint is None or not endpoint.enabled:
             continue
-        targets.append({"url": endpoint.url, "token": endpoint.token})
+        targets.append(a2a_target_snapshot(endpoint))
     return targets
 
 
@@ -71,6 +87,10 @@ def mcp_server_snapshot(server: McpServer) -> dict:
         "command": server.command,
         "args": list(server.args or []),
         "env": dict(server.env or {}),
+        # 鉴权：远程传输走请求头/查询参数，stdio 注入环境变量
+        "token": server.token or "",
+        "auth_type": server.auth_type or "bearer",
+        "auth_name": server.auth_name or "",
     }
 
 
@@ -212,7 +232,7 @@ async def create_a2a_endpoint(
 async def update_a2a_endpoint(
     session: AsyncSession, endpoint: A2AEndpoint, data: A2AEndpointUpdate
 ) -> A2AEndpoint:
-    for field in ("name", "url", "token", "description", "enabled"):
+    for field in ("name", "url", "token", "description", "auth_type", "auth_name", "enabled"):
         value = getattr(data, field)
         if value is not None:
             setattr(endpoint, field, value)
@@ -262,6 +282,9 @@ async def update_mcp_server(
         "command",
         "args",
         "env",
+        "token",
+        "auth_type",
+        "auth_name",
         "enabled",
     ):
         value = getattr(data, field)

@@ -5,17 +5,38 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .auth_scheme import AUTH_TYPES
 from .models import AgentStatus
 
 # MCP 支持的传输方式
 MCP_TRANSPORTS = ("stdio", "sse", "streamable_http")
 
+# 需要「配套名称」的鉴权方式：header→请求头名、query→参数名、basic→用户名
+AUTH_NAME_REQUIRED = ("header", "query", "basic")
+
+
+def validate_auth(auth_type: str, auth_name: str, token: str) -> None:
+    """校验鉴权参数完整性；不匹配时抛 ValueError（由路由转 400）。"""
+    if auth_type not in AUTH_TYPES:
+        raise ValueError(f"auth_type 仅支持 {AUTH_TYPES}")
+    if auth_type in AUTH_NAME_REQUIRED and not auth_name.strip():
+        raise ValueError(f"{auth_type} 鉴权需要填写名称（请求头名 / 参数名 / 用户名）")
+    if auth_type != "none" and not token.strip():
+        raise ValueError(f"{auth_type} 鉴权需要填写密钥")
+
 
 class A2ATarget(BaseModel):
-    """一个绑定的 A2A 目标（解析后的连接快照）。"""
+    """一个绑定的 A2A 目标（解析后的连接快照）。
+
+    description 会写进工具说明，让大模型知道"该目标擅长什么"，从而在多个目标间做出选择。
+    """
 
     url: str = Field(description="A2A 目标 URL，如 http://host:port/")
     token: str = Field(default="", description="认证 token，可为空")
+    name: str = Field(default="", description="目标名称（用于生成工具名）")
+    description: str = Field(default="", description="目标说明，会进入大模型提示词")
+    auth_type: str = Field(default="bearer", description="鉴权方式")
+    auth_name: str = Field(default="", description="请求头名 / 查询参数名 / basic 用户名")
 
 
 # ---------------------------------------------------------------------------
@@ -24,9 +45,18 @@ class A2ATarget(BaseModel):
 class A2AEndpointBase(BaseModel):
     name: str = Field(description="显示名称，全局唯一")
     url: str = Field(description="A2A 服务地址，如 http://host:port/")
-    token: str = Field(default="", description="Bearer token，可为空")
-    description: str = Field(default="")
+    token: str = Field(default="", description="密钥（随 auth_type 决定放到哪里）")
+    description: str = Field(
+        default="", description="目标说明（会进入大模型提示词，用于判断该调用哪个目标）"
+    )
+    auth_type: str = Field(default="bearer", description="鉴权方式：none/bearer/header/query/basic")
+    auth_name: str = Field(default="", description="请求头名 / 查询参数名 / basic 用户名")
     enabled: bool = True
+
+    @model_validator(mode="after")
+    def _check_auth(self) -> "A2AEndpointBase":
+        validate_auth(self.auth_type, self.auth_name, self.token)
+        return self
 
 
 class A2AEndpointCreate(A2AEndpointBase):
@@ -38,6 +68,8 @@ class A2AEndpointUpdate(BaseModel):
     url: str | None = None
     token: str | None = None
     description: str | None = None
+    auth_type: str | None = None
+    auth_name: str | None = None
     enabled: bool | None = None
 
 
@@ -71,11 +103,20 @@ class McpServerBase(BaseModel):
     command: str = Field(default="", description="stdio 的启动命令")
     args: list[str] = Field(default_factory=list, description="stdio 的启动参数")
     env: dict[str, str] = Field(default_factory=dict, description="stdio 的进程环境变量")
+    # 验证凭据：远程传输走请求头/查询参数，stdio 注入环境变量 MCP_AUTH_TOKEN
+    token: str = Field(default="", description="密钥（随 auth_type 决定放到哪里）")
+    auth_type: str = Field(default="bearer", description="鉴权方式：none/bearer/header/query/basic")
+    auth_name: str = Field(default="", description="请求头名 / 查询参数名 / basic 用户名")
     enabled: bool = True
 
     @model_validator(mode="after")
     def _check_transport(self) -> "McpServerBase":
         validate_mcp_transport(self.transport, self.url, self.command)
+        return self
+
+    @model_validator(mode="after")
+    def _check_auth(self) -> "McpServerBase":
+        validate_auth(self.auth_type, self.auth_name, self.token)
         return self
 
 
@@ -91,6 +132,9 @@ class McpServerUpdate(BaseModel):
     command: str | None = None
     args: list[str] | None = None
     env: dict[str, str] | None = None
+    token: str | None = None
+    auth_type: str | None = None
+    auth_name: str | None = None
     enabled: bool | None = None
 
 

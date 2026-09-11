@@ -10,11 +10,23 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Select,
   Switch,
   TextField,
 } from "@mui/material";
-import { A2AEndpoint, A2AEndpointCreatePayload, adminApi } from "@/lib/adminApi";
+import {
+  A2AEndpoint,
+  A2AEndpointCreatePayload,
+  AUTH_NAME_LABELS,
+  AUTH_NAME_PLACEHOLDERS,
+  AUTH_TYPE_LABELS,
+  AuthType,
+  adminApi,
+} from "@/lib/adminApi";
 
 interface A2AEndpointDialogProps {
   /** 传入则为编辑，否则为新建 */
@@ -42,13 +54,23 @@ export default function A2AEndpointDialog({
   const [url, setUrl] = useState(initial?.url ?? "");
   const [token, setToken] = useState(initial?.token ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [authType, setAuthType] = useState<AuthType>(initial?.auth_type ?? "bearer");
+  const [authName, setAuthName] = useState(initial?.auth_name ?? "");
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
-  const [errors, setErrors] = useState<{ name?: string; url?: string }>({});
+  const [errors, setErrors] = useState<{
+    name?: string;
+    url?: string;
+    token?: string;
+    authName?: string;
+  }>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const nameLabel = AUTH_NAME_LABELS[authType];
+  const needsName = !!nameLabel;
+
   const validate = (): boolean => {
-    const next: { name?: string; url?: string } = {};
+    const next: typeof errors = {};
     const n = name.trim();
     const u = url.trim();
     if (!n) next.name = "请填写名称";
@@ -56,6 +78,12 @@ export default function A2AEndpointDialog({
       next.name = `名称 '${n}' 已存在`;
     }
     if (!u) next.url = "请填写服务地址";
+    if (authType !== "none" && !token.trim()) {
+      next.token = `${AUTH_TYPE_LABELS[authType]} 需要填写密钥`;
+    }
+    if (needsName && !authName.trim()) {
+      next.authName = `请填写${nameLabel}`;
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -70,6 +98,8 @@ export default function A2AEndpointDialog({
         url: url.trim(),
         token: token.trim(),
         description: description.trim(),
+        auth_type: authType,
+        auth_name: needsName ? authName.trim() : "",
         enabled,
       };
       if (isEdit && initial) await adminApi.updateA2AEndpoint(initial.id, payload);
@@ -111,14 +141,6 @@ export default function A2AEndpointDialog({
             placeholder="http://host:port/"
           />
           <TextField
-            label="认证 Token（Bearer）"
-            fullWidth
-            size="small"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="可留空"
-          />
-          <TextField
             label="描述"
             fullWidth
             size="small"
@@ -126,7 +148,55 @@ export default function A2AEndpointDialog({
             minRows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            helperText="会写入大模型提示词：说明该目标擅长什么，模型才能判断该调用哪个 A2A 目标"
+            placeholder="例如：擅长代码编写与重构"
           />
+
+          {/* 鉴权方式 */}
+          <FormControl fullWidth size="small">
+            <InputLabel id="a2a-auth-type-label">鉴权方式</InputLabel>
+            <Select
+              labelId="a2a-auth-type-label"
+              label="鉴权方式"
+              value={authType}
+              onChange={(e) => setAuthType(e.target.value as AuthType)}
+            >
+              {(Object.keys(AUTH_TYPE_LABELS) as AuthType[]).map((value) => (
+                <MenuItem key={value} value={value}>
+                  {AUTH_TYPE_LABELS[value]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {needsName && (
+            <TextField
+              label={nameLabel}
+              required
+              fullWidth
+              size="small"
+              value={authName}
+              onChange={(e) => setAuthName(e.target.value)}
+              error={!!errors.authName}
+              helperText={errors.authName}
+              placeholder={AUTH_NAME_PLACEHOLDERS[authType]}
+            />
+          )}
+
+          {authType !== "none" && (
+            <TextField
+              label={authType === "basic" ? "密码" : "密钥"}
+              required
+              fullWidth
+              size="small"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              error={!!errors.token}
+              helperText={errors.token ?? "密钥统一存于本字段，由鉴权方式决定放到哪里"}
+              placeholder="可留空则等同无鉴权"
+            />
+          )}
+
           <FormControlLabel
             control={
               <Switch size="small" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />

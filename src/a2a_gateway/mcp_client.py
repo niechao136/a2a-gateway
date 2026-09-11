@@ -18,10 +18,13 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
+
+from .auth_scheme import apply_query_auth, build_headers, build_stdio_env
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +44,13 @@ class McpConnection:
     command: str = ""
     args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
+    # 鉴权（与 A2A 目标共用同一套方式）
+    token: str = ""
+    auth_type: str = "bearer"
+    auth_name: str = ""
 
 
-def connection_from_snapshot(snapshot: dict) -> McpConnection:
+def connection_from_snapshot(snapshot: dict[str, Any]) -> McpConnection:
     """由 Agent 上的 MCP 快照（repository.mcp_server_snapshot）构造连接参数。"""
     return McpConnection(
         name=snapshot.get("name") or "MCP",
@@ -52,27 +59,47 @@ def connection_from_snapshot(snapshot: dict) -> McpConnection:
         command=snapshot.get("command") or "",
         args=list(snapshot.get("args") or []),
         env=dict(snapshot.get("env") or {}),
+        token=snapshot.get("token") or "",
+        auth_type=snapshot.get("auth_type") or "bearer",
+        auth_name=snapshot.get("auth_name") or "",
     )
 
 
 @asynccontextmanager
 async def _open_session(conn: McpConnection):
-    """按传输方式建立会话（退出时自动关闭连接与子进程）。"""
+    """按传输方式建立会话（退出时自动关闭连接与子进程）。
+
+    鉴权按传输方式落到不同位置：
+    - stdio           → 注入子进程环境变量（无法携带 HTTP 头）
+    - sse             → headers 参数
+    - streamable_http → 预置 headers 的 httpx 客户端（该传输不直接接受 headers）
+    """
+    headers = build_headers(conn.auth_type, conn.auth_name, conn.token)
+    url = apply_query_auth(conn.url, conn.auth_type, conn.auth_name, conn.token)
+
     if conn.transport == "stdio":
-        params = StdioServerParameters(
-            command=conn.command, args=conn.args, env=conn.env or None
-        )
+        env = build_stdio_env(conn.auth_type, conn.auth_name, conn.token, conn.env)
+        params = StdioServerParameters(command=conn.command, args=conn.args, env=env or None)
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
                 yield session
     elif conn.transport == "sse":
-        async with sse_client(conn.url) as (read, write):
+        async with sse_client(url, headers=headers or None) as (read, write):
             async with ClientSession(read, write) as session:
                 yield session
     else:
-        async with streamable_http_client(conn.url) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                yield session
+        # streamable_http 只接受 http_client，因此自建带鉴权头的 httpx 客户端
+        http_client = httpx.AsyncClient(headers=headers or None, timeout=httpx.Timeout(60.0))
+        try:
+            async with streamable_http_client(url, http_client=http_client) as (
+                read,
+                write,
+                _,
+            ):
+                async with ClientSession(read, write) as session:
+                    yield session
+        finally:
+            await http_client.aclose()
 
 
 def _render_content(result: Any) -> str:
@@ -123,10 +150,12 @@ async def list_tools(
             async with _open_session(conn) as session:
                 await session.initialize()
                 result = await session.list_tools()
+                # 带上 inputSchema：用于把每个 MCP 工具真正绑定成 Agent 的可调用工具
                 tools = [
                     {
                         "name": t.name,
                         "description": (getattr(t, "description", "") or "").strip(),
+                        "inputSchema": getattr(t, "inputSchema", None) or {},
                     }
                     for t in result.tools
                 ]

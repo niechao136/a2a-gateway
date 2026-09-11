@@ -23,7 +23,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import BoltIcon from "@mui/icons-material/Bolt";
-import { A2AEndpoint, ApiError, adminApi } from "@/lib/adminApi";
+import { A2AEndpoint, AUTH_TYPE_LABELS, ApiError, adminApi } from "@/lib/adminApi";
 import A2AEndpointDialog from "@/components/admin/A2AEndpointDialog";
 
 /** A2A 目标注册表管理页：集中登记可复用的 A2A 服务。 */
@@ -131,6 +131,7 @@ export default function A2AAdminPage() {
             <TableRow>
               <TableCell>名称</TableCell>
               <TableCell>服务地址</TableCell>
+              <TableCell>鉴权</TableCell>
               <TableCell>状态</TableCell>
               <TableCell>更新时间</TableCell>
               <TableCell align="right">操作</TableCell>
@@ -139,13 +140,13 @@ export default function A2AAdminPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 4, color: "text.secondary" }}>
                   暂无 A2A 目标，点击右上角「新建目标」添加
                 </TableCell>
               </TableRow>
@@ -168,6 +169,11 @@ export default function A2AAdminPage() {
                   <TableCell>
                     <Typography variant="caption" sx={{ fontFamily: "monospace" }}>
                       {item.url}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption" color="text.secondary">
+                      {AUTH_TYPE_LABELS[item.auth_type] ?? item.auth_type}
                     </Typography>
                   </TableCell>
                   <TableCell>

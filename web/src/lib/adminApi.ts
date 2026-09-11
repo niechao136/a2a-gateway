@@ -46,6 +46,32 @@ export type AgentUpdatePayload = Partial<Omit<AgentCreatePayload, "slug">> & {
 };
 
 // ---------------------------------------------------------------------------
+// 鉴权方式（A2A 目标与 MCP 服务共用）
+// ---------------------------------------------------------------------------
+export type AuthType = "none" | "bearer" | "header" | "query" | "basic";
+
+export const AUTH_TYPE_LABELS: Record<AuthType, string> = {
+  none: "无鉴权",
+  bearer: "Bearer Token（Authorization 头）",
+  header: "自定义请求头",
+  query: "URL 查询参数",
+  basic: "Basic（用户名 + 密码）",
+};
+
+/** 需要额外填写「名称」的鉴权方式：header→头名、query→参数名、basic→用户名 */
+export const AUTH_NAME_LABELS: Partial<Record<AuthType, string>> = {
+  header: "请求头名称",
+  query: "查询参数名",
+  basic: "用户名",
+};
+
+export const AUTH_NAME_PLACEHOLDERS: Partial<Record<AuthType, string>> = {
+  header: "X-Api-Key",
+  query: "access_token",
+  basic: "admin",
+};
+
+// ---------------------------------------------------------------------------
 // A2A 目标注册表
 // ---------------------------------------------------------------------------
 export interface A2AEndpoint {
@@ -54,6 +80,8 @@ export interface A2AEndpoint {
   url: string;
   token: string;
   description: string;
+  auth_type: AuthType;
+  auth_name: string;
   enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -64,6 +92,8 @@ export interface A2AEndpointCreatePayload {
   url: string;
   token?: string;
   description?: string;
+  auth_type?: AuthType;
+  auth_name?: string;
   enabled?: boolean;
 }
 
@@ -89,6 +119,9 @@ export interface McpServer {
   command: string;
   args: string[];
   env: Record<string, string>;
+  token: string;
+  auth_type: AuthType;
+  auth_name: string;
   enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -102,6 +135,9 @@ export interface McpServerCreatePayload {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
+  token?: string;
+  auth_type?: AuthType;
+  auth_name?: string;
   enabled?: boolean;
 }
 

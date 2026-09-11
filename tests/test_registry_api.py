@@ -21,6 +21,8 @@ def _endpoint(**kw):
         "url": "http://hermes:9900/",
         "token": "t",
         "description": "",
+        "auth_type": "bearer",
+        "auth_name": "",
         "enabled": True,
         "created_at": _NOW,
         "updated_at": _NOW,
@@ -39,6 +41,9 @@ def _server(**kw):
         "command": "python",
         "args": ["-m", "server"],
         "env": {},
+        "token": "tok",
+        "auth_type": "bearer",
+        "auth_name": "",
         "enabled": True,
         "created_at": _NOW,
         "updated_at": _NOW,
@@ -69,12 +74,16 @@ async def test_registry_requires_auth(anon_client):
 # A2A 目标
 # ---------------------------------------------------------------------------
 async def test_create_endpoint_rejects_empty_name(auth_client):
-    resp = await auth_client.post("/api/admin/a2a-endpoints", json={"name": "  ", "url": "http://x/"})
+    resp = await auth_client.post(
+        "/api/admin/a2a-endpoints", json={"name": "  ", "url": "http://x/", "auth_type": "none"}
+    )
     assert resp.status_code == 400
 
 
 async def test_create_endpoint_rejects_empty_url(auth_client):
-    resp = await auth_client.post("/api/admin/a2a-endpoints", json={"name": "x", "url": "  "})
+    resp = await auth_client.post(
+        "/api/admin/a2a-endpoints", json={"name": "x", "url": "  ", "auth_type": "none"}
+    )
     assert resp.status_code == 400
 
 
@@ -84,9 +93,53 @@ async def test_create_endpoint_rejects_duplicate_name(auth_client, monkeypatch):
 
     monkeypatch.setattr(registry_mod.repo, "get_a2a_endpoint_by_name", fake_by_name)
     resp = await auth_client.post(
-        "/api/admin/a2a-endpoints", json={"name": "Hermes", "url": "http://x/"}
+        "/api/admin/a2a-endpoints",
+        json={"name": "Hermes", "url": "http://x/", "auth_type": "none"},
     )
     assert resp.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# 鉴权方式
+# ---------------------------------------------------------------------------
+async def test_create_endpoint_rejects_bearer_without_token(auth_client):
+    resp = await auth_client.post(
+        "/api/admin/a2a-endpoints", json={"name": "x", "url": "http://x/", "auth_type": "bearer"}
+    )
+    assert resp.status_code == 422
+
+
+async def test_create_endpoint_rejects_header_without_name(auth_client):
+    resp = await auth_client.post(
+        "/api/admin/a2a-endpoints",
+        json={"name": "x", "url": "http://x/", "auth_type": "header", "token": "t"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_create_endpoint_accepts_query_auth(auth_client, monkeypatch):
+    async def fake_by_name(session, name):
+        return None
+
+    async def fake_create(session, data):
+        return _endpoint(name=data.name, auth_type=data.auth_type, auth_name=data.auth_name)
+
+    monkeypatch.setattr(registry_mod.repo, "get_a2a_endpoint_by_name", fake_by_name)
+    monkeypatch.setattr(registry_mod.repo, "create_a2a_endpoint", fake_create)
+
+    resp = await auth_client.post(
+        "/api/admin/a2a-endpoints",
+        json={
+            "name": "x",
+            "url": "http://x/",
+            "auth_type": "query",
+            "auth_name": "key",
+            "token": "v",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["auth_type"] == "query"
+    assert resp.json()["auth_name"] == "key"
 
 
 async def test_create_endpoint_ok(auth_client, monkeypatch):
@@ -236,7 +289,13 @@ async def test_create_mcp_server_ok(auth_client, monkeypatch):
 
     resp = await auth_client.post(
         "/api/admin/mcp-servers",
-        json={"name": "Local MCP", "transport": "stdio", "command": "python", "args": ["-m", "x"]},
+        json={
+            "name": "Local MCP",
+            "transport": "stdio",
+            "command": "python",
+            "args": ["-m", "x"],
+            "auth_type": "none",
+        },
     )
     assert resp.status_code == 201
     assert resp.json()["transport"] == "stdio"
@@ -249,7 +308,12 @@ async def test_create_mcp_server_rejects_duplicate(auth_client, monkeypatch):
     monkeypatch.setattr(registry_mod.repo, "get_mcp_server_by_name", fake_by_name)
     resp = await auth_client.post(
         "/api/admin/mcp-servers",
-        json={"name": "Local MCP", "transport": "stdio", "command": "python"},
+        json={
+            "name": "Local MCP",
+            "transport": "stdio",
+            "command": "python",
+            "auth_type": "none",
+        },
     )
     assert resp.status_code == 409
 
@@ -268,6 +332,29 @@ async def test_update_mcp_server_requires_command_for_stdio(auth_client, monkeyp
 
     monkeypatch.setattr(registry_mod.repo, "get_mcp_server", fake_get)
     resp = await auth_client.put("/api/admin/mcp-servers/1", json={"transport": "stdio"})
+    assert resp.status_code == 400
+
+
+async def test_update_endpoint_validates_auth(auth_client, monkeypatch):
+    """改为 header 鉴权却没给头名 → 400（按合并后的值校验）。"""
+    async def fake_get(session, endpoint_id):
+        return _endpoint()
+
+    monkeypatch.setattr(registry_mod.repo, "get_a2a_endpoint", fake_get)
+    resp = await auth_client.put(
+        "/api/admin/a2a-endpoints/1", json={"auth_type": "header", "token": "t"}
+    )
+    assert resp.status_code == 400
+
+
+async def test_update_mcp_server_validates_auth(auth_client, monkeypatch):
+    async def fake_get(session, server_id):
+        return _server()
+
+    monkeypatch.setattr(registry_mod.repo, "get_mcp_server", fake_get)
+    resp = await auth_client.put(
+        "/api/admin/mcp-servers/1", json={"auth_type": "query", "token": "t"}
+    )
     assert resp.status_code == 400
 
 

@@ -1,11 +1,12 @@
-"""MCP 客户端纯函数与 mcp_call 工具构造测试（不发起真实连接）。"""
+"""MCP 客户端纯函数、MCP 工具绑定与 A2A 工具构造测试（不发起真实连接）。"""
 
 from types import SimpleNamespace
 
 from a2a_gateway.graph import DEFAULT_SYSTEM_PROMPT, build_tools
 from a2a_gateway.mcp_client import connection_from_snapshot, format_tools_for_prompt
 from a2a_gateway.repository import mcp_server_snapshot
-from a2a_gateway.tools import make_mcp_call_tool
+from a2a_gateway.schemas import A2ATarget
+from a2a_gateway.tools import json_schema_to_model, make_a2a_tools, make_mcp_call_tool, make_mcp_tools
 
 
 def _server(**kw):
@@ -18,6 +19,9 @@ def _server(**kw):
         "command": "python",
         "args": ["-m", "server"],
         "env": {"K": "V"},
+        "token": "tok",
+        "auth_type": "bearer",
+        "auth_name": "",
         "enabled": True,
     }
     base.update(kw)
@@ -36,6 +40,9 @@ def test_mcp_server_snapshot_fields():
         "command": "python",
         "args": ["-m", "server"],
         "env": {"K": "V"},
+        "token": "tok",
+        "auth_type": "bearer",
+        "auth_name": "",
     }
 
 
@@ -50,15 +57,24 @@ def test_connection_from_snapshot_applies_defaults():
     assert conn.name == "X"
     assert conn.transport == "streamable_http"
     assert (conn.url, conn.command, conn.args, conn.env) == ("", "", [], {})
+    assert conn.auth_type == "bearer"
 
 
 def test_connection_from_snapshot_keeps_values():
     conn = connection_from_snapshot(
-        {"name": "X", "transport": "sse", "url": "http://m/sse", "env": {"A": "B"}}
+        {
+            "name": "X",
+            "transport": "sse",
+            "url": "http://m/sse",
+            "env": {"A": "B"},
+            "token": "t",
+            "auth_type": "header",
+            "auth_name": "X-Key",
+        }
     )
     assert conn.transport == "sse"
-    assert conn.url == "http://m/sse"
     assert conn.env == {"A": "B"}
+    assert (conn.token, conn.auth_type, conn.auth_name) == ("t", "header", "X-Key")
 
 
 # ---------------------------------------------------------------------------
@@ -66,9 +82,7 @@ def test_connection_from_snapshot_keeps_values():
 # ---------------------------------------------------------------------------
 def test_format_tools_for_prompt_lists_tools():
     out = format_tools_for_prompt("S", [{"name": "echo", "description": "回声工具"}])
-    assert "S" in out
-    assert "echo" in out
-    assert "回声工具" in out
+    assert "echo" in out and "回声工具" in out
 
 
 def test_format_tools_for_prompt_when_empty():
@@ -76,51 +90,163 @@ def test_format_tools_for_prompt_when_empty():
 
 
 # ---------------------------------------------------------------------------
-# mcp_call 工具
+# MCP 工具绑定（把服务上的每个工具绑成 Agent 可用工具）
 # ---------------------------------------------------------------------------
-def test_mcp_call_tool_description_lists_servers():
-    tool = make_mcp_call_tool(
-        [{"name": "S1", "transport": "streamable_http", "url": "http://m/mcp"}],
-        {"S1": [{"name": "echo", "description": "回声"}]},
+def test_json_schema_to_model_maps_types_and_required():
+    model = json_schema_to_model(
+        "t",
+        {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "文本"},
+                "n": {"type": "integer"},
+                "flag": {"type": "boolean"},
+            },
+            "required": ["text"],
+        },
     )
-    assert tool.name == "mcp_call"
-    assert "S1" in tool.description
-    assert "echo" in tool.description
+    fields = model.model_fields
+    assert fields["text"].annotation == str
+    assert fields["text"].is_required() is True
+    # 非必填项默认 None
+    assert fields["n"].default is None
+    assert fields["flag"].annotation == bool | None
 
 
-def test_mcp_call_tool_description_without_servers():
-    assert "未启用任何 MCP 服务" in make_mcp_call_tool([]).description
+def test_json_schema_to_model_falls_back_to_arguments():
+    """无 properties 时退化为单个 arguments 字段，保证工具仍可调用。"""
+    model = json_schema_to_model("t", {"type": "object"})
+    assert set(model.model_fields) == {"arguments"}
 
 
-def test_mcp_call_tool_args_schema():
-    tool = make_mcp_call_tool([{"name": "S1"}])
-    assert set(tool.args.keys()) == {"server", "tool", "arguments"}
+def test_make_mcp_tools_binds_each_tool():
+    tools = make_mcp_tools(
+        {"name": "Local MCP", "transport": "stdio", "command": "python"},
+        [
+            {"name": "echo", "description": "回声", "inputSchema": {"type": "object"}},
+            {
+                "name": "sum",
+                "description": "求和",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"a": {"type": "integer"}},
+                    "required": ["a"],
+                },
+            },
+        ],
+    )
+    assert [t.name for t in tools] == ["mcp_Local_MCP__echo", "mcp_Local_MCP__sum"]
+    # 描述里带上来源服务，便于模型理解
+    assert "回声" in tools[0].description and "Local MCP" in tools[0].description
+    assert set(tools[1].args.keys()) == {"a"}
+
+
+def test_make_mcp_tools_skips_unnamed_tools():
+    tools = make_mcp_tools({"name": "S"}, [{"name": "  "}, {"name": "ok"}])
+    assert [t.name for t in tools] == ["mcp_S__ok"]
+
+
+# ---------------------------------------------------------------------------
+# A2A 工具：单/多目标与描述注入
+# ---------------------------------------------------------------------------
+def test_make_a2a_tools_single_target_keeps_legacy_name():
+    tools, wrappers = make_a2a_tools(
+        [A2ATarget(url="http://h:9900/", token="t", name="Hermes", description="通用助手")]
+    )
+    assert [t.name for t in tools] == ["a2a_call"]
+    # 关键：描述必须进入工具说明，模型才能判断该不该调它
+    assert "通用助手" in tools[0].description
+    assert len(wrappers) == 1
+
+
+def test_make_a2a_tools_multiple_targets_are_distinct():
+    tools, wrappers = make_a2a_tools(
+        [
+            A2ATarget(url="http://a/", name="weather", description="擅长查天气"),
+            A2ATarget(url="http://b/", name="flight", description="擅长订机票"),
+        ]
+    )
+    assert [t.name for t in tools] == ["a2a_call__weather", "a2a_call__flight"]
+    assert "擅长查天气" in tools[0].description
+    assert "擅长订机票" in tools[1].description
+    # 描述必须各自独立，否则模型无法区分
+    assert "擅长订机票" not in tools[0].description
+    assert len(wrappers) == 2
+
+
+def test_make_a2a_tools_guards_name_collisions():
+    """中文名规整成 ASCII 后可能重名，必须用序号区分，否则工具会互相覆盖。"""
+    tools, _ = make_a2a_tools(
+        [
+            A2ATarget(url="http://a/", name="天气服务", description="查天气"),
+            A2ATarget(url="http://b/", name="机票服务", description="订机票"),
+        ]
+    )
+    assert len(tools) == 2
+    assert len({t.name for t in tools}) == 2
+
+
+def test_make_a2a_tools_ignores_empty_url():
+    tools, wrappers = make_a2a_tools([A2ATarget(url="  ", name="x")])
+    assert tools == [] and wrappers == []
+
+
+def test_make_a2a_tools_without_description_uses_default():
+    tools, _ = make_a2a_tools([A2ATarget(url="http://h/")])
+    assert "a2a_call" == tools[0].name
+    assert tools[0].description  # 仍有可用说明
 
 
 # ---------------------------------------------------------------------------
 # 图工具集
 # ---------------------------------------------------------------------------
-def test_build_tools_omits_mcp_when_not_selected(make_agent):
-    """未勾选 MCP 服务时不出现 mcp_call，避免给模型无意义的工具。"""
-    names = [t.name for t in build_tools(make_agent(), object())]
-    assert names == ["a2a_call"]
+def test_build_tools_without_a2a_or_mcp(make_agent):
+    assert build_tools(make_agent(), []) == []
 
 
-def test_build_tools_adds_mcp_when_selected(make_agent):
-    names = [
-        t.name
-        for t in build_tools(make_agent(), object(), mcp_servers=[{"name": "S1"}])
-    ]
-    assert names == ["a2a_call", "mcp_call"]
+def test_build_tools_binds_mcp_tools_when_index_available(make_agent):
+    tools = build_tools(
+        make_agent(),
+        [],
+        mcp_servers=[{"name": "S1"}],
+        mcp_tool_index={
+            "S1": [{"name": "echo", "description": "回声", "inputSchema": {"type": "object"}}]
+        },
+    )
+    assert [t.name for t in tools] == ["mcp_S1__echo"]
+
+
+def test_build_tools_falls_back_to_mcp_call_when_no_tools_probed(make_agent):
+    """服务不可达、拿不到工具清单时，退化为通用 mcp_call 保留可用能力。"""
+    tools = build_tools(make_agent(), [], mcp_servers=[{"name": "S1"}])
+    assert [t.name for t in tools] == ["mcp_call"]
+
+
+def test_build_tools_combines_a2a_optional_and_mcp(make_agent):
+    a2a_tools, _ = make_a2a_tools([A2ATarget(url="http://h/", name="H")])
+    tools = build_tools(
+        make_agent(enabled_tools=["web_search"]),
+        a2a_tools,
+        mcp_servers=[{"name": "S1"}],
+        mcp_tool_index={
+            "S1": [{"name": "echo", "description": "回声", "inputSchema": {"type": "object"}}]
+        },
+    )
+    assert [t.name for t in tools] == ["a2a_call", "web_search", "mcp_S1__echo"]
 
 
 def test_build_tools_ignores_reserved_core_tool_names(make_agent):
-    """a2a_call / mcp_call 由 build_tools 直接构造，enabled_tools 里出现也只构造一次。"""
+    """a2a_call / mcp_call 由本模块直接构造，enabled_tools 里出现也只构造一次。"""
     agent = make_agent(enabled_tools=["a2a_call", "mcp_call", "web_search"])
-    names = [t.name for t in build_tools(agent, object())]
-    assert names == ["a2a_call", "web_search"]
+    names = [t.name for t in build_tools(agent, [])]
+    assert names == ["web_search"]
 
 
-def test_default_prompt_mentions_mcp():
-    assert "mcp_call" in DEFAULT_SYSTEM_PROMPT
+def test_make_mcp_call_tool_args_schema():
+    tool = make_mcp_call_tool([{"name": "S1"}])
+    assert set(tool.args.keys()) == {"server", "tool", "arguments"}
+
+
+def test_default_prompt_mentions_selection_guidance():
     assert "a2a_call" in DEFAULT_SYSTEM_PROMPT
+    assert "MCP" in DEFAULT_SYSTEM_PROMPT

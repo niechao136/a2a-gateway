@@ -15,6 +15,7 @@ from .graph import build_graph
 from .mcp_client import connection_from_snapshot, list_tools
 from .models import AgentConfig
 from .schemas import A2ATarget
+from .tools import make_a2a_tools
 
 logger = logging.getLogger(__name__)
 _settings = get_settings()
@@ -23,8 +24,14 @@ _settings = get_settings()
 _checkpointer: AsyncPostgresSaver | None = None
 _checkpointer_cm = None  # _AsyncGeneratorContextManager
 
-# agent 图实例缓存：{(agent_id, updated_at_iso): (wrapper, graph)}
-_cache: dict[tuple[int, str], tuple[A2AClientWrapper, Any]] = {}
+# agent 图实例缓存：{(agent_id, updated_at_iso): (wrappers, graph)}
+# 一个 Agent 可能绑定多个 A2A 目标，因此缓存的是 wrapper 列表
+_cache: dict[tuple[int, str], tuple[list[A2AClientWrapper], Any]] = {}
+
+
+async def _close_wrappers(wrappers: list[A2AClientWrapper]) -> None:
+    for wrapper in wrappers:
+        await wrapper.close()
 
 
 async def get_checkpointer() -> AsyncPostgresSaver:
@@ -65,26 +72,26 @@ async def get_agent_instance(agent: AgentConfig) -> Any:
     key = (agent.id, agent.updated_at.isoformat() if agent.updated_at else "")
     if key in _cache:
         return _cache[key][1]
-    targets = agent.a2a_targets or []
-    target_data = targets[0] if targets else {"url": "", "token": ""}
-    wrapper = A2AClientWrapper(A2ATarget(**target_data))
+    # 每个 A2A 目标各一个工具（说明里带目标描述，便于模型选择）
+    targets = [A2ATarget(**t) for t in (agent.a2a_targets or [])]
+    a2a_tools, wrappers = make_a2a_tools(targets)
     # MCP 服务快照（由 repository 解析 mcp_server_ids 得到），无 DB 依赖
     mcp_servers = list(getattr(agent, "mcp_servers", None) or [])
     mcp_tool_index = await _probe_mcp_tools(mcp_servers)
     checkpointer = await get_checkpointer()
     graph = build_graph(
         agent,
-        wrapper,
+        a2a_tools,
         checkpointer=checkpointer,
         mcp_servers=mcp_servers,
         mcp_tool_index=mcp_tool_index,
     )
-    _cache[key] = (wrapper, graph)
+    _cache[key] = (wrappers, graph)
     # 清理同 id 但旧 updated_at 的缓存条目
     stale = [k for k in _cache if k[0] == agent.id and k != key]
     for k in stale:
-        old_wrapper, _ = _cache.pop(k)
-        await old_wrapper.close()
+        old_wrappers, _ = _cache.pop(k)
+        await _close_wrappers(old_wrappers)
         logger.info("Agent %s 配置变更，已失效旧缓存", agent.slug)
     return graph
 
@@ -93,14 +100,14 @@ async def invalidate_agent(agent_id: int) -> None:
     """显式失效某个 Agent 的缓存（管理中心修改配置后调用）。"""
     stale = [k for k in _cache if k[0] == agent_id]
     for k in stale:
-        wrapper, _ = _cache.pop(k)
-        await wrapper.close()
+        wrappers, _ = _cache.pop(k)
+        await _close_wrappers(wrappers)
 
 
 async def close_all() -> None:
     """关闭所有缓存的 wrapper 与 checkpointer（应用关停时调用）。"""
-    for wrapper, _ in list(_cache.values()):
-        await wrapper.close()
+    for wrappers, _ in list(_cache.values()):
+        await _close_wrappers(wrappers)
     _cache.clear()
     global _checkpointer, _checkpointer_cm
     if _checkpointer_cm is not None:

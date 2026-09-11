@@ -84,6 +84,10 @@ class A2AEndpoint(Base, BaseMixin):
     url: Mapped[str] = mapped_column(String(512))
     token: Mapped[str] = mapped_column(String(512), default="")
     description: Mapped[str] = mapped_column(Text, default="")
+    # 鉴权方式：none / bearer / header / query / basic（密钥统一放在 token 字段）
+    auth_type: Mapped[str] = mapped_column(String(32), default="bearer")
+    # header 模式为请求头名、query 模式为查询参数名、basic 模式为用户名
+    auth_name: Mapped[str] = mapped_column(String(128), default="")
     # 临时停用时不再参与解析（保留 Agent 上的勾选，重新启用即恢复）
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -107,6 +111,11 @@ class McpServer(Base, BaseMixin):
     command: Mapped[str] = mapped_column(String(512), default="")
     args: Mapped[list] = mapped_column(JSONB, default=list)
     env: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # 验证凭据：远程传输（sse / streamable_http）走请求头或查询参数；
+    # stdio 传输无法带 HTTP 头，改为注入环境变量 MCP_AUTH_TOKEN 供子进程读取
+    token: Mapped[str] = mapped_column(String(512), default="")
+    auth_type: Mapped[str] = mapped_column(String(32), default="bearer")
+    auth_name: Mapped[str] = mapped_column(String(128), default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 

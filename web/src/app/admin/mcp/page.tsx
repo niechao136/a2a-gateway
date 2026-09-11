@@ -29,6 +29,7 @@ import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import BoltIcon from "@mui/icons-material/Bolt";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import {
+  AUTH_TYPE_LABELS,
   ApiError,
   MCP_TRANSPORT_LABELS,
   McpServer,
@@ -176,6 +177,7 @@ export default function McpAdminPage() {
               <TableCell>名称</TableCell>
               <TableCell>传输方式</TableCell>
               <TableCell>连接信息</TableCell>
+              <TableCell>鉴权</TableCell>
               <TableCell>状态</TableCell>
               <TableCell>更新时间</TableCell>
               <TableCell align="right">操作</TableCell>
@@ -184,13 +186,13 @@ export default function McpAdminPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.secondary" }}>
                   暂无 MCP 服务，点击右上角「新建服务」添加
                 </TableCell>
               </TableRow>
@@ -219,6 +221,11 @@ export default function McpAdminPage() {
                     <MonoText variant="caption" color="text.secondary">
                       {connectionText(item)}
                     </MonoText>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption" color="text.secondary">
+                      {AUTH_TYPE_LABELS[item.auth_type] ?? item.auth_type}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
