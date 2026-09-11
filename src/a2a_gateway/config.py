@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, alias="APP_PORT")
     frontend_origin: str = Field(default="http://localhost:3000", alias="FRONTEND_ORIGIN")
 
+    # 告警（可选）：配置后把 A2A 调用失败 / Agent 加载失败等推送到 Webhook
+    alert_webhook_url: str = Field(default="", alias="ALERT_WEBHOOK_URL")
+    alert_webhook_token: str = Field(default="", alias="ALERT_WEBHOOK_TOKEN")
+
     @model_validator(mode="after")
     def _fill_db_urls(self) -> "Settings":
         """未显式提供完整连接串时，用组件式配置拼接。"""
@@ -102,6 +106,18 @@ class Settings(BaseSettings):
     def sync_db_url(self) -> str:
         """psycopg 同步连接串（建表 / Checkpointer 用）。"""
         return self.checkpoint_db_url
+
+    @property
+    def migration_db_url(self) -> str:
+        """Alembic 用的同步连接串（SQLAlchemy 的 psycopg v3 方言）。
+
+        checkpoint_db_url 默认是裸 `postgresql://`（供 psycopg3 直连），
+        而 SQLAlchemy 需要 `postgresql+psycopg://` 才会选用 psycopg v3 驱动。
+        """
+        url = self.checkpoint_db_url
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return url
 
 
 @lru_cache

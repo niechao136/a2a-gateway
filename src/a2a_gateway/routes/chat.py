@@ -19,6 +19,7 @@ from ..agent_factory import get_agent_instance, get_checkpointer
 from ..database import get_session
 from ..deps import new_thread_id
 from ..models import AgentConfig, AgentStatus
+from ..notifier import notify_alert
 from ..repository import get_agent_by_slug
 from ..schemas import ChatRequest
 
@@ -42,8 +43,9 @@ async def _stream_chat(agent: AgentConfig, message: str, thread_id: str):
     """生成 SSE 事件流。"""
     try:
         graph = await get_agent_instance(agent)
-    except Exception:
+    except Exception as exc:
         logger.exception("Agent 实例构建失败 slug=%s", agent.slug)
+        await notify_alert("Agent 加载失败", f"slug={agent.slug} error={exc}")
         yield {"event": "error", "data": json.dumps({"detail": "Agent 加载失败"}, ensure_ascii=False)}
         return
 
@@ -81,8 +83,9 @@ async def _stream_chat(agent: AgentConfig, message: str, thread_id: str):
                     ),
                 }
         yield {"event": "done", "data": json.dumps({"thread_id": thread_id}, ensure_ascii=False)}
-    except Exception:
+    except Exception as exc:
         logger.exception("对话流式失败 slug=%s thread=%s", agent.slug, thread_id)
+        await notify_alert("对话流式失败", f"slug={agent.slug} thread={thread_id} error={exc}")
         yield {
             "event": "error",
             "data": json.dumps(

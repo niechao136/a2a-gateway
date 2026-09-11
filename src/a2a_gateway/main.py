@@ -7,6 +7,7 @@
 关停时关闭 Agent 工厂缓存的连接。
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -17,6 +18,7 @@ from fastapi.responses import JSONResponse
 from .agent_factory import close_all
 from .config import get_settings
 from .database import async_engine
+from .migrations import run_migrations
 from .models import Base
 from .repository import ensure_default_admin, ensure_default_agent
 from .routes import admin, chat
@@ -32,9 +34,13 @@ _settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # 启动：执行 Alembic 迁移（历史库会自动 stamp 基线接管）
+    try:
+        await asyncio.to_thread(run_migrations)
+    except Exception:
+        logger.exception("Alembic 迁移失败，回退到 create_all（仅建表，不做版本管理）")
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     logger.info("数据库表已就绪")
     async with AsyncSessionLocal() as session:
         await ensure_default_agent(session)

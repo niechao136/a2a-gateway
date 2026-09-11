@@ -15,6 +15,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
+# 数据库迁移脚本（容器内可直接执行 `alembic upgrade head` / `alembic current`）
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
+
 # 安装项目（包含全部运行时依赖），装完即清理编译工具
 RUN uv pip install --system --no-cache . \
     && apt-get purge -y gcc && apt-get autoremove -y

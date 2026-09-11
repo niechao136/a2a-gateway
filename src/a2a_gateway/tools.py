@@ -10,6 +10,7 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from .a2a_client import A2AClientWrapper, A2ATargetError
+from .notifier import notify_alert
 
 
 class A2ACallArgs(BaseModel):
@@ -26,6 +27,10 @@ def make_a2a_tool(wrapper: A2AClientWrapper) -> StructuredTool:
             async for chunk in wrapper.stream_message(message):
                 chunks.append(chunk)
         except A2ATargetError as e:
+            await notify_alert(
+                "A2A 调用失败",
+                f"target={wrapper.target.url} kind={e.kind} error={e.detail}",
+            )
             return f"A2A 调用失败：{e}"
         return "".join(chunks) if chunks else "（A2A 目标未返回内容）"
 

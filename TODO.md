@@ -7,8 +7,8 @@
 > - ✅ **Phase 3**（前端对话界面：动态路由/MUI 对话组件/SSE 客户端/404+错误态/匿名 session/响应式/**对话历史侧边栏+多会话管理**）
 > - ✅ **Phase 4**（前端管理中心：登录/Agent 列表/创建编辑表单/A2A 连通性测试/发布下线/工具勾选/测试对话/slug 校验）
 > - ✅ **Phase 5**（A2A Client 封装/连通性测试/Hermes 全链路联调均已完成；含 Gemini 3 thought_signature 兼容层与瞬时错误自动重试）
-> - 🔄 **Phase 6**（前后端容器化 + nginx 统一入口 + 环境变量清单已完成；Alembic/监控/防火墙待做）
-> - ⏳ **下一步**：Phase 6（Alembic 迁移 + 监控告警）→ Phase 7（测试）
+> - ✅ **Phase 6**（容器化 + nginx 统一入口 + 环境变量清单 + Alembic 迁移 + 可选告警 Webhook 已完成；安全组/防火墙清单待补）
+> - ⏳ **下一步**：Phase 7（后端单元/集成测试、前端组件测试、端到端测试）
 > - ⚠️ **注意**：LLM 使用 Gemini 3 系列（OpenAI 兼容端点）时，函数调用必须回传 `thought_signature`，否则第二轮报 400；已在 `src/a2a_gateway/llm.py` 内置兼容适配层（入站捕获 + 出站回填），对其它 OpenAI 兼容端点透明。
 > - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
 > - 前端启动：`cd web && npm run dev` → `http://localhost:3000`
@@ -163,10 +163,10 @@
 
 - [x] 后端容器化（Dockerfile）✅ 多阶段构建 + 镜像内置健康检查（`Dockerfile`）
 - [x] 前端容器化 / 静态部署方案确定 ✅ 自托管 Next.js standalone（`web/Dockerfile`）+ nginx 统一反向代理
-- [ ] 数据库迁移脚本（Alembic）
-- [x] 环境变量清单整理 ✅ `.env.example` + `docker-compose.yml`（组件式 `POSTGRES_*`、`LLM_*`、`HERMES_A2A_*`、`JWT_*`/`ADMIN_*`、`GATEWAY_PORT`）
-- [ ] 日志与监控接入（至少保证 A2A 调用失败、Agent 加载失败有告警）—— 已有分级日志与错误三分类，告警接入待做
-- [ ] 云服务器安全组/防火墙规则梳理 —— 当前对外仅暴露 nginx `10099`，Postgres 不对外
+- [x] 数据库迁移脚本（Alembic）✅ `alembic.ini` + `alembic/env.py` + 基线迁移 `0001_initial`；应用启动时自动执行 `upgrade head`，并**自动接管** create_all 建出的历史库（stamp 基线），迁移失败回退 create_all 保证可用性
+- [x] 环境变量清单整理 ✅ `.env.example` + `docker-compose.yml`（组件式 `POSTGRES_*`、`LLM_*`、`HERMES_A2A_*`、`JWT_*`/`ADMIN_*`、`GATEWAY_PORT`、`ALERT_WEBHOOK_*`）
+- [x] 日志与监控接入（至少保证 A2A 调用失败、Agent 加载失败有告警）✅ 分级日志 + 错误三分类 + **可选告警 Webhook**（`ALERT_WEBHOOK_URL`，未配置时退化为 ERROR 日志）；覆盖 A2A 调用失败 / Agent 加载失败 / 对话流式失败
+- [ ] 云服务器安全组/防火墙规则梳理 —— 当前对外仅暴露 nginx `10099`，Postgres 不对外（正式安全组清单待补）
 
 ---
 
