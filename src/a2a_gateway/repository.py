@@ -8,6 +8,8 @@
 - 这样运行时（agent_factory）无需访问数据库即可构造工具，且注册表变更后统一刷新
 """
 
+from typing import Any
+
 from urllib.parse import urlparse
 
 from sqlalchemy import select
@@ -34,7 +36,7 @@ DEFAULT_ENDPOINT_NAME = "Hermes（默认）"
 # ---------------------------------------------------------------------------
 # 绑定解析
 # ---------------------------------------------------------------------------
-def a2a_target_snapshot(endpoint: A2AEndpoint) -> dict:
+def a2a_target_snapshot(endpoint: A2AEndpoint) -> dict[str, str]:
     """A2A 目标快照：运行时构造工具所需的全部信息。
 
     description 会写进工具说明，让大模型知道「该目标擅长什么」，
@@ -50,7 +52,7 @@ def a2a_target_snapshot(endpoint: A2AEndpoint) -> dict:
     }
 
 
-async def resolve_a2a_targets(session: AsyncSession, ids: list[int]) -> list[dict]:
+async def resolve_a2a_targets(session: AsyncSession, ids: list[int]) -> list[dict[str, str]]:
     """按勾选顺序解析 A2A 目标；已删除或被停用的条目自动跳过。"""
     if not ids:
         return []
@@ -58,7 +60,7 @@ async def resolve_a2a_targets(session: AsyncSession, ids: list[int]) -> list[dic
         await session.execute(select(A2AEndpoint).where(A2AEndpoint.id.in_(ids)))
     ).scalars().all()
     by_id = {row.id: row for row in rows}
-    targets: list[dict] = []
+    targets: list[dict[str, str]] = []
     for endpoint_id in ids:
         endpoint = by_id.get(endpoint_id)
         if endpoint is None or not endpoint.enabled:
@@ -78,7 +80,7 @@ async def resolve_mcp_servers(session: AsyncSession, ids: list[int]) -> list[Mcp
     return [by_id[i] for i in ids if by_id.get(i) is not None and by_id[i].enabled]
 
 
-def mcp_server_snapshot(server: McpServer) -> dict:
+def mcp_server_snapshot(server: McpServer) -> dict[str, Any]:
     """把 MCP 服务记录压成运行时快照（供 agent_factory 构造工具）。"""
     return {
         "name": server.name,
@@ -94,7 +96,7 @@ def mcp_server_snapshot(server: McpServer) -> dict:
     }
 
 
-async def resolve_mcp_snapshot(session: AsyncSession, ids: list[int]) -> list[dict]:
+async def resolve_mcp_snapshot(session: AsyncSession, ids: list[int]) -> list[dict[str, Any]]:
     return [mcp_server_snapshot(s) for s in await resolve_mcp_servers(session, ids)]
 
 
@@ -396,7 +398,7 @@ async def _unique_endpoint_name(session: AsyncSession, base: str) -> str:
 
 
 async def _find_or_create_endpoint_for_target(
-    session: AsyncSession, target: dict
+    session: AsyncSession, target: dict[str, Any]
 ) -> A2AEndpoint | None:
     """为历史 Agent 内嵌的 url/token 在注册表中补一条记录。"""
     url = (target or {}).get("url") or ""

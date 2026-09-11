@@ -8,6 +8,7 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Enum, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -44,15 +45,15 @@ class AgentConfig(Base, BaseMixin):
     description: Mapped[str] = mapped_column(Text, default="")
     # 绑定的 A2A 目标列表：[{"url": "...", "token": "..."}]
     # 由 a2a_target_ids 解析而来，是运行时的实际绑定（a2a_client 只读这里）
-    a2a_targets: Mapped[list] = mapped_column(JSONB, default=list)
+    a2a_targets: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     # 在「A2A 管理」中勾选的 A2A 目标 id 列表（Agent 侧只做选择，不再手填 url/token）
-    a2a_target_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    a2a_target_ids: Mapped[list[int]] = mapped_column(JSONB, default=list)
     # 可选覆盖 system prompt
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 在「MCP 管理」中勾选的 MCP 服务 id 列表
-    mcp_server_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    mcp_server_ids: Mapped[list[int]] = mapped_column(JSONB, default=list)
     # 由 mcp_server_ids 解析而来的连接快照，供运行时构造 MCP 工具（不对外暴露）
-    mcp_servers: Mapped[list] = mapped_column(JSONB, default=list)
+    mcp_servers: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     status: Mapped[AgentStatus] = mapped_column(
         Enum(
             AgentStatus,
@@ -107,8 +108,8 @@ class McpServer(Base, BaseMixin):
     transport: Mapped[str] = mapped_column(String(32), default="streamable_http")
     url: Mapped[str] = mapped_column(String(512), default="")
     command: Mapped[str] = mapped_column(String(512), default="")
-    args: Mapped[list] = mapped_column(JSONB, default=list)
-    env: Mapped[dict] = mapped_column(JSONB, default=dict)
+    args: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    env: Mapped[dict[str, str]] = mapped_column(JSONB, default=dict)
     # 验证凭据：远程传输（sse / streamable_http）走请求头或查询参数；
     # stdio 传输无法带 HTTP 头，改为注入环境变量 MCP_AUTH_TOKEN 供子进程读取
     token: Mapped[str] = mapped_column(String(512), default="")

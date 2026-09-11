@@ -94,7 +94,7 @@ async def _open_session(conn: McpConnection):
                 yield session
     else:
         # streamable_http 不接受 headers，只能自建带鉴权头的客户端
-        http_client = _httpx.AsyncClient(headers=headers or None, timeout=_httpx.Timeout(60.0))
+        http_client: Any = _httpx.AsyncClient(headers=headers or None, timeout=60.0)
         try:
             async with streamable_http_client(url, http_client=http_client) as streams:
                 # mcp 2.x 只 yield (read, write)，早期版本还会多 yield 一个 get_session_id；
@@ -161,7 +161,7 @@ async def test_connection(conn: McpConnection, timeout: float = PROBE_TIMEOUT) -
 
 async def list_tools(
     conn: McpConnection, timeout: float = PROBE_TIMEOUT
-) -> tuple[bool, list[dict], str]:
+) -> tuple[bool, list[dict[str, Any]], str]:
     """列出工具。返回 (是否成功, [{"name","description"}], 说明)。"""
     try:
         async with asyncio.timeout(timeout):
@@ -207,7 +207,7 @@ async def call_tool(
         return f"MCP 调用失败（{conn.name}·{tool_name}）：{_format_error(exc)}"
 
 
-def format_tools_for_prompt(server_name: str, tools: list[dict]) -> str:
+def format_tools_for_prompt(server_name: str, tools: list[dict[str, Any]]) -> str:
     """把某个 MCP 服务的工具列表渲染进 mcp_call 工具的说明里。"""
     if not tools:
         return f"- {server_name}：暂无可用工具（服务可能未启动或工具列表获取失败）"
