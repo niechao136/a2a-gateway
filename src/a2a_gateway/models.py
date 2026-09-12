@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -128,13 +128,16 @@ class ApiKey(Base, BaseMixin):
     """
 
     __tablename__ = "api_keys"
+    # 名称在同一 Agent 内唯一（不同 Agent 可同名，如各自的「默认 Key」）
+    __table_args__ = (
+        UniqueConstraint("agent_id", "name", name="uq_api_keys_agent_name"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     agent_id: Mapped[int] = mapped_column(
         ForeignKey("agent_configs.id", ondelete="CASCADE"), index=True
     )
-    # 名称在同一 Agent 内唯一
-    name: Mapped[str] = mapped_column(String(128), index=True)
+    name: Mapped[str] = mapped_column(String(128))
     key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     # 默认 Key 不可删除
     is_default: Mapped[bool] = mapped_column(default=False)
