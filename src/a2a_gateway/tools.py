@@ -153,6 +153,36 @@ def _unwrap_arguments(kwargs: dict[str, Any], model: type[BaseModel]) -> dict[st
     return {key: value for key, value in kwargs.items() if value is not None}
 
 
+def _build_mcp_tool(
+    full_name: str,
+    description: str,
+    args_model: type[BaseModel],
+    server: dict[str, Any],
+    tool_name: str,
+) -> StructuredTool:
+    """为单个 MCP 工具构造 StructuredTool。
+
+    必须经由工厂函数固化 ``tool_name`` / ``args_model``：若在循环内直接定义
+    闭包，Python 的晚绑定会让所有工具都指向最后一个 ``tool_name``，
+    导致调用 A 工具时实际执行了 B 工具。
+    """
+
+    async def _acall(**kwargs: Any) -> str:
+        arguments = _unwrap_arguments(kwargs, args_model)
+        return await mcp_invoke(connection_from_snapshot(server), tool_name, arguments)
+
+    def _call(**kwargs: Any) -> str:
+        raise RuntimeError("MCP 工具仅支持异步调用")
+
+    return StructuredTool(
+        name=full_name,
+        description=description,
+        coroutine=_acall,
+        func=_call,
+        args_schema=args_model,
+    )
+
+
 def make_mcp_tools(
     server: dict[str, Any], tools: list[dict[str, Any]]
 ) -> list[StructuredTool]:
@@ -181,23 +211,7 @@ def make_mcp_tools(
         base_desc = str(tool.get("description") or "").strip() or f"MCP 工具 {tool_name}"
         description = f"{base_desc}（来自 MCP 服务 {server_name}）"
         args_model = json_schema_to_model(full_name, tool.get("inputSchema"))
-
-        async def _acall(**kwargs: Any) -> str:
-            arguments = _unwrap_arguments(kwargs, args_model)
-            return await mcp_invoke(connection_from_snapshot(server), tool_name, arguments)
-
-        def _call(**kwargs: Any) -> str:
-            raise RuntimeError("MCP 工具仅支持异步调用")
-
-        bound.append(
-            StructuredTool(
-                name=full_name,
-                description=description,
-                coroutine=_acall,
-                func=_call,
-                args_schema=args_model,
-            )
-        )
+        bound.append(_build_mcp_tool(full_name, description, args_model, server, tool_name))
     return bound
 
 
