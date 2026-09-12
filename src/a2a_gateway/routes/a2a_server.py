@@ -177,6 +177,17 @@ async def get_agent_card_default(
     return JSONResponse(agent_card_to_dict(card))
 
 
+@router.get("/a2a/.well-known/agent-card.json")
+async def get_agent_card_well_known_default(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """默认 Agent（slug=/）的 well-known Agent Card。"""
+    agent = await _resolve_published_agent(session, "/")
+    card = build_agent_card(agent, _public_base_url(request))
+    return JSONResponse(agent_card_to_dict(card))
+
+
 @router.get("/a2a/{slug}/.well-known/agent-card.json")
 async def get_agent_card_well_known(
     slug: str,
