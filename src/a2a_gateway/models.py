@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -120,16 +120,21 @@ class McpServer(Base, BaseMixin):
 
 
 class ApiKey(Base, BaseMixin):
-    """API Key（对外提供 A2A 服务时的调用凭据）。
+    """API Key（某个 Agent 对外提供 A2A 服务时的调用凭据）。
 
-    - 启动时自动生成一个默认 Key（is_default=True，不可删除，防止把自己锁在门外）
-    - 其余 Key 可在「API Key 管理」中按需新增 / 删除
+    - 每个 Agent 独立管理自己的 Key：创建 Agent 时自动生成默认 Key
+      （is_default=True，不可删除），其余 Key 在 Agent 编辑页按需新增 / 删除
+    - 对外 A2A 调用 /a2a/{slug} 时，Key 必须属于该 Agent
     """
 
     __tablename__ = "api_keys"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    agent_id: Mapped[int] = mapped_column(
+        ForeignKey("agent_configs.id", ondelete="CASCADE"), index=True
+    )
+    # 名称在同一 Agent 内唯一
+    name: Mapped[str] = mapped_column(String(128), index=True)
     key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     # 默认 Key 不可删除
     is_default: Mapped[bool] = mapped_column(default=False)

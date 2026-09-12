@@ -22,8 +22,8 @@ from ..repository import (
     get_agent_by_id,
     get_agent_by_slug,
     get_api_key,
+    list_agent_api_keys as _list_agent_api_keys,
     list_agents,
-    list_api_keys,
     set_agent_status,
     update_agent,
 )
@@ -45,7 +45,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # 禁止自定义 Agent 使用的保留 slug
-RESERVED_SLUGS = {"/", ""}
+# - "/" 与 "" 为默认 Agent 保留
+# - "a2a" 为 A2A 对外服务地址前缀（/a2a/{slug}），避免冲突
+RESERVED_SLUGS = {"/", "", "a2a"}
 
 
 @router.post("/login", response_model=Token)
@@ -81,7 +83,7 @@ async def create_new_agent(
     _: AdminUser = Depends(get_current_admin),
 ):
     if data.slug in RESERVED_SLUGS:
-        raise HTTPException(400, "slug '/' 为默认 Agent 保留，禁止使用")
+        raise HTTPException(400, "slug 为系统保留（'/' 为默认 Agent，'a2a' 为 A2A 服务地址前缀）")
     existing = await get_agent_by_slug(session, data.slug)
     if existing is not None:
         raise HTTPException(409, f"slug '{data.slug}' 已被占用")
@@ -184,38 +186,51 @@ async def test_a2a_connection(
 
 
 # ---------------------------------------------------------------------------
-# API Key 管理（对外 A2A 服务调用凭据）
+# API Key 管理（每个 Agent 独立配置的对外 A2A 调用凭据）
 # ---------------------------------------------------------------------------
-@router.get("/api-keys", response_model=list[ApiKeyOut])
-async def list_all_api_keys(
+async def _get_agent_or_404(session: AsyncSession, agent_id: int):
+    agent = await get_agent_by_id(session, agent_id)
+    if agent is None:
+        raise HTTPException(404, "Agent 不存在")
+    return agent
+
+
+@router.get("/agents/{agent_id}/api-keys", response_model=list[ApiKeyOut])
+async def list_agent_api_keys(
+    agent_id: int,
     session: AsyncSession = Depends(get_session),
     _: AdminUser = Depends(get_current_admin),
 ):
-    return await list_api_keys(session)
+    await _get_agent_or_404(session, agent_id)
+    return await _list_agent_api_keys(session, agent_id)
 
 
-@router.post("/api-keys", response_model=ApiKeyOut, status_code=201)
-async def create_new_api_key(
+@router.post("/agents/{agent_id}/api-keys", response_model=ApiKeyOut, status_code=201)
+async def create_agent_api_key(
+    agent_id: int,
     data: ApiKeyCreate,
     session: AsyncSession = Depends(get_session),
     _: AdminUser = Depends(get_current_admin),
 ):
-    from ..repository import get_api_key_by_name
+    agent = await _get_agent_or_404(session, agent_id)
+    existing = [
+        k for k in await _list_agent_api_keys(session, agent_id) if k.name == data.name
+    ]
+    if existing:
+        raise HTTPException(409, f"该 Agent 下已存在名为 '{data.name}' 的 Key")
+    return await create_api_key(session, agent, data)
 
-    existing = await get_api_key_by_name(session, data.name)
-    if existing is not None:
-        raise HTTPException(409, f"名称 '{data.name}' 已被占用")
-    return await create_api_key(session, data)
 
-
-@router.delete("/api-keys/{key_id}", status_code=204)
-async def delete_existing_api_key(
+@router.delete("/agents/{agent_id}/api-keys/{key_id}", status_code=204)
+async def delete_agent_api_key(
+    agent_id: int,
     key_id: int,
     session: AsyncSession = Depends(get_session),
     _: AdminUser = Depends(get_current_admin),
 ):
+    await _get_agent_or_404(session, agent_id)
     api_key = await get_api_key(session, key_id)
-    if api_key is None:
+    if api_key is None or api_key.agent_id != agent_id:
         raise HTTPException(404, "API Key 不存在")
     if api_key.is_default:
         raise HTTPException(400, "默认 Key 不可删除")

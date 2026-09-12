@@ -60,7 +60,7 @@ from a2a.utils.errors import TaskNotFoundError
 
 from ..agent_factory import get_agent_instance
 from ..database import get_session
-from ..models import AgentConfig, AgentStatus, ApiKey
+from ..models import AgentConfig, AgentStatus
 from ..repository import get_agent_by_slug, get_api_key_by_key
 
 logger = logging.getLogger(__name__)
@@ -93,26 +93,30 @@ def _normalize_slug(slug: str | None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 鉴权：API Key
+# 鉴权：API Key（每个 Agent 独立配置）
 # ---------------------------------------------------------------------------
-async def require_api_key(
+async def validate_api_key(
     request: Request,
-    session: AsyncSession = Depends(get_session),
-) -> ApiKey:
-    """校验 X-Api-Key / Bearer 凭据，返回对应 ApiKey 记录。"""
+    session: AsyncSession,
+    agent: AgentConfig,
+) -> None:
+    """校验 X-Api-Key / Bearer 凭据；Key 必须属于被调用的 Agent 且已启用。"""
     key = (request.headers.get("x-api-key") or "").strip()
     if not key:
         auth = request.headers.get("authorization") or ""
         if auth.lower().startswith("bearer "):
             key = auth[7:].strip()
     api_key = await get_api_key_by_key(session, key)
-    if api_key is None or not api_key.enabled:
+    if (
+        api_key is None
+        or not api_key.enabled
+        or api_key.agent_id != agent.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="无效或已停用的 API Key",
+            detail="无效、已停用或不属于该 Agent 的 API Key",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return api_key
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +227,6 @@ def _rpc_error(request_id: Any, error: Any) -> JSONResponse:
 async def a2a_rpc_default(
     request: Request,
     session: AsyncSession = Depends(get_session),
-    _: ApiKey = Depends(require_api_key),
 ):
     """默认 Agent 的 A2A JSON-RPC 入口。"""
     return await a2a_rpc("/", request, session)
@@ -234,10 +237,10 @@ async def a2a_rpc(
     slug: str,
     request: Request,
     session: AsyncSession = Depends(get_session),
-    _: ApiKey = Depends(require_api_key),
 ):
-    """A2A JSON-RPC 协议入口（API Key 鉴权）。"""
+    """A2A JSON-RPC 协议入口（该 Agent 自己的 API Key 鉴权）。"""
     agent = await _resolve_published_agent(session, slug)
+    await validate_api_key(request, session, agent)
     try:
         body = await request.json()
     except Exception:

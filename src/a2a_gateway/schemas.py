@@ -204,6 +204,7 @@ class ApiKeyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    agent_id: int
     name: str
     key: str
     is_default: bool

@@ -142,6 +142,8 @@ async def create_agent(session: AsyncSession, data: AgentCreate) -> AgentConfig:
     session.add(agent)
     await session.commit()
     await session.refresh(agent)
+    # 每个 Agent 创建时自动生成默认 API Key（对外 A2A 调用凭据）
+    await ensure_agent_default_api_key(session, agent)
     return agent
 
 
@@ -188,6 +190,7 @@ async def update_agent(
 
 
 async def delete_agent(session: AsyncSession, agent: AgentConfig) -> None:
+    await delete_agent_api_keys(session, agent.id)
     await session.delete(agent)
     await session.commit()
 
@@ -395,8 +398,11 @@ def generate_api_key() -> str:
     return f"a2a-{secrets.token_urlsafe(24)}"
 
 
-async def list_api_keys(session: AsyncSession) -> list[ApiKey]:
-    result = await session.execute(select(ApiKey).order_by(ApiKey.id))
+async def list_agent_api_keys(session: AsyncSession, agent_id: int) -> list[ApiKey]:
+    """列出某个 Agent 的全部 API Key。"""
+    result = await session.execute(
+        select(ApiKey).where(ApiKey.agent_id == agent_id).order_by(ApiKey.id)
+    )
     return list(result.scalars().all())
 
 
@@ -412,13 +418,15 @@ async def get_api_key_by_key(session: AsyncSession, key: str) -> ApiKey | None:
     return result.scalar_one_or_none()
 
 
-async def get_api_key_by_name(session: AsyncSession, name: str) -> ApiKey | None:
-    result = await session.execute(select(ApiKey).where(ApiKey.name == name))
-    return result.scalar_one_or_none()
-
-
-async def create_api_key(session: AsyncSession, data: ApiKeyCreate) -> ApiKey:
-    api_key = ApiKey(name=data.name, key=generate_api_key(), enabled=True)
+async def create_api_key(
+    session: AsyncSession, agent: AgentConfig, data: ApiKeyCreate
+) -> ApiKey:
+    api_key = ApiKey(
+        agent_id=agent.id,
+        name=data.name,
+        key=generate_api_key(),
+        enabled=True,
+    )
     session.add(api_key)
     await session.commit()
     await session.refresh(api_key)
@@ -430,12 +438,16 @@ async def delete_api_key(session: AsyncSession, api_key: ApiKey) -> None:
     await session.commit()
 
 
-async def ensure_default_api_key(session: AsyncSession) -> ApiKey:
-    """确保存在默认 API Key（首个启动时自动生成；后续启动幂等返回）。"""
-    existing = await get_api_key_by_name(session, DEFAULT_API_KEY_NAME)
+async def ensure_agent_default_api_key(session: AsyncSession, agent: AgentConfig) -> ApiKey:
+    """确保该 Agent 存在默认 API Key（首个启动时自动生成；后续启动幂等返回）。"""
+    result = await session.execute(
+        select(ApiKey).where(ApiKey.agent_id == agent.id, ApiKey.is_default.is_(True))
+    )
+    existing = result.scalar_one_or_none()
     if existing is not None:
         return existing
     api_key = ApiKey(
+        agent_id=agent.id,
         name=DEFAULT_API_KEY_NAME,
         key=generate_api_key(),
         is_default=True,
@@ -444,8 +456,23 @@ async def ensure_default_api_key(session: AsyncSession) -> ApiKey:
     session.add(api_key)
     await session.commit()
     await session.refresh(api_key)
-    logger.info("已生成默认 API Key：%s", api_key.key)
+    logger.info("已为 Agent %s 生成默认 API Key：%s", agent.slug, api_key.key)
     return api_key
+
+
+async def ensure_all_agent_api_keys(session: AsyncSession) -> None:
+    """应用启动时为每个尚无默认 Key 的 Agent 补齐（含历史 Agent 升级）。"""
+    agents = await list_agents(session)
+    for agent in agents:
+        await ensure_agent_default_api_key(session, agent)
+
+
+async def delete_agent_api_keys(session: AsyncSession, agent_id: int) -> None:
+    """删除 Agent 的全部 API Key（删除 Agent 时调用）。"""
+    result = await session.execute(select(ApiKey).where(ApiKey.agent_id == agent_id))
+    for api_key in result.scalars().all():
+        await session.delete(api_key)
+    await session.commit()
 
 
 # ---------------------------------------------------------------------------

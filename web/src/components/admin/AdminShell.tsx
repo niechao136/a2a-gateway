@@ -25,7 +25,6 @@ import MenuIcon from "@mui/icons-material/Menu";
 import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
-import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import { hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
 import { useColorMode } from "@/components/ThemeRegistry";
@@ -55,12 +54,6 @@ const NAV_ITEMS = [
     href: "/admin/mcp",
     icon: <ExtensionOutlinedIcon fontSize="small" />,
     isActive: (pathname: string) => pathname.startsWith("/admin/mcp"),
-  },
-  {
-    label: "API Key 管理",
-    href: "/admin/apikeys",
-    icon: <KeyOutlinedIcon fontSize="small" />,
-    isActive: (pathname: string) => pathname.startsWith("/admin/apikeys"),
   },
 ];
 

@@ -62,6 +62,7 @@ def make_api_key():
     def _make(**overrides):
         base = {
             "id": 1,
+            "agent_id": 1,
             "name": "默认 Key",
             "key": "a2a-test-key",
             "is_default": True,

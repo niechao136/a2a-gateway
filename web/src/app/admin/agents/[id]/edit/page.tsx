@@ -20,6 +20,7 @@ import UnpublishedIcon from "@mui/icons-material/Unpublished";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import AgentForm from "@/components/admin/AgentForm";
+import AgentApiKeys from "@/components/admin/AgentApiKeys";
 import TestChatDialog from "@/components/admin/TestChatDialog";
 import { A2AEndpoint, Agent, AgentCreatePayload, McpServer, adminApi } from "@/lib/adminApi";
 
@@ -181,16 +182,22 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
       )}
 
       {agent ? (
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <AgentForm
-            initial={agent}
-            a2aEndpoints={a2aEndpoints}
-            mcpServers={mcpServers}
-            submitting={submitting}
-            submitLabel="保存修改"
-            onSubmit={handleSubmit}
-          />
-        </Paper>
+        <>
+          <Paper variant="outlined" sx={{ p: 3 }}>
+            <AgentForm
+              initial={agent}
+              a2aEndpoints={a2aEndpoints}
+              mcpServers={mcpServers}
+              submitting={submitting}
+              submitLabel="保存修改"
+              onSubmit={handleSubmit}
+            />
+          </Paper>
+          {/* 每个 Agent 独立的对外 A2A 调用凭据 */}
+          <Paper variant="outlined" sx={{ p: 3, mt: 2 }}>
+            <AgentApiKeys agentId={agent.id} />
+          </Paper>
+        </>
       ) : (
         <Stack spacing={2}>
           <Typography color="text.secondary">未找到该 Agent。</Typography>

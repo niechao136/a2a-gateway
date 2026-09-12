@@ -20,7 +20,11 @@ from .config import get_settings
 from .database import async_engine
 from .migrations import run_migrations
 from .models import Base
-from .repository import ensure_default_admin, ensure_default_agent, ensure_default_api_key
+from .repository import (
+    ensure_all_agent_api_keys,
+    ensure_default_admin,
+    ensure_default_agent,
+)
 from .routes import a2a_server, admin, chat, registry
 from .database import AsyncSessionLocal
 
@@ -45,7 +49,8 @@ async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as session:
         await ensure_default_agent(session)
         await ensure_default_admin(session)
-        await ensure_default_api_key(session)
+        # 为每个尚无 Key 的 Agent 补齐默认 API Key（含历史 Agent 升级）
+        await ensure_all_agent_api_keys(session)
     logger.info("默认 Agent、管理员账号与 API Key 已就绪")
     yield
     # 关停

@@ -70,6 +70,13 @@ async def test_create_agent_rejects_reserved_slug(auth_client):
     assert resp.status_code == 400
 
 
+async def test_create_agent_rejects_a2a_slug(auth_client):
+    # "a2a" 为对外 A2A 服务地址前缀，作为路由会与之冲突
+    payload = {"slug": "a2a", "name": "x", "a2a_targets": []}
+    resp = await auth_client.post("/api/admin/agents", json=payload)
+    assert resp.status_code == 400
+
+
 async def test_create_agent_rejects_duplicate_slug(auth_client, monkeypatch, make_agent):
     async def fake_get(session, slug):
         return make_agent(slug=slug)

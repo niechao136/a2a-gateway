@@ -11,59 +11,104 @@ TEST_KEY = "a2a-test-key"
 
 
 # ---------------------------------------------------------------------------
-# API Key 管理后台
+# API Key 管理后台（按 Agent 维度）
 # ---------------------------------------------------------------------------
 async def test_api_key_requires_auth(anon_client):
-    resp = await anon_client.get("/api/admin/api-keys")
+    resp = await anon_client.get("/api/admin/agents/1/api-keys")
     assert resp.status_code == 401
 
 
-async def test_list_api_keys(auth_client, monkeypatch, make_api_key):
-    async def fake_list(session):
-        return [make_api_key()]
+async def test_list_agent_api_keys(auth_client, monkeypatch, make_agent, make_api_key):
+    async def fake_get_agent(session, agent_id):
+        return make_agent(id=agent_id)
 
-    monkeypatch.setattr(admin_mod, "list_api_keys", fake_list)
+    async def fake_list(session, agent_id):
+        return [make_api_key(agent_id=agent_id)]
 
-    resp = await auth_client.get("/api/admin/api-keys")
+    monkeypatch.setattr(admin_mod, "get_agent_by_id", fake_get_agent)
+    monkeypatch.setattr(admin_mod, "_list_agent_api_keys", fake_list)
+
+    resp = await auth_client.get("/api/admin/agents/1/api-keys")
     assert resp.status_code == 200
     data = resp.json()
     assert data[0]["key"] == "a2a-test-key"
+    assert data[0]["agent_id"] == 1
     assert data[0]["is_default"] is True
 
 
-async def test_create_api_key_conflict(auth_client, monkeypatch, make_api_key):
-    async def fake_get(session, name):
-        return make_api_key(name=name)
+async def test_create_agent_api_key_conflict(auth_client, monkeypatch, make_api_key):
+    from types import SimpleNamespace
 
-    monkeypatch.setattr(repository, "get_api_key_by_name", fake_get)
+    async def fake_get(session, agent_id):
+        return SimpleNamespace(id=agent_id)
 
-    resp = await auth_client.post("/api/admin/api-keys", json={"name": "默认 Key"})
+    async def fake_list(session, agent_id):
+        return [make_api_key(name="默认 Key", agent_id=agent_id)]
+
+    monkeypatch.setattr(admin_mod, "get_agent_by_id", fake_get)
+    monkeypatch.setattr(admin_mod, "_list_agent_api_keys", fake_list)
+
+    resp = await auth_client.post(
+        "/api/admin/agents/1/api-keys", json={"name": "默认 Key"}
+    )
     assert resp.status_code == 409
 
 
-async def test_create_api_key_generates_secret(auth_client, monkeypatch, make_api_key):
-    async def fake_get(session, name):
-        return None
+async def test_create_agent_api_key_generates_secret(
+    auth_client, monkeypatch, make_agent, make_api_key
+):
+    async def fake_create(session, agent, data):
+        return make_api_key(
+            id=2, agent_id=agent.id, name=data.name, key="a2a-new", is_default=False
+        )
 
-    async def fake_create(session, data):
-        return make_api_key(id=2, name=data.name, key="a2a-new", is_default=False)
+    async def fake_list(session, agent_id):
+        return []
 
-    monkeypatch.setattr(repository, "get_api_key_by_name", fake_get)
+    monkeypatch.setattr(admin_mod, "get_agent_by_id", _fake_agent_get)
+    monkeypatch.setattr(admin_mod, "_list_agent_api_keys", fake_list)
     monkeypatch.setattr(admin_mod, "create_api_key", fake_create)
 
-    resp = await auth_client.post("/api/admin/api-keys", json={"name": "ci"})
+    resp = await auth_client.post("/api/admin/agents/1/api-keys", json={"name": "ci"})
     assert resp.status_code == 201
     assert resp.json()["key"].startswith("a2a-")
+    assert resp.json()["agent_id"] == 1
 
 
-async def test_delete_default_api_key_forbidden(auth_client, monkeypatch, make_api_key):
-    async def fake_get(session, key_id):
-        return make_api_key(is_default=True)
+async def test_delete_default_agent_api_key_forbidden(
+    auth_client, monkeypatch, make_api_key
+):
+    async def fake_get(session, agent_id):
+        from types import SimpleNamespace
 
-    monkeypatch.setattr(admin_mod, "get_api_key", fake_get)
+        return SimpleNamespace(id=agent_id)
 
-    resp = await auth_client.delete("/api/admin/api-keys/1")
+    async def fake_key(session, key_id):
+        return make_api_key(agent_id=1, is_default=True)
+
+    monkeypatch.setattr(admin_mod, "get_agent_by_id", fake_get)
+    monkeypatch.setattr(admin_mod, "get_api_key", fake_key)
+
+    resp = await auth_client.delete("/api/admin/agents/1/api-keys/1")
     assert resp.status_code == 400
+
+
+async def test_delete_api_key_of_other_agent_404(
+    auth_client, monkeypatch, make_api_key
+):
+    async def fake_get(session, agent_id):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(id=agent_id)
+
+    async def fake_key(session, key_id):
+        return make_api_key(agent_id=999, is_default=False)
+
+    monkeypatch.setattr(admin_mod, "get_agent_by_id", fake_get)
+    monkeypatch.setattr(admin_mod, "get_api_key", fake_key)
+
+    resp = await auth_client.delete("/api/admin/agents/1/api-keys/1")
+    assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +153,15 @@ def _patch_agent(monkeypatch, make_agent, chunks: list[str]):
     monkeypatch.setattr(a2a_server_mod, "_stream_agent_text", fake_stream)
 
 
+async def _fake_agent_get(session, agent_id):
+    """替身：按 id 返回一个最小 Agent 存根。"""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(id=agent_id)
+
+
 def _patch_api_key(monkeypatch, make_api_key, **overrides):
+    """默认返回属于 agent_id=1（即 make_agent 的 id）的 Key。"""
     async def fake_get(session, key):
         return make_api_key(**overrides)
 
@@ -125,6 +178,16 @@ async def test_rpc_requires_api_key(anon_client, monkeypatch, make_agent):
 
 async def test_rpc_rejects_disabled_key(anon_client, monkeypatch, make_agent, make_api_key):
     _patch_api_key(monkeypatch, make_api_key, enabled=False)
+    _patch_agent(monkeypatch, make_agent, ["hi"])
+    body = {"jsonrpc": "2.0", "id": 1, "method": "SendMessage",
+            "params": {"message": {"messageId": "m1", "parts": [{"text": "hello"}]}}}
+    resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
+    assert resp.status_code == 401
+
+
+async def test_rpc_rejects_key_of_other_agent(anon_client, monkeypatch, make_agent, make_api_key):
+    # Key 存在且启用，但属于别的 Agent（agent_id 不匹配）→ 401
+    _patch_api_key(monkeypatch, make_api_key, agent_id=999)
     _patch_agent(monkeypatch, make_agent, ["hi"])
     body = {"jsonrpc": "2.0", "id": 1, "method": "SendMessage",
             "params": {"message": {"messageId": "m1", "parts": [{"text": "hello"}]}}}

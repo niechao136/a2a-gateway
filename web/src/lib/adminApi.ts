@@ -147,10 +147,11 @@ export interface McpToolInfo {
 }
 
 // ---------------------------------------------------------------------------
-// API Key（对外 A2A 服务调用凭据）
+// API Key（每个 Agent 独立配置的对外 A2A 服务调用凭据）
 // ---------------------------------------------------------------------------
 export interface ApiKey {
   id: number;
+  agent_id: number;
   name: string;
   key: string;
   is_default: boolean;
@@ -392,21 +393,23 @@ export const adminApi = {
     );
   },
 
-  // ---- API Key 管理（对外 A2A 服务调用凭据）----
-  listApiKeys(): Promise<ApiKey[]> {
-    return request<ApiKey[]>("/api/admin/api-keys");
+  // ---- API Key 管理（每个 Agent 独立配置的对外 A2A 调用凭据）----
+  listAgentApiKeys(agentId: number): Promise<ApiKey[]> {
+    return request<ApiKey[]>(`/api/admin/agents/${agentId}/api-keys`);
   },
 
-  createApiKey(payload: ApiKeyCreatePayload): Promise<ApiKey> {
-    return request<ApiKey>("/api/admin/api-keys", {
+  createAgentApiKey(agentId: number, payload: ApiKeyCreatePayload): Promise<ApiKey> {
+    return request<ApiKey>(`/api/admin/agents/${agentId}/api-keys`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  /** 删除 Key；默认 Key 后端返回 400 不可删除。 */
-  deleteApiKey(id: number): Promise<void> {
-    return request<void>(`/api/admin/api-keys/${id}`, { method: "DELETE" });
+  /** 删除某 Agent 的 Key；默认 Key 后端返回 400 不可删除。 */
+  deleteAgentApiKey(agentId: number, keyId: number): Promise<void> {
+    return request<void>(`/api/admin/agents/${agentId}/api-keys/${keyId}`, {
+      method: "DELETE",
+    });
   },
 };
 
