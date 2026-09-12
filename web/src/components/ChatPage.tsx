@@ -132,8 +132,16 @@ export default function ChatPage({
 
   const handleNew = useCallback(() => {
     setDrawerOpen(false);
-    router.push(chatPath(slug, null));
-  }, [slug, router]);
+    // 立即生成新会话 id 并写入路由：确保对话框清空，
+    // 也避免 push 到当前相同路由时 Next.js 不触发任何变化
+    const conv = createConversation(slug, "新对话");
+    setActiveIdState(conv.id);
+    setMessages([]);
+    setError(null);
+    setHistoryLoaded(true);
+    refreshConversations();
+    router.push(chatPath(slug, conv.id));
+  }, [slug, router, refreshConversations]);
 
   const handleDelete = useCallback(
     (id: string) => {
