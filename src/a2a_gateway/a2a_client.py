@@ -77,9 +77,9 @@ class A2AClientWrapper:
         except (AgentCardResolutionError, httpx.HTTPError) as e:
             await http.aclose()
             raise A2ATargetError("network", f"A2A 目标 {url} 不可达或未发布 Agent Card：{e}") from e
-        # 目标 Agent Card 中声明的 url 通常是其内部地址（如 http://localhost:9901），
-        # 网关容器据此回连会连到自己而失败。统一改写为实际可达的 target.url。
-        card.url = url
+        # 目标 Agent Card 中声明的回连地址通常是其内部地址（如 http://localhost:9901），
+        # 网关容器据此回连会连到自己而失败。A2A 1.0 的 url 位于 supported_interfaces，
+        # 逐个改写为实际可达的 target.url。
         for _iface in card.supported_interfaces:
             _iface.url = url
         config = ClientConfig(
