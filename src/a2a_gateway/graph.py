@@ -17,8 +17,8 @@ from langchain_core.messages import (
     get_buffer_string,
 )
 from langchain_core.tools import StructuredTool
-from langgraph.graph import MessagesState
 from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt.chat_agent_executor import AgentState
 
 from .llm import build_llm
 from .models import AgentConfig
@@ -56,8 +56,13 @@ KEEP_RECENT = 20
 SUMMARIZE_BATCH = 12
 
 
-class AgentChatState(MessagesState):
-    """在默认 messages 之上增加压缩摘要所需的状态字段。"""
+class AgentChatState(AgentState):
+    """在 AgentState（messages + remaining_steps）之上增加压缩摘要字段。
+
+    注意：必须继承 AgentState 而非 MessagesState —— prebuilt 要求
+    state_schema 含 remaining_steps，否则构建图时报
+    ValueError: Missing required key(s) {'remaining_steps'} in state_schema。
+    """
 
     # 早期对话的滚动摘要（模型不可见时也会保留在状态里）
     summary: str
