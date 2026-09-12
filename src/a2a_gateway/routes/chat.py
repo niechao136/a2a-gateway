@@ -130,7 +130,12 @@ async def chat_history_custom(slug: str, thread_id: str):
 
 
 async def _get_history(thread_id: str) -> list[dict[str, str]]:
-    """从 Checkpointer 提取会话历史消息。"""
+    """从 Checkpointer 提取会话历史消息。
+
+    与前端流式渲染保持一致：工具调用以 ``role=tool`` 消息返回
+    （``toolName`` / ``toolOutput``），刷新后仍能还原工具卡片，
+    而不是折叠成普通助手文本。
+    """
     checkpointer = await get_checkpointer()
     config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     try:
@@ -143,6 +148,30 @@ async def _get_history(thread_id: str) -> list[dict[str, str]]:
     messages = tuple_.checkpoint.get("channel_values", {}).get("messages", [])
     history = []
     for msg in messages:
-        role = "user" if msg.type == "human" else "assistant"
-        history.append({"role": role, "content": msg.content if isinstance(msg.content, str) else str(msg.content)})
+        if msg.type == "human":
+            history.append(
+                {
+                    "role": "user",
+                    "content": msg.content
+                    if isinstance(msg.content, str)
+                    else str(msg.content),
+                }
+            )
+        elif msg.type == "tool":
+            history.append(
+                {
+                    "role": "tool",
+                    "content": "",
+                    "toolName": getattr(msg, "name", "") or "",
+                    "toolOutput": msg.content
+                    if isinstance(msg.content, str)
+                    else str(msg.content),
+                }
+            )
+        else:  # ai / system 等：仅输出有文本内容的助手消息
+            content = (
+                msg.content if isinstance(msg.content, str) else str(msg.content)
+            )
+            if content:
+                history.append({"role": "assistant", "content": content})
     return history

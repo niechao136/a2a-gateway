@@ -26,6 +26,7 @@ import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import PublishIcon from "@mui/icons-material/Publish";
 import UnpublishedIcon from "@mui/icons-material/Unpublished";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
+import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
 import { Agent, adminApi } from "@/lib/adminApi";
 import TestChatDialog from "@/components/admin/TestChatDialog";
 
@@ -178,6 +179,24 @@ export default function AdminAgentsPage() {
                         >
                           <EditOutlinedIcon fontSize="small" />
                         </IconButton>
+                      </Tooltip>
+                      <Tooltip
+                        title={
+                          agent.status === "published"
+                            ? "前往对话"
+                            : "草稿未发布，发布后可对话"
+                        }
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            component={Link}
+                            href={isDefault ? "/" : `/${agent.slug}`}
+                            disabled={busy || agent.status !== "published"}
+                          >
+                            <ChatOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <Tooltip title={agent.status === "published" ? "下线" : "发布"}>
                         <span>

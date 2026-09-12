@@ -102,9 +102,11 @@ async def test_history_returns_empty_without_checkpoint(anon_client, monkeypatch
 
 async def test_history_maps_messages(anon_client, monkeypatch):
     class FakeMessage:
-        def __init__(self, type_, content):
+        def __init__(self, type_, content, name=None):
             self.type = type_
             self.content = content
+            if name is not None:
+                self.name = name
 
     class FakeCheckpointer:
         async def aget_tuple(self, config):
@@ -113,6 +115,8 @@ async def test_history_maps_messages(anon_client, monkeypatch):
                     "channel_values": {
                         "messages": [
                             FakeMessage("human", "hi"),
+                            FakeMessage("ai", ""),
+                            FakeMessage("tool", '{"ok": true}', name="a2a_call"),
                             FakeMessage("ai", "hello"),
                         ]
                     }
@@ -128,5 +132,6 @@ async def test_history_maps_messages(anon_client, monkeypatch):
     assert resp.status_code == 200
     assert resp.json() == [
         {"role": "user", "content": "hi"},
+        {"role": "tool", "content": "", "toolName": "a2a_call", "toolOutput": '{"ok": true}'},
         {"role": "assistant", "content": "hello"},
     ]
