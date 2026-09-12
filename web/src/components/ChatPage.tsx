@@ -25,7 +25,6 @@ import { streamChat, retryChat, fetchHistory, ChatMessage, SSEEvent } from "@/li
 import {
   Conversation,
   listConversations,
-  getActiveId,
   setActiveId,
   migrateLegacy,
   createConversation,
@@ -65,7 +64,15 @@ export default function ChatPage({
   const [activeId, setActiveIdState] = useState<string | null>(initialConversationId);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // activeId 的同步引用：供 effect 判断「路由变化是否指向当前已在看的会话」
+  const activeIdRef = useRef<string | null>(initialConversationId);
+  const mountedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const updateActiveId = useCallback((id: string | null) => {
+    activeIdRef.current = id;
+    setActiveIdState(id);
+  }, []);
 
   const loadHistory = useCallback(async (conversationId: string, targetSlug: string) => {
     setHistoryLoaded(false);
@@ -80,8 +87,15 @@ export default function ChatPage({
     }
   }, []);
 
-  // 初始化：迁移旧 session，恢复会话列表与当前会话（以路由中的会话 id 优先）
+  // 初始化：以路由中的会话 id 为准；裸路由（未带 id）= 全新空白对话
   useEffect(() => {
+    // 首条消息发送后 router.replace 到 /c/{id}：会话已在当前对话框中，
+    // 跳过重载，避免打断正在流式填充的消息
+    if (mountedRef.current && initialConversationId && initialConversationId === activeIdRef.current) {
+      return;
+    }
+    mountedRef.current = true;
+
     migrateLegacy(slug);
     const list = listConversations(slug);
     setConversations(list);
@@ -96,11 +110,8 @@ export default function ChatPage({
         setConversations([...listConversations(slug)]);
       }
       active = initialConversationId;
-    } else {
-      const stored = getActiveId(slug);
-      active = stored && list.some((c) => c.id === stored) ? stored : list[0]?.id ?? null;
     }
-    setActiveIdState(active);
+    updateActiveId(active);
     if (active) {
       setActiveId(slug, active);
       void loadHistory(active, slug);
@@ -109,7 +120,7 @@ export default function ChatPage({
       setHistoryLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, initialConversationId, loadHistory]);
+  }, [slug, initialConversationId, loadHistory, updateActiveId]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -132,16 +143,15 @@ export default function ChatPage({
 
   const handleNew = useCallback(() => {
     setDrawerOpen(false);
-    // 立即生成新会话 id 并写入路由：确保对话框清空，
-    // 也避免 push 到当前相同路由时 Next.js 不触发任何变化
-    const conv = createConversation(slug, "新对话");
-    setActiveIdState(conv.id);
+    // 不再立即生成会话 id：清空对话框，等用户发出首条消息后再落地新路由
+    updateActiveId(null);
+    setActiveId(slug, null);
     setMessages([]);
     setError(null);
     setHistoryLoaded(true);
-    refreshConversations();
-    router.push(chatPath(slug, conv.id));
-  }, [slug, router, refreshConversations]);
+    // 若当前已带会话 id，则回到裸路由；已在裸路由时无路由变化也不影响（本地已清空）
+    router.push(chatPath(slug, null));
+  }, [slug, router, updateActiveId]);
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -210,8 +220,8 @@ export default function ChatPage({
       if (!conversationId) {
         const conv = createConversation(slug, text.slice(0, 24));
         conversationId = conv.id;
-        setActiveIdState(conv.id);
-        // 会话落地后把 id 写进路由
+        updateActiveId(conv.id);
+        // 会话落地后把 id 写进路由（effect 会因指向当前会话而跳过重载）
         router.replace(chatPath(slug, conv.id));
       } else if (isFirstMessage) {
         upsertConversation(slug, conversationId, { title: text.slice(0, 24) });
@@ -239,7 +249,7 @@ export default function ChatPage({
         refreshConversations();
       }
     },
-    [activeId, messages, slug, refreshConversations, router, consumeChatEvents],
+    [activeId, messages, slug, refreshConversations, router, consumeChatEvents, updateActiveId],
   );
 
   /** 重试最后一次回复：后端 time travel 到最后一次人类消息的检查点重放。 */
