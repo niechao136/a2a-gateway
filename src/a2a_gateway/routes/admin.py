@@ -16,10 +16,14 @@ from ..deps import get_current_admin, new_thread_id
 from ..models import AdminUser, AgentStatus
 from ..repository import (
     create_agent,
+    create_api_key,
     delete_agent,
+    delete_api_key,
     get_agent_by_id,
     get_agent_by_slug,
+    get_api_key,
     list_agents,
+    list_api_keys,
     set_agent_status,
     update_agent,
 )
@@ -28,6 +32,8 @@ from ..schemas import (
     AgentCreate,
     AgentOut,
     AgentUpdate,
+    ApiKeyCreate,
+    ApiKeyOut,
     ChatRequest,
     Token,
 )
@@ -175,3 +181,43 @@ async def test_a2a_connection(
     ok, msg = await wrapper.test_connection()
     await wrapper.close()
     return {"ok": ok, "message": msg}
+
+
+# ---------------------------------------------------------------------------
+# API Key 管理（对外 A2A 服务调用凭据）
+# ---------------------------------------------------------------------------
+@router.get("/api-keys", response_model=list[ApiKeyOut])
+async def list_all_api_keys(
+    session: AsyncSession = Depends(get_session),
+    _: AdminUser = Depends(get_current_admin),
+):
+    return await list_api_keys(session)
+
+
+@router.post("/api-keys", response_model=ApiKeyOut, status_code=201)
+async def create_new_api_key(
+    data: ApiKeyCreate,
+    session: AsyncSession = Depends(get_session),
+    _: AdminUser = Depends(get_current_admin),
+):
+    from ..repository import get_api_key_by_name
+
+    existing = await get_api_key_by_name(session, data.name)
+    if existing is not None:
+        raise HTTPException(409, f"名称 '{data.name}' 已被占用")
+    return await create_api_key(session, data)
+
+
+@router.delete("/api-keys/{key_id}", status_code=204)
+async def delete_existing_api_key(
+    key_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: AdminUser = Depends(get_current_admin),
+):
+    api_key = await get_api_key(session, key_id)
+    if api_key is None:
+        raise HTTPException(404, "API Key 不存在")
+    if api_key.is_default:
+        raise HTTPException(400, "默认 Key 不可删除")
+    await delete_api_key(session, api_key)
+    return None

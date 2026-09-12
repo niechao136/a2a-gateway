@@ -20,8 +20,8 @@ from .config import get_settings
 from .database import async_engine
 from .migrations import run_migrations
 from .models import Base
-from .repository import ensure_default_admin, ensure_default_agent
-from .routes import admin, chat, registry
+from .repository import ensure_default_admin, ensure_default_agent, ensure_default_api_key
+from .routes import a2a_server, admin, chat, registry
 from .database import AsyncSessionLocal
 
 logging.basicConfig(
@@ -45,7 +45,8 @@ async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as session:
         await ensure_default_agent(session)
         await ensure_default_admin(session)
-    logger.info("默认 Agent 与管理员账号已就绪")
+        await ensure_default_api_key(session)
+    logger.info("默认 Agent、管理员账号与 API Key 已就绪")
     yield
     # 关停
     await close_all()
@@ -81,6 +82,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(registry.router)
+app.include_router(a2a_server.router)
 
 
 @app.get("/health")

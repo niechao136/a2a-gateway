@@ -3,6 +3,7 @@
 - A2AEndpoint：「A2A 管理」中维护的 A2A 服务注册表
 - McpServer：「MCP 管理」中维护的 MCP 服务注册表
 - AgentConfig：自定义/默认 Agent 的配置（路由、绑定的 A2A/MCP 资源、system_prompt、工具集、状态）
+- ApiKey：对外提供 A2A 服务的调用凭据（/a2a/* 端点鉴权）
 - AdminUser：管理中心登录账号（JWT 认证）
 """
 
@@ -116,6 +117,23 @@ class McpServer(Base, BaseMixin):
     auth_type: Mapped[str] = mapped_column(String(32), default="bearer")
     auth_name: Mapped[str] = mapped_column(String(128), default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ApiKey(Base, BaseMixin):
+    """API Key（对外提供 A2A 服务时的调用凭据）。
+
+    - 启动时自动生成一个默认 Key（is_default=True，不可删除，防止把自己锁在门外）
+    - 其余 Key 可在「API Key 管理」中按需新增 / 删除
+    """
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    # 默认 Key 不可删除
+    is_default: Mapped[bool] = mapped_column(default=False)
+    enabled: Mapped[bool] = mapped_column(default=True)
 
 
 class AdminUser(Base, BaseMixin):

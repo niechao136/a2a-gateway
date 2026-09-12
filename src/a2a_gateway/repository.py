@@ -12,20 +12,27 @@ from typing import Any
 
 from urllib.parse import urlparse
 
+import logging
+
+import secrets
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings
-from .models import A2AEndpoint, AdminUser, AgentConfig, AgentStatus, McpServer
+from .models import A2AEndpoint, AdminUser, AgentConfig, AgentStatus, ApiKey, McpServer
 from .schemas import (
     A2AEndpointCreate,
     A2AEndpointUpdate,
     AgentCreate,
     AgentUpdate,
+    ApiKeyCreate,
     McpServerCreate,
     McpServerUpdate,
 )
 from .auth import hash_password
+
+logger = logging.getLogger(__name__)
 
 _settings = get_settings()
 
@@ -375,6 +382,70 @@ async def detach_mcp_server_from_agents(session: AsyncSession, server_id: int) -
     if changed:
         await session.commit()
     return changed
+
+
+# ---------------------------------------------------------------------------
+# ApiKey（对外 A2A 服务调用凭据）
+# ---------------------------------------------------------------------------
+DEFAULT_API_KEY_NAME = "默认 Key"
+
+
+def generate_api_key() -> str:
+    """生成形如 a2a-<随机串> 的 API Key。"""
+    return f"a2a-{secrets.token_urlsafe(24)}"
+
+
+async def list_api_keys(session: AsyncSession) -> list[ApiKey]:
+    result = await session.execute(select(ApiKey).order_by(ApiKey.id))
+    return list(result.scalars().all())
+
+
+async def get_api_key(session: AsyncSession, key_id: int) -> ApiKey | None:
+    return await session.get(ApiKey, key_id)
+
+
+async def get_api_key_by_key(session: AsyncSession, key: str) -> ApiKey | None:
+    """按明文 key 查找（A2A 端点鉴权用）。"""
+    if not key:
+        return None
+    result = await session.execute(select(ApiKey).where(ApiKey.key == key))
+    return result.scalar_one_or_none()
+
+
+async def get_api_key_by_name(session: AsyncSession, name: str) -> ApiKey | None:
+    result = await session.execute(select(ApiKey).where(ApiKey.name == name))
+    return result.scalar_one_or_none()
+
+
+async def create_api_key(session: AsyncSession, data: ApiKeyCreate) -> ApiKey:
+    api_key = ApiKey(name=data.name, key=generate_api_key(), enabled=True)
+    session.add(api_key)
+    await session.commit()
+    await session.refresh(api_key)
+    return api_key
+
+
+async def delete_api_key(session: AsyncSession, api_key: ApiKey) -> None:
+    await session.delete(api_key)
+    await session.commit()
+
+
+async def ensure_default_api_key(session: AsyncSession) -> ApiKey:
+    """确保存在默认 API Key（首个启动时自动生成；后续启动幂等返回）。"""
+    existing = await get_api_key_by_name(session, DEFAULT_API_KEY_NAME)
+    if existing is not None:
+        return existing
+    api_key = ApiKey(
+        name=DEFAULT_API_KEY_NAME,
+        key=generate_api_key(),
+        is_default=True,
+        enabled=True,
+    )
+    session.add(api_key)
+    await session.commit()
+    await session.refresh(api_key)
+    logger.info("已生成默认 API Key：%s", api_key.key)
+    return api_key
 
 
 # ---------------------------------------------------------------------------

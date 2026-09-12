@@ -3,6 +3,9 @@
 import httpx
 import pytest
 
+from a2a.helpers.proto_helpers import new_text_message
+from a2a.types.a2a_pb2 import StreamResponse
+
 from a2a_gateway import a2a_client
 from a2a_gateway.a2a_client import A2AClientWrapper, A2ATargetError
 from a2a_gateway.schemas import A2ATarget
@@ -24,7 +27,7 @@ class ChunkedClient:
 
     def send_message(self, request):
         async def gen():
-            yield "partial"
+            yield StreamResponse(message=new_text_message("partial"))
             raise httpx.ReadError("stream broken")
 
         return gen()
@@ -93,14 +96,7 @@ async def test_gives_up_after_retries_exhausted():
     assert state["n"] == 3  # 1 次原始 + 2 次重试
 
 
-async def test_does_not_retry_after_partial_output(monkeypatch):
-    # 让假客户端产出的字符串能被文本提取函数识别
-    monkeypatch.setattr(
-        a2a_client,
-        "get_stream_response_text",
-        lambda response: response if isinstance(response, str) else "",
-    )
-
+async def test_does_not_retry_after_partial_output():
     wrapper = _wrapper()
     state = {"n": 0}
 

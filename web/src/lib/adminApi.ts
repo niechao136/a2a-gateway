@@ -146,6 +146,23 @@ export interface McpToolInfo {
   description: string;
 }
 
+// ---------------------------------------------------------------------------
+// API Key（对外 A2A 服务调用凭据）
+// ---------------------------------------------------------------------------
+export interface ApiKey {
+  id: number;
+  name: string;
+  key: string;
+  is_default: boolean;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiKeyCreatePayload {
+  name: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
@@ -374,7 +391,29 @@ export const adminApi = {
       `/api/admin/mcp-servers/${id}/tools`,
     );
   },
+
+  // ---- API Key 管理（对外 A2A 服务调用凭据）----
+  listApiKeys(): Promise<ApiKey[]> {
+    return request<ApiKey[]>("/api/admin/api-keys");
+  },
+
+  createApiKey(payload: ApiKeyCreatePayload): Promise<ApiKey> {
+    return request<ApiKey>("/api/admin/api-keys", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** 删除 Key；默认 Key 后端返回 400 不可删除。 */
+  deleteApiKey(id: number): Promise<void> {
+    return request<void>(`/api/admin/api-keys/${id}`, { method: "DELETE" });
+  },
 };
+
+/** Agent 对外的 A2A 地址路径（默认 Agent 为 /a2a）。 */
+export function a2aPathForAgent(agent: Pick<Agent, "slug">): string {
+  return agent.slug === "/" ? "/a2a" : `/a2a/${agent.slug}`;
+}
 
 /** 管理中心测试对话的 SSE 端点。 */
 export function adminTestChatUrl(agentId: number): string {

@@ -57,6 +57,24 @@ def make_admin():
     return _make
 
 
+@pytest.fixture
+def make_api_key():
+    def _make(**overrides):
+        base = {
+            "id": 1,
+            "name": "默认 Key",
+            "key": "a2a-test-key",
+            "is_default": True,
+            "enabled": True,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        base.update(overrides)
+        return SimpleNamespace(**base)
+
+    return _make
+
+
 async def _fake_session():
     """替身 DB 会话（路由层已被 monkeypatch，不会真正使用它）。"""
     yield None

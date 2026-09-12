@@ -27,7 +27,7 @@ import PublishIcon from "@mui/icons-material/Publish";
 import UnpublishedIcon from "@mui/icons-material/Unpublished";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
-import { Agent, adminApi } from "@/lib/adminApi";
+import { Agent, a2aPathForAgent, adminApi } from "@/lib/adminApi";
 import TestChatDialog from "@/components/admin/TestChatDialog";
 
 export default function AdminAgentsPage() {
@@ -110,6 +110,7 @@ export default function AdminAgentsPage() {
             <TableRow>
               <TableCell>名称</TableCell>
               <TableCell>路由</TableCell>
+              <TableCell>A2A 地址</TableCell>
               <TableCell>状态</TableCell>
               <TableCell>A2A 目标</TableCell>
               <TableCell>更新时间</TableCell>
@@ -119,13 +120,13 @@ export default function AdminAgentsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : agents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.secondary" }}>
                   暂无 Agent，点击右上角「新建 Agent」开始
                 </TableCell>
               </TableRow>
@@ -150,6 +151,19 @@ export default function AdminAgentsPage() {
                     </TableCell>
                     <TableCell>
                       <code>{isDefault ? "/（默认）" : `/${agent.slug}`}</code>
+                    </TableCell>
+                    <TableCell>
+                      {agent.status === "published" ? (
+                        <Tooltip title="其他 Agent 通过 A2A 调用本 Agent 的地址（调用时需携带 API Key）">
+                          <Typography variant="caption" sx={{ fontFamily: "monospace" }}>
+                            {a2aPathForAgent(agent)}
+                          </Typography>
+                        </Tooltip>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          发布后可用
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip

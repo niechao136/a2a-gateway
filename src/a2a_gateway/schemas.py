@@ -196,6 +196,22 @@ class AdminUserCreate(BaseModel):
     password: str
 
 
+class ApiKeyCreate(BaseModel):
+    name: str = Field(description="显示名称，全局唯一")
+
+
+class ApiKeyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    key: str
+    is_default: bool
+    enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+
 class AdminUserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
