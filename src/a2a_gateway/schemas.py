@@ -267,6 +267,11 @@ class ChatRequest(BaseModel):
     )
 
 
+# 重试请求（time travel：从最后一次人类消息处重放）
+class RetryRequest(BaseModel):
+    thread_id: str = Field(description="要重试的会话标识")
+
+
 class AdminLoginRequest(BaseModel):
     username: str
     password: str

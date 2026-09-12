@@ -18,10 +18,31 @@ interface PageProps {
   params: Promise<{ slug?: string[] }>;
 }
 
+/**
+ * 从 catch-all 路由段解析 Agent 与会话：
+ *   /                     → 默认 Agent，未指定会话
+ *   /c/{threadId}         → 默认 Agent + 会话
+ *   /{agentSlug}          → 指定 Agent，未指定会话
+ *   /{agentSlug}/c/{threadId} → 指定 Agent + 会话
+ */
+export function parseRoute(
+  segments: string[] | undefined,
+): { agentSlug: string; conversationId: string | null } {
+  if (!segments || segments.length === 0) return { agentSlug: "/", conversationId: null };
+  if (segments[0] === "c") {
+    return { agentSlug: "/", conversationId: segments[1] ?? null };
+  }
+  const agentSlug = segments[0];
+  if (segments.length >= 2 && segments[1] === "c") {
+    return { agentSlug, conversationId: segments[2] ?? null };
+  }
+  return { agentSlug, conversationId: null };
+}
+
 export default function Page({ params }: PageProps) {
   const { slug } = use(params);
-  const slugStr = slug && slug.length > 0 ? slug.join("/") : "/";
-  const displaySlug = slugStr === "/" ? "" : slugStr;
+  const { agentSlug, conversationId } = parseRoute(slug);
+  const slugStr = agentSlug === "/" ? "/" : agentSlug;
 
   const [agent, setAgent] = useState<AgentInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,5 +127,11 @@ export default function Page({ params }: PageProps) {
     );
   }
 
-  return <ChatPage slug={displaySlug} agentName={agent?.name || "Agent"} />;
+  return (
+    <ChatPage
+      slug={agentSlug === "/" ? "" : agentSlug}
+      agentName={agent?.name || "Agent"}
+      initialConversationId={conversationId}
+    />
+  );
 }

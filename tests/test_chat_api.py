@@ -2,6 +2,8 @@
 
 from types import SimpleNamespace
 
+from langchain_core.messages import AIMessage, HumanMessage
+
 from a2a_gateway.models import AgentStatus
 from a2a_gateway.routes import chat as chat_mod
 
@@ -36,12 +38,29 @@ async def test_chat_streams_expected_sse_events(anon_client, monkeypatch, make_a
 
     class FakeGraph:
         async def astream_events(self, *args, **kwargs):
+            # 摘要 hook 里的模型调用（pre_model_hook 节点）必须被过滤
+            yield {
+                "event": "on_chat_model_stream",
+                "data": {"chunk": SimpleNamespace(content="摘要片段")},
+                "metadata": {"langgraph_node": "pre_model_hook"},
+            }
             yield {
                 "event": "on_chat_model_stream",
                 "data": {"chunk": SimpleNamespace(content="你好")},
+                "metadata": {"langgraph_node": "agent"},
             }
-            yield {"event": "on_tool_start", "name": "a2a_call", "data": {}}
-            yield {"event": "on_tool_end", "name": "a2a_call", "data": {"output": "pong"}}
+            yield {
+                "event": "on_tool_start",
+                "name": "a2a_call",
+                "data": {},
+                "metadata": {"langgraph_node": "agent"},
+            }
+            yield {
+                "event": "on_tool_end",
+                "name": "a2a_call",
+                "data": {"output": "pong"},
+                "metadata": {"langgraph_node": "agent"},
+            }
 
     async def fake_instance(agent):
         return FakeGraph()
@@ -55,10 +74,83 @@ async def test_chat_streams_expected_sse_events(anon_client, monkeypatch, make_a
     body = resp.text
     assert "event: token" in body
     assert "你好" in body
+    # 摘要调用的 token 不应透传给前端
+    assert "摘要片段" not in body
     assert "event: tool_start" in body
     assert "event: tool_end" in body
     assert "event: done" in body
     assert '"thread_id": "t1"' in body
+
+
+async def test_retry_replays_from_last_human_checkpoint(anon_client, monkeypatch, make_agent):
+    async def fake_get(session, slug):
+        return make_agent(status=AgentStatus.PUBLISHED)
+
+    captured: dict = {}
+
+    class FakeSnapshot:
+        def __init__(self, message, next_, checkpoint_id):
+            self.values = {"messages": [message]}
+            self.next = next_
+            self.config = {"configurable": {"thread_id": "t1", "checkpoint_id": checkpoint_id}}
+
+    class FakeGraph:
+        async def aget_state_history(self, config):
+            # 最新在前：最后一次 AI 回复已完成 → 上一个是待重放的检查点
+            yield FakeSnapshot(AIMessage(content="上次回复"), (), "ckpt-new")
+            yield FakeSnapshot(HumanMessage(content="hi"), ("agent",), "ckpt-old")
+
+        async def astream_events(self, graph_input, config=None, **kwargs):
+            captured["input"] = graph_input
+            captured["config"] = config
+            yield {
+                "event": "on_chat_model_stream",
+                "data": {"chunk": SimpleNamespace(content="重试回复")},
+                "metadata": {"langgraph_node": "agent"},
+            }
+
+    async def fake_instance(agent):
+        return FakeGraph()
+
+    monkeypatch.setattr(chat_mod, "get_agent_by_slug", fake_get)
+    monkeypatch.setattr(chat_mod, "get_agent_instance", fake_instance)
+
+    resp = await anon_client.post("/api/chat/retry", json={"thread_id": "t1"})
+
+    assert resp.status_code == 200
+    body = resp.text
+    # time travel：输入为 None，从「最后一次人类消息」的检查点重放
+    assert captured["input"] is None
+    assert captured["config"]["configurable"]["checkpoint_id"] == "ckpt-old"
+    assert captured["config"]["configurable"]["thread_id"] == "t1"
+    assert "重试回复" in body
+    assert "event: done" in body
+
+
+async def test_retry_without_retryable_message_returns_error(
+    anon_client, monkeypatch, make_agent
+):
+    async def fake_get(session, slug):
+        return make_agent(status=AgentStatus.PUBLISHED)
+
+    class FakeGraph:
+        async def aget_state_history(self, config):
+            # 没有以人类消息结尾的检查点 → 无可重试
+            yield SimpleNamespace(
+                values={"messages": [AIMessage(content="hi")]},
+                next=(),
+                config={"configurable": {"thread_id": "t1", "checkpoint_id": "c1"}},
+            )
+
+    async def fake_instance(agent):
+        return FakeGraph()
+
+    monkeypatch.setattr(chat_mod, "get_agent_by_slug", fake_get)
+    monkeypatch.setattr(chat_mod, "get_agent_instance", fake_instance)
+
+    resp = await anon_client.post("/api/chat/retry", json={"thread_id": "t1"})
+    assert resp.status_code == 200
+    assert "没有可重试的对话" in resp.text
 
 
 async def test_chat_stream_error_event_is_friendly(anon_client, monkeypatch, make_agent):

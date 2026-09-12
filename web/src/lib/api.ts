@@ -173,6 +173,44 @@ export async function streamChat(
   return streamChatUrl(url, message, threadId, onEvent);
 }
 
+/**
+ * 重试最后一次回复（time travel：后端从最后一次人类消息的检查点重放）。
+ * @param slug  Agent 路由（空串或 "/" 表示默认 Agent）
+ * @param threadId 会话 ID
+ * @param onEvent 事件回调
+ */
+export async function retryChat(
+  slug: string,
+  threadId: string,
+  onEvent: (e: SSEEvent) => void,
+): Promise<string> {
+  const url =
+    slug && slug !== "/"
+      ? `${API_BASE}/api/chat/${slug}/retry`
+      : `${API_BASE}/api/chat/retry`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify({ thread_id: threadId }),
+  });
+
+  if (!resp.ok || !resp.body) {
+    let detail = "请求失败";
+    try {
+      const data = await resp.json();
+      detail = data.detail || detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(detail);
+  }
+
+  return consumeSSE(resp, onEvent, threadId);
+}
+
 /** 获取会话历史。 */
 export async function fetchHistory(slug: string, threadId: string): Promise<ChatMessage[]> {
   const url =

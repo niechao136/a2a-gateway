@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Typography,
@@ -20,7 +21,7 @@ import ChatInput from "./ChatInput";
 import ConversationList from "./ConversationList";
 import AdminEntry from "./AdminEntry";
 import ThemeToggleButton from "./ThemeToggleButton";
-import { streamChat, fetchHistory, ChatMessage, SSEEvent } from "@/lib/api";
+import { streamChat, retryChat, fetchHistory, ChatMessage, SSEEvent } from "@/lib/api";
 import {
   Conversation,
   listConversations,
@@ -35,12 +36,25 @@ import {
 interface ChatPageProps {
   slug: string;
   agentName: string;
+  /** 路由中的会话 id（/{slug}/c/{id}）；为空表示未指定 */
+  initialConversationId?: string | null;
 }
 
 const SIDEBAR_WIDTH = 288;
 
-export default function ChatPage({ slug, agentName }: ChatPageProps) {
+/** 会话对应的页面路径；无会话时回到 Agent 根路由。 */
+function chatPath(slug: string, conversationId: string | null): string {
+  const base = slug && slug !== "/" ? `/${slug}` : "";
+  return conversationId ? `${base}/c/${conversationId}` : base || "/";
+}
+
+export default function ChatPage({
+  slug,
+  agentName,
+  initialConversationId = null,
+}: ChatPageProps) {
   const theme = useTheme();
+  const router = useRouter();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -48,7 +62,7 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveIdState] = useState<string | null>(null);
+  const [activeId, setActiveIdState] = useState<string | null>(initialConversationId);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,15 +80,26 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
     }
   }, []);
 
-  // 初始化：迁移旧 session，恢复会话列表与当前会话
+  // 初始化：迁移旧 session，恢复会话列表与当前会话（以路由中的会话 id 优先）
   useEffect(() => {
     migrateLegacy(slug);
     const list = listConversations(slug);
     setConversations(list);
     setError(null);
 
-    const stored = getActiveId(slug);
-    const active = stored && list.some((c) => c.id === stored) ? stored : list[0]?.id ?? null;
+    let active: string | null = null;
+    if (initialConversationId) {
+      // 路由指定的会话：若本地列表没有（如分享链接），补一条记录
+      if (!list.some((c) => c.id === initialConversationId)) {
+        const conv = upsertConversation(slug, initialConversationId);
+        list.unshift(conv);
+        setConversations([...listConversations(slug)]);
+      }
+      active = initialConversationId;
+    } else {
+      const stored = getActiveId(slug);
+      active = stored && list.some((c) => c.id === stored) ? stored : list[0]?.id ?? null;
+    }
     setActiveIdState(active);
     if (active) {
       setActiveId(slug, active);
@@ -83,7 +108,8 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
       setMessages([]);
       setHistoryLoaded(true);
     }
-  }, [slug, loadHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, initialConversationId, loadHistory]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -98,22 +124,16 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
     (id: string) => {
       setDrawerOpen(false);
       if (id === activeId) return;
-      setActiveId(slug, id);
-      setActiveIdState(id);
-      setError(null);
-      void loadHistory(id, slug);
+      // 路由带会话 id，便于分享 / 前进后退
+      router.push(chatPath(slug, id));
     },
-    [activeId, slug, loadHistory],
+    [activeId, slug, router],
   );
 
   const handleNew = useCallback(() => {
     setDrawerOpen(false);
-    setActiveId(slug, null);
-    setActiveIdState(null);
-    setMessages([]);
-    setError(null);
-    setHistoryLoaded(true);
-  }, [slug]);
+    router.push(chatPath(slug, null));
+  }, [slug, router]);
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -122,19 +142,53 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
       setConversations(list);
       if (activeId === id) {
         const next = list[0]?.id ?? null;
-        if (next) {
-          setActiveId(slug, next);
-          setActiveIdState(next);
-          void loadHistory(next, slug);
-        } else {
-          setActiveId(slug, null);
-          setActiveIdState(null);
-          setMessages([]);
-          setHistoryLoaded(true);
-        }
+        router.push(chatPath(slug, next));
       }
     },
-    [activeId, slug, loadHistory],
+    [activeId, slug, router],
+  );
+
+  /** SSE 事件 → 消息状态更新（发送与重试共用）。 */
+  const consumeChatEvents = useCallback(
+    (e: SSEEvent) => {
+      if (e.type === "token") {
+        setMessages((prev) => {
+          const next = [...prev];
+          // 找到最后一条 assistant 消息填入 token（工具卡片可能插在中间）
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].role === "assistant") {
+              next[i] = { ...next[i], content: next[i].content + e.content };
+              break;
+            }
+          }
+          return next;
+        });
+      } else if (e.type === "tool_start") {
+        setMessages((prev) => {
+          const next = [...prev];
+          const toolMsg: ChatMessage = { role: "tool", content: "", toolName: e.name };
+          const last = next[next.length - 1];
+          // 插到助手占位之前，保持助手消息在末尾以继续接收 token
+          if (last && last.role === "assistant") next.splice(next.length - 1, 0, toolMsg);
+          else next.push(toolMsg);
+          return next;
+        });
+      } else if (e.type === "tool_end") {
+        setMessages((prev) => {
+          const next = [...prev];
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].role === "tool" && !next[i].toolOutput) {
+              next[i] = { ...next[i], toolOutput: e.output };
+              break;
+            }
+          }
+          return next;
+        });
+      } else if (e.type === "error") {
+        setError(e.detail || "对话处理失败");
+      }
+    },
+    [],
   );
 
   const handleSend = useCallback(
@@ -149,6 +203,8 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
         const conv = createConversation(slug, text.slice(0, 24));
         conversationId = conv.id;
         setActiveIdState(conv.id);
+        // 会话落地后把 id 写进路由
+        router.replace(chatPath(slug, conv.id));
       } else if (isFirstMessage) {
         upsertConversation(slug, conversationId, { title: text.slice(0, 24) });
       } else {
@@ -165,44 +221,8 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
 
       try {
         await streamChat(slug, text, conversationId, (e: SSEEvent) => {
-          if (e.type === "token") {
-            setMessages((prev) => {
-              const next = [...prev];
-              // 找到最后一条 assistant 消息填入 token（工具卡片可能插在中间）
-              for (let i = next.length - 1; i >= 0; i--) {
-                if (next[i].role === "assistant") {
-                  next[i] = { ...next[i], content: next[i].content + e.content };
-                  break;
-                }
-              }
-              return next;
-            });
-          } else if (e.type === "tool_start") {
-            setMessages((prev) => {
-              const next = [...prev];
-              const toolMsg: ChatMessage = { role: "tool", content: "", toolName: e.name };
-              const last = next[next.length - 1];
-              // 插到助手占位之前，保持助手消息在末尾以继续接收 token
-              if (last && last.role === "assistant") next.splice(next.length - 1, 0, toolMsg);
-              else next.push(toolMsg);
-              return next;
-            });
-          } else if (e.type === "tool_end") {
-            setMessages((prev) => {
-              const next = [...prev];
-              for (let i = next.length - 1; i >= 0; i--) {
-                if (next[i].role === "tool" && !next[i].toolOutput) {
-                  next[i] = { ...next[i], toolOutput: e.output };
-                  break;
-                }
-              }
-              return next;
-            });
-          } else if (e.type === "done") {
-            refreshConversations();
-          } else if (e.type === "error") {
-            setError(e.detail || "对话处理失败");
-          }
+          if (e.type === "done") refreshConversations();
+          consumeChatEvents(e);
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "网络错误，请稍后重试");
@@ -211,8 +231,38 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
         refreshConversations();
       }
     },
-    [activeId, messages, slug, refreshConversations],
+    [activeId, messages, slug, refreshConversations, router, consumeChatEvents],
   );
+
+  /** 重试最后一次回复：后端 time travel 到最后一次人类消息的检查点重放。 */
+  const handleRetry = useCallback(async () => {
+    if (!activeId || loading) return;
+    setError(null);
+    setLoading(true);
+
+    // 移除最后一次回复（含尾部工具卡片），保留到人类消息为止
+    setMessages((prev) => {
+      const next = [...prev];
+      while (next.length && next[next.length - 1].role !== "user") next.pop();
+      return next;
+    });
+
+    try {
+      await retryChat(slug, activeId, (e: SSEEvent) => consumeChatEvents(e));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "网络错误，请稍后重试");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeId, loading, slug, consumeChatEvents]);
+
+  // 最后一条 assistant 消息的索引（重试按钮只挂在它上面）
+  const lastAssistantIdx = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") return i;
+    }
+    return -1;
+  })();
 
   const sidebar = (
     <ConversationList
@@ -326,7 +376,15 @@ export default function ChatPage({ slug, agentName }: ChatPageProps) {
               <Typography variant="body2">输入消息后按 Enter 发送</Typography>
             </Box>
           ) : (
-            messages.map((msg, idx) => <MessageBubble key={idx} message={msg} />)
+            messages.map((msg, idx) => (
+              <MessageBubble
+                key={idx}
+                message={msg}
+                onRetry={
+                  idx === lastAssistantIdx && !loading ? handleRetry : undefined
+                }
+              />
+            ))
           )}
 
           {loading && (
