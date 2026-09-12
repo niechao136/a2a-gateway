@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { adminApi, setAdminToken } from "@/lib/adminApi";
+import ThemeToggleButton from "@/components/ThemeToggleButton";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -46,14 +47,19 @@ export default function AdminLoginPage() {
   return (
     <Box
       sx={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        bgcolor: "grey.100",
+        bgcolor: "background.default",
         px: 2,
       }}
     >
+      <Box sx={{ position: "absolute", top: 16, right: 16 }}>
+        <ThemeToggleButton />
+      </Box>
+
       <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: 400 }}>
         <Typography variant="h6" gutterBottom>
           A2A Gateway 管理中心

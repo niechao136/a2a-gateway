@@ -132,7 +132,7 @@ export default function TestChatDialog({
       </DialogTitle>
       <DialogContent
         dividers
-        sx={{ p: 0, display: "flex", flexDirection: "column", height: "65vh", bgcolor: "grey.50" }}
+        sx={{ p: 0, display: "flex", flexDirection: "column", height: "65vh", bgcolor: "background.default" }}
       >
         <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", px: 2, py: 2 }}>
           {messages.length === 0 ? (
