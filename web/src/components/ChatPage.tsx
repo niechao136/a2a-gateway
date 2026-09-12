@@ -143,15 +143,15 @@ export default function ChatPage({
 
   const handleNew = useCallback(() => {
     setDrawerOpen(false);
-    // 不再立即生成会话 id：清空对话框，等用户发出首条消息后再落地新路由
+    // 不再立即生成会话 id：清空对话框，等用户发出首条消息后再落地新路由。
+    // 用 history.replaceState 仅改 URL，不触发 Next.js 导航/重渲染
     updateActiveId(null);
     setActiveId(slug, null);
     setMessages([]);
     setError(null);
     setHistoryLoaded(true);
-    // 若当前已带会话 id，则回到裸路由；已在裸路由时无路由变化也不影响（本地已清空）
-    router.push(chatPath(slug, null));
-  }, [slug, router, updateActiveId]);
+    window.history.replaceState(null, "", chatPath(slug, null));
+  }, [slug, updateActiveId]);
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -221,8 +221,10 @@ export default function ChatPage({
         const conv = createConversation(slug, text.slice(0, 24));
         conversationId = conv.id;
         updateActiveId(conv.id);
-        // 会话落地后把 id 写进路由（effect 会因指向当前会话而跳过重载）
-        router.replace(chatPath(slug, conv.id));
+        // 会话落地后把 id 无感写进路由：
+        // 必须用 history.replaceState 而非 router.replace —— 后者会触发
+        // Next.js 导航并重渲染页面，打断正在流式输出的回复
+        window.history.replaceState(null, "", chatPath(slug, conv.id));
       } else if (isFirstMessage) {
         upsertConversation(slug, conversationId, { title: text.slice(0, 24) });
       } else {
@@ -249,7 +251,7 @@ export default function ChatPage({
         refreshConversations();
       }
     },
-    [activeId, messages, slug, refreshConversations, router, consumeChatEvents, updateActiveId],
+    [activeId, messages, slug, refreshConversations, consumeChatEvents, updateActiveId],
   );
 
   /** 重试最后一次回复：后端 time travel 到最后一次人类消息的检查点重放。 */
