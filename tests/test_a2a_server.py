@@ -213,6 +213,12 @@ async def test_send_message_returns_full_text(anon_client, monkeypatch, make_age
 
 
 async def test_send_streaming_message_sse(anon_client, monkeypatch, make_agent, make_api_key):
+    """流式响应必须为任务式事件流：Task → working(status_update)×N → completed。
+
+    回归背景：曾把每个增量 chunk 包装成裸 message 事件发送，
+    而 a2a-sdk 客户端收到 message 即视为最终回复并终止流，
+    导致每次调用只能拿到第一个分块（/news 调 devops 拿到碎片）。
+    """
     _patch_api_key(monkeypatch, make_api_key)
     _patch_agent(monkeypatch, make_agent, ["a", "b"])
 
@@ -225,9 +231,23 @@ async def test_send_streaming_message_sse(anon_client, monkeypatch, make_agent, 
     for line in resp.text.splitlines():
         if line.startswith("data: "):
             events.append(json.loads(line[len("data: "):]))
-    assert len(events) == 2
-    parts = events[0]["result"]["message"]["parts"]
-    assert "".join(p["text"] for p in parts if "text" in p) == "a"
+    # Task + 2 个增量 status_update + 1 个 completed
+    assert len(events) == 4
+
+    # 首事件是 Task（不含 message，客户端不会提前终止）
+    assert "task" in events[0]["result"]
+    assert "message" not in events[0]["result"]
+
+    # 增量文本经 statusUpdate.message 携带
+    first_chunk = events[1]["result"]["statusUpdate"]["status"]["message"]["parts"]
+    assert "".join(p["text"] for p in first_chunk if "text" in p) == "a"
+    second_chunk = events[2]["result"]["statusUpdate"]["status"]["message"]["parts"]
+    assert "".join(p["text"] for p in second_chunk if "text" in p) == "b"
+
+    # 结束事件为 completed，且不带 message（避免客户端重复输出全文）
+    final_status = events[3]["result"]["statusUpdate"]["status"]
+    assert final_status["state"] == "TASK_STATE_COMPLETED"
+    assert "message" not in final_status
 
 
 async def test_rpc_unknown_method(anon_client, monkeypatch, make_agent, make_api_key):

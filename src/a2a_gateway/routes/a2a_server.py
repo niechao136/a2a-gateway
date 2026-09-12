@@ -37,7 +37,9 @@ from sse_starlette.sse import EventSourceResponse
 from a2a.helpers.proto_helpers import (
     get_data_parts,
     get_message_text,
+    new_task,
     new_text_message,
+    new_text_status_update_event,
 )
 from a2a.server.jsonrpc_models import InvalidRequestError, MethodNotFoundError
 from a2a.server.request_handlers.response_helpers import (
@@ -45,6 +47,9 @@ from a2a.server.request_handlers.response_helpers import (
     build_error_response,
 )
 from a2a.types.a2a_pb2 import (
+    TASK_STATE_COMPLETED,
+    TASK_STATE_FAILED,
+    TASK_STATE_WORKING,
     AgentCapabilities,
     AgentCard,
     AgentInterface,
@@ -54,6 +59,8 @@ from a2a.types.a2a_pb2 import (
     SendMessageRequest,
     SendMessageResponse,
     StreamResponse,
+    TaskStatus,
+    TaskStatusUpdateEvent,
 )
 from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH, TransportProtocol
 from a2a.utils.errors import TaskNotFoundError
@@ -292,14 +299,15 @@ async def a2a_rpc(
         )
 
     context_id = req.message.context_id or req.message.task_id or uuid.uuid4().hex
+    task_id = req.message.task_id or uuid.uuid4().hex
 
     try:
         if method in STREAMING_METHODS:
             return EventSourceResponse(
-                _rpc_stream(request_id, agent, text, context_id)
+                _rpc_stream(request_id, agent, text, context_id, task_id)
             )
         return JSONResponse(
-            await _rpc_send_message(agent, text, context_id, request_id)
+            await _rpc_send_message(agent, text, context_id, task_id, request_id)
         )
     except HTTPException:
         raise
@@ -326,33 +334,70 @@ async def _stream_agent_text(
 
 
 async def _rpc_send_message(
-    agent: AgentConfig, text: str, context_id: str, request_id: Any
+    agent: AgentConfig, text: str, context_id: str, task_id: str, request_id: Any
 ) -> dict[str, Any]:
     """非流式 SendMessage：等 Agent 跑完后返回完整消息。"""
     chunks: list[str] = []
     async for chunk in _stream_agent_text(agent, text, context_id):
         chunks.append(chunk)
-    message = new_text_message("".join(chunks), context_id=context_id)
+    message = new_text_message("".join(chunks), context_id=context_id, task_id=task_id)
     response = SendMessageResponse(message=message)
     result = MessageToDict(response)
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
+def _sse_result(request_id: Any, response: Any) -> dict[str, str]:
+    """把流式事件包装为 JSON-RPC 响应的 SSE 帧。"""
+    result = MessageToDict(response)
+    return {
+        "data": json.dumps(
+            {"jsonrpc": "2.0", "id": request_id, "result": result},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+    }
+
+
 async def _rpc_stream(
-    request_id: Any, agent: AgentConfig, text: str, context_id: str
+    request_id: Any, agent: AgentConfig, text: str, context_id: str, task_id: str
 ) -> AsyncGenerator[dict[str, str], None]:
-    """流式 SendStreamingMessage：每个增量文本作为一个 JSON-RPC 响应事件。"""
+    """流式 SendStreamingMessage：按 A2A 1.0 任务式语义发事件。
+
+    - 首事件：Task（working）—— 标准客户端在收到裸 message 事件时会视为
+      「最终完整回复」并立即终止流（a2a-sdk base_client._process_stream），
+      因此增量文本必须经 status_update 携带，不能直接发 message
+    - 中间事件：TaskStatusUpdateEvent（working，message 携带增量文本）
+    - 结束事件：TaskStatusUpdateEvent（completed）
+    """
     try:
+        yield _sse_result(
+            request_id,
+            StreamResponse(
+                task=new_task(task_id=task_id, context_id=context_id, state=TASK_STATE_WORKING)
+            ),
+        )
         async for chunk in _stream_agent_text(agent, text, context_id):
-            message = new_text_message(chunk, context_id=context_id)
-            result = MessageToDict(StreamResponse(message=message))
-            yield {
-                "data": json.dumps(
-                    {"jsonrpc": "2.0", "id": request_id, "result": result},
-                    ensure_ascii=False,
-                    separators=(",", ":"),
+            yield _sse_result(
+                request_id,
+                StreamResponse(
+                    status_update=new_text_status_update_event(
+                        task_id=task_id,
+                        context_id=context_id,
+                        state=TASK_STATE_WORKING,
+                        text=chunk,
+                    )
+                ),
+            )
+        yield _sse_result(
+            request_id,
+            StreamResponse(
+                status_update=TaskStatusUpdateEvent(
+                    task_id=task_id,
+                    context_id=context_id,
+                    status=TaskStatus(state=TASK_STATE_COMPLETED),
                 )
-            }
+            ),
+        )
     except Exception:
         logger.exception("A2A 流式处理失败 slug=%s", agent.slug)
         yield {
