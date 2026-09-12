@@ -149,6 +149,32 @@ class McpServerOut(McpServerBase):
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
+class ManualMcpServer(BaseModel):
+    """Agent 上手动绑定的 MCP 服务（不经过「MCP 管理」注册表）。
+
+    与注册表勾选可并存：运行时快照 = 勾选解析结果 + 手动条目。
+    """
+
+    name: str = Field(description="显示名称（用于生成工具说明），同一 Agent 内建议唯一")
+    description: str = Field(default="", description="服务说明，会进入大模型提示词")
+    transport: Literal["stdio", "sse", "streamable_http"] = "streamable_http"
+    url: str = Field(default="", description="sse / streamable_http 的服务地址")
+    command: str = Field(default="", description="stdio 的启动命令")
+    args: list[str] = Field(default_factory=list, description="stdio 的启动参数")
+    env: dict[str, str] = Field(default_factory=dict, description="stdio 的进程环境变量")
+    token: str = Field(default="", description="密钥（随 auth_type 决定放到哪里）")
+    auth_type: str = Field(default="bearer", description="鉴权方式：none/bearer/header/query/basic")
+    auth_name: str = Field(default="", description="请求头名 / 查询参数名 / basic 用户名")
+
+    @model_validator(mode="after")
+    def _check(self) -> "ManualMcpServer":
+        if not self.name.strip():
+            raise ValueError("手动绑定的 MCP 服务需要填写名称")
+        validate_mcp_transport(self.transport, self.url, self.command)
+        validate_auth(self.auth_type, self.auth_name, self.token)
+        return self
+
+
 class AgentBase(BaseModel):
     name: str
     description: str = ""
@@ -160,7 +186,11 @@ class AgentBase(BaseModel):
     )
     a2a_targets: list[A2ATarget] = Field(
         default_factory=list,
-        description="解析后的 A2A 绑定快照（只读）。兼容历史客户端：未传 a2a_target_ids 时可直接传本字段",
+        description="手动绑定的 A2A 目标（无需在「A2A 管理」注册），可与勾选并存",
+    )
+    mcp_servers: list[ManualMcpServer] = Field(
+        default_factory=list,
+        description="手动绑定的 MCP 服务（无需在「MCP 管理」注册），可与勾选并存",
     )
     system_prompt: str | None = None
 
@@ -175,6 +205,7 @@ class AgentUpdate(BaseModel):
     a2a_target_ids: list[int] | None = None
     mcp_server_ids: list[int] | None = None
     a2a_targets: list[A2ATarget] | None = None
+    mcp_servers: list[ManualMcpServer] | None = None
     system_prompt: str | None = None
     status: Literal["draft", "published"] | None = None
 

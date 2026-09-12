@@ -8,6 +8,24 @@ const TOKEN_KEY = "a2a_admin_token";
 export interface A2ATargetInput {
   url: string;
   token: string;
+  /** 目标说明，会进入大模型提示词（手动绑定时建议填写） */
+  description?: string;
+  auth_type?: AuthType;
+  auth_name?: string;
+}
+
+/** 手动绑定的 MCP 服务（不经过「MCP 管理」注册表，可与勾选并存） */
+export interface ManualMcpServerInput {
+  name: string;
+  description?: string;
+  transport: McpTransport;
+  url?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  token?: string;
+  auth_type?: AuthType;
+  auth_name?: string;
 }
 
 export interface Agent {
@@ -19,8 +37,9 @@ export interface Agent {
   a2a_target_ids: number[];
   /** 在「MCP 管理」中勾选的服务 id（选择式绑定） */
   mcp_server_ids: number[];
-  /** 由 a2a_target_ids 解析出的绑定快照（只读） */
+  /** 绑定快照 = 注册表解析结果 + 手动绑定条目（只读） */
   a2a_targets: A2ATargetInput[];
+  mcp_servers: ManualMcpServerInput[];
   system_prompt: string | null;
   status: "draft" | "published";
   created_at: string;
@@ -31,11 +50,13 @@ export interface AgentCreatePayload {
   slug: string;
   name: string;
   description?: string;
-  /** 优先使用：从「A2A 管理」注册表勾选的 id */
+  /** 从「A2A 管理」注册表勾选的 id */
   a2a_target_ids?: number[];
   mcp_server_ids?: number[];
-  /** 兼容字段：直接传 url/token（未传 a2a_target_ids 时生效） */
+  /** 手动绑定的 A2A 目标（可与勾选并存） */
   a2a_targets?: A2ATargetInput[];
+  /** 手动绑定的 MCP 服务（可与勾选并存） */
+  mcp_servers?: ManualMcpServerInput[];
   system_prompt?: string | null;
 }
 

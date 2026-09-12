@@ -7,6 +7,7 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+.codebuddy/
 
 # Node
 node_modules/

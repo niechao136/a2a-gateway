@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Alert,
@@ -15,12 +15,21 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { A2AEndpoint, Agent, AgentCreatePayload, McpServer } from "@/lib/adminApi";
+import {
+  A2AEndpoint,
+  A2ATargetInput,
+  Agent,
+  AgentCreatePayload,
+  ManualMcpServerInput,
+  McpServer,
+} from "@/lib/adminApi";
+import ManualA2ABinding from "@/components/admin/ManualA2ABinding";
+import ManualMcpBinding from "@/components/admin/ManualMcpBinding";
 
 /** slug 允许字母、数字、- 和 _，且首尾必须是字母或数字。 */
 const SLUG_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 /** 系统保留 slug（与后端 RESERVED_SLUGS + 路由中的 default 别名一致）。 */
-const RESERVED_SLUGS = ["/", "", "default"];
+const RESERVED_SLUGS = ["/", "", "default", "a2a"];
 
 interface AgentFormProps {
   initial?: Agent | null;
@@ -57,19 +66,55 @@ export default function AgentForm({
   const [selectedMcpIds, setSelectedMcpIds] = useState<number[]>(
     initial?.mcp_server_ids ?? [],
   );
-  const [errors, setErrors] = useState<{ slug?: string; name?: string }>({});
+  // 手动绑定（未在注册表登记）：与勾选并存
+  const [manualTargets, setManualTargets] = useState<A2ATargetInput[]>([]);
+  const [manualMcp, setManualMcp] = useState<ManualMcpServerInput[]>([]);
+  const [errors, setErrors] = useState<{ slug?: string; name?: string; manualA2a?: string }>({});
 
   /**
-   * 历史 Agent 可能带着「不在注册表里」的内嵌目标（例如脚本直接创建）。
-   * 这些目标在当前勾选下无法保留，明确提示，避免保存后静默丢失绑定。
+   * 编辑时把「不在当前勾选的注册表条目里」的既有绑定快照识别为手动绑定，
+   * 使其在表单中可见、可编辑，保存后不会静默丢失。
    */
-  const unmatchedTargets = useMemo(() => {
-    if (!initial) return [];
+  useEffect(() => {
+    if (!initial) return;
     const selectedUrls = new Set(
       a2aEndpoints.filter((ep) => selectedTargetIds.includes(ep.id)).map((ep) => ep.url),
     );
-    return (initial.a2a_targets ?? []).filter((t) => !selectedUrls.has(t.url));
-  }, [initial, a2aEndpoints, selectedTargetIds]);
+    setManualTargets(
+      (initial.a2a_targets ?? [])
+        .filter((t) => t.url && !selectedUrls.has(t.url))
+        .map((t) => ({
+          url: t.url,
+          token: t.token ?? "",
+          description: t.description ?? "",
+          auth_type: t.auth_type,
+          auth_name: t.auth_name,
+        })),
+    );
+    const selectedMcpNames = new Set(
+      mcpServers
+        .filter((s) => selectedMcpIds.includes(s.id))
+        .map((s) => s.name),
+    );
+    setManualMcp(
+      (initial.mcp_servers ?? [])
+        .filter((m) => m.name && !selectedMcpNames.has(m.name))
+        .map((m) => ({
+          name: m.name,
+          description: m.description ?? "",
+          transport: m.transport ?? "streamable_http",
+          url: m.url ?? "",
+          command: m.command ?? "",
+          args: m.args ?? [],
+          env: m.env ?? {},
+          token: m.token ?? "",
+          auth_type: m.auth_type,
+          auth_name: m.auth_name,
+        })),
+    );
+    // 仅在打开表单时初始化一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleTarget = (id: number) => {
     setSelectedTargetIds((prev) =>
@@ -84,14 +129,21 @@ export default function AgentForm({
   };
 
   const validate = (): boolean => {
-    const next: { slug?: string; name?: string } = {};
+    const next: { slug?: string; name?: string; manualA2a?: string } = {};
     if (!name.trim()) next.name = "请填写名称";
     if (!isEdit) {
       const s = slug.trim();
       if (!s) next.slug = "请填写路由 slug";
-      else if (RESERVED_SLUGS.includes(s)) next.slug = "该 slug 为系统保留（默认 Agent），禁止使用";
+      else if (RESERVED_SLUGS.includes(s)) next.slug = "该 slug 为系统保留（默认 Agent / A2A 地址前缀），禁止使用";
       else if (!SLUG_PATTERN.test(s)) next.slug = "仅允许字母、数字、- 和 _，且首尾不能是符号";
       else if (existingSlugs.includes(s)) next.slug = `slug '${s}' 已被占用`;
+    }
+    // 手动 A2A 目标：非空行必须填写地址
+    const filled = manualTargets.filter(
+      (t) => (t.url ?? "").trim() || (t.token ?? "").trim() || (t.description ?? "").trim(),
+    );
+    if (filled.some((t) => !(t.url ?? "").trim())) {
+      next.manualA2a = "手动绑定的 A2A 目标需填写地址";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -100,12 +152,17 @@ export default function AgentForm({
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    // 过滤完全为空的手动行
+    const targets = manualTargets.filter((t) => (t.url ?? "").trim());
+    const mcps = manualMcp.filter((m) => (m.name ?? "").trim());
     void onSubmit({
       slug: slug.trim(),
       name: name.trim(),
       description: description.trim(),
       a2a_target_ids: selectedTargetIds,
       mcp_server_ids: selectedMcpIds,
+      a2a_targets: targets,
+      mcp_servers: mcps,
       system_prompt: systemPrompt.trim() ? systemPrompt : null,
     });
   };
@@ -170,10 +227,9 @@ export default function AgentForm({
             Agent 将通过 A2A 协议调用这里勾选的远端 Agent。目标在「A2A 管理」中统一维护。
           </Typography>
 
-          {unmatchedTargets.length > 0 && (
-            <Alert severity="warning" sx={{ mt: 1.5 }}>
-              该 Agent 存在未在注册表中登记的 A2A 目标（
-              {unmatchedTargets.map((t) => t.url).join("、")}），保存后将按当前勾选重建绑定。
+          {errors.manualA2a && (
+            <Alert severity="error" sx={{ mt: 1.5 }}>
+              {errors.manualA2a}
             </Alert>
           )}
 
@@ -228,6 +284,8 @@ export default function AgentForm({
               ))}
             </Stack>
           )}
+
+          <ManualA2ABinding value={manualTargets} onChange={setManualTargets} />
         </Box>
 
         <Divider />
@@ -294,6 +352,8 @@ export default function AgentForm({
               ))}
             </Stack>
           )}
+
+          <ManualMcpBinding value={manualMcp} onChange={setManualMcp} />
         </Box>
 
         <Divider />

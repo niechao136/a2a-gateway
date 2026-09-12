@@ -107,19 +107,46 @@ async def resolve_mcp_snapshot(session: AsyncSession, ids: list[int]) -> list[di
     return [mcp_server_snapshot(s) for s in await resolve_mcp_servers(session, ids)]
 
 
-async def _resolve_bindings(session: AsyncSession, data: AgentCreate):
-    """解析 Agent 载荷中的绑定选择，返回 (a2a_ids, a2a_targets, mcp_ids, mcp_snapshot)。
+def _merge_manual_items(
+    existing: list[dict[str, Any]] | None,
+    resolved: list[dict[str, Any]],
+    manual: list[dict[str, Any]] | None,
+    key: str,
+) -> list[dict[str, Any]]:
+    """合并手动绑定条目与注册表解析结果。
 
-    优先级：a2a_target_ids > a2a_targets（后者为历史兼容字段，保证老客户端可用）。
+    - resolved：由 a2a_target_ids / mcp_server_ids 解析出的注册表快照
+    - key：去重键（A2A 用 url，MCP 用 name）；手动条目与注册表条目重复时以注册表为准
+    - manual 为 None 表示请求未显式提供手动列表（如仅改状态的老客户端），
+      此时保留既有的手动条目，避免只改勾选时静默丢失手动绑定
+    """
+    resolved_keys = {item.get(key) for item in resolved}
+    if manual is None:
+        return [item for item in (existing or []) if item.get(key) not in resolved_keys]
+    seen: set[Any] = set()
+    merged: list[dict[str, Any]] = []
+    for item in manual:
+        k = item.get(key)
+        if k in seen:
+            continue
+        seen.add(k)
+        if k not in resolved_keys:
+            merged.append(item)
+    return merged
+
+
+async def _resolve_bindings(session: AsyncSession, data: AgentCreate):
+    """解析 Agent 载荷中的绑定，返回 (a2a_ids, a2a_targets, mcp_ids, mcp_snapshot)。
+
+    注册表勾选与手动绑定可并存：快照 = 勾选解析结果 + 手动条目。
     """
     a2a_ids = list(data.a2a_target_ids or [])
-    if a2a_ids:
-        a2a_targets = await resolve_a2a_targets(session, a2a_ids)
-    else:
-        a2a_targets = [t.model_dump() for t in (data.a2a_targets or [])]
+    a2a_resolved = await resolve_a2a_targets(session, a2a_ids)
+    a2a_targets = a2a_resolved + [t.model_dump() for t in (data.a2a_targets or [])]
 
     mcp_ids = list(data.mcp_server_ids or [])
-    mcp_snapshot = await resolve_mcp_snapshot(session, mcp_ids)
+    mcp_resolved = await resolve_mcp_snapshot(session, mcp_ids)
+    mcp_snapshot = mcp_resolved + [m.model_dump() for m in (data.mcp_servers or [])]
     return a2a_ids, a2a_targets, mcp_ids, mcp_snapshot
 
 
@@ -173,16 +200,33 @@ async def update_agent(
     if data.status is not None:
         agent.status = AgentStatus(data.status)
 
-    # A2A 绑定：优先按注册表 id 解析；未传 id 时兼容旧的 url/token 字段
-    if data.a2a_target_ids is not None:
-        agent.a2a_target_ids = list(data.a2a_target_ids)
-        agent.a2a_targets = await resolve_a2a_targets(session, agent.a2a_target_ids)
-    elif data.a2a_targets is not None:
-        agent.a2a_targets = [t.model_dump() for t in data.a2a_targets]
+    # A2A 绑定：勾选（注册表 id）与手动条目并存，重复 url 以注册表为准
+    if data.a2a_target_ids is not None or data.a2a_targets is not None:
+        if data.a2a_target_ids is not None:
+            agent.a2a_target_ids = list(data.a2a_target_ids)
+        a2a_resolved = await resolve_a2a_targets(session, agent.a2a_target_ids)
+        manual_a2a = (
+            [t.model_dump() for t in data.a2a_targets]
+            if data.a2a_targets is not None
+            else None
+        )
+        agent.a2a_targets = _merge_manual_items(
+            agent.a2a_targets, a2a_resolved, manual_a2a, key="url"
+        )
 
-    if data.mcp_server_ids is not None:
-        agent.mcp_server_ids = list(data.mcp_server_ids)
-        agent.mcp_servers = await resolve_mcp_snapshot(session, agent.mcp_server_ids)
+    # MCP 绑定：勾选（注册表 id）与手动条目并存，重复 name 以注册表为准
+    if data.mcp_server_ids is not None or data.mcp_servers is not None:
+        if data.mcp_server_ids is not None:
+            agent.mcp_server_ids = list(data.mcp_server_ids)
+        mcp_resolved = await resolve_mcp_snapshot(session, agent.mcp_server_ids)
+        manual_mcp = (
+            [m.model_dump() for m in data.mcp_servers]
+            if data.mcp_servers is not None
+            else None
+        )
+        agent.mcp_servers = _merge_manual_items(
+            agent.mcp_servers, mcp_resolved, manual_mcp, key="name"
+        )
 
     await session.commit()
     await session.refresh(agent)
