@@ -99,17 +99,32 @@ async def speech_tts(req: TtsRequest) -> Any:
 # ---------------------------------------------------------------------------
 # ASR：WebSocket 双向透传
 # ---------------------------------------------------------------------------
-async def _pump(source: Any, sink: Any, label: str) -> None:
-    """把 source 收到的消息原样转发给 sink，连接关闭即退出。"""
+async def _pump_client_to_hub(ws: WebSocket, upstream: Any) -> None:
+    """客户端 → 上游：ws.receive() 返回 ASGI 原始消息（dict），需按类型分发。"""
     try:
         while True:
-            message = await source.receive()
+            message = await ws.receive()
+            if message.get("type") == "websocket.disconnect":
+                return
+            if message.get("text") is not None:
+                await upstream.send(message["text"])
+            elif message.get("bytes") is not None:
+                await upstream.send(message["bytes"])
+    except Exception:
+        logger.debug("ASR 透传任务结束 client->hub")
+
+
+async def _pump_hub_to_client(upstream: Any, ws: WebSocket) -> None:
+    """上游 → 客户端：websockets 库返回 str/bytes。"""
+    try:
+        while True:
+            message = await upstream.recv()
             if isinstance(message, str):
-                await sink.send_text(message)
+                await ws.send_text(message)
             else:
-                await sink.send_bytes(message)
-    except (WebSocketDisconnect, Exception):
-        logger.debug("ASR 透传任务结束 %s", label)
+                await ws.send_bytes(message)
+    except Exception:
+        logger.debug("ASR 透传任务结束 hub->client")
 
 
 @router.websocket("/ws/asr")
@@ -141,8 +156,8 @@ async def speech_asr(ws: WebSocket, model_id: str | None = None) -> None:
         async with websockets.connect(
             upstream_url, max_size=None, open_timeout=10
         ) as upstream:
-            client_to_hub = asyncio.create_task(_pump(ws, upstream, "client->hub"))
-            hub_to_client = asyncio.create_task(_pump(upstream, ws, "hub->client"))
+            client_to_hub = asyncio.create_task(_pump_client_to_hub(ws, upstream))
+            hub_to_client = asyncio.create_task(_pump_hub_to_client(upstream, ws))
             done, pending = await asyncio.wait(
                 {client_to_hub, hub_to_client}, return_when=asyncio.FIRST_COMPLETED
             )
