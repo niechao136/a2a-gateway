@@ -49,7 +49,7 @@ async def speech_tts(req: TtsRequest) -> Any:
 
     url = f"{settings.onnx_hub_base_url.rstrip('/')}/api/tts/{settings.onnx_hub_tts_model}"
     try:
-        client = httpx.AsyncClient(timeout=httpx.Timeout(connect=10.0, read=120.0))
+        client = httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0))
     except Exception as exc:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
