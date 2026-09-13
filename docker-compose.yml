@@ -63,6 +63,11 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
       # 经 nginx 统一入口访问时的来源（CORS）
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:10099}
+      # 语音服务（onnx-hub）：ASR / TTS 代理
+      ONNX_HUB_BASE_URL: ${ONNX_HUB_BASE_URL:-http://43.156.187.79:10100}
+      ONNX_HUB_API_KEY: ${ONNX_HUB_API_KEY:-}
+      ONNX_HUB_ASR_MODEL: ${ONNX_HUB_ASR_MODEL:-zipformer-streaming-bilingual-zh-en}
+      ONNX_HUB_TTS_MODEL: ${ONNX_HUB_TTS_MODEL:-vits-zh-aishell3}
     # 让容器可通过 host.docker.internal 访问宿主机服务（Linux 需要此映射，Docker Desktop 自带）
     extra_hosts:
       - "host.docker.internal:host-gateway"

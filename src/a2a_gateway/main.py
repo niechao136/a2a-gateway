@@ -25,7 +25,7 @@ from .repository import (
     ensure_default_admin,
     ensure_default_agent,
 )
-from .routes import a2a_server, admin, chat, registry
+from .routes import a2a_server, admin, chat, registry, speech
 from .database import AsyncSessionLocal
 
 logging.basicConfig(
@@ -88,6 +88,7 @@ app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(registry.router)
 app.include_router(a2a_server.router)
+app.include_router(speech.router)
 
 
 @app.get("/health")

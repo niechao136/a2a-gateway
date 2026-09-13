@@ -81,6 +81,17 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, alias="APP_PORT")
     frontend_origin: str = Field(default="http://localhost:3000", alias="FRONTEND_ORIGIN")
 
+    # 语音服务（onnx-hub）：ASR 语音识别 / TTS 语音合成
+    # 网关代理请求并注入 API Key，前端无需接触真实 Key
+    onnx_hub_base_url: str = Field(
+        default="http://43.156.187.79:10100", alias="ONNX_HUB_BASE_URL"
+    )
+    onnx_hub_api_key: str = Field(default="", alias="ONNX_HUB_API_KEY")
+    onnx_hub_asr_model: str = Field(
+        default="zipformer-streaming-bilingual-zh-en", alias="ONNX_HUB_ASR_MODEL"
+    )
+    onnx_hub_tts_model: str = Field(default="vits-zh-aishell3", alias="ONNX_HUB_TTS_MODEL")
+
     # 告警（可选）：配置后把 A2A 调用失败 / Agent 加载失败等推送到 Webhook
     alert_webhook_url: str = Field(default="", alias="ALERT_WEBHOOK_URL")
     alert_webhook_token: str = Field(default="", alias="ALERT_WEBHOOK_TOKEN")

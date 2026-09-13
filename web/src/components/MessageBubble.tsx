@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Avatar, IconButton, Tooltip, Typography } from "@mui/material";
+import { Box, Avatar, IconButton, Tooltip, Typography, CircularProgress } from "@mui/material";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import ReplayOutlinedIcon from "@mui/icons-material/ReplayOutlined";
+import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
+import VolumeOffOutlinedIcon from "@mui/icons-material/VolumeOffOutlined";
 import { ChatMessage } from "@/lib/api";
+import { synthesizeSpeech, playBlob, stopPlaying } from "@/lib/speech";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -17,8 +20,35 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
   const isUser = message.role === "user";
   const isTool = message.role === "tool";
   const [copied, setCopied] = useState(false);
+  const [ttsState, setTtsState] = useState<"idle" | "loading" | "playing">("idle");
+  const [ttsError, setTtsError] = useState(false);
 
   const text = isTool ? (message.toolOutput || "") : message.content;
+
+  /** 播放 / 停止本条消息的语音合成（仅 assistant 消息）。 */
+  const handleToggleTts = async () => {
+    if (ttsState === "playing") {
+      stopPlaying();
+      setTtsState("idle");
+      return;
+    }
+    if (!message.content) return;
+    setTtsState("loading");
+    setTtsError(false);
+    try {
+      const blob = await synthesizeSpeech(message.content);
+      const audio = playBlob(blob);
+      setTtsState("playing");
+      audio.addEventListener("ended", () => setTtsState("idle"));
+      audio.addEventListener("pause", () => {
+        // stopPlaying() 主动暂停时也复位（ended 在被替换时可能不触发）
+        if (audio.paused) setTtsState((s) => (s === "playing" ? "idle" : s));
+      });
+    } catch {
+      setTtsError(true);
+      setTtsState("idle");
+    }
+  };
 
   const handleCopy = async () => {
     if (!text) return;
@@ -124,6 +154,32 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
               )}
             </IconButton>
           </Tooltip>
+          {!isUser && (
+            <Tooltip
+              title={
+                ttsError
+                  ? "语音合成失败"
+                  : ttsState === "playing"
+                    ? "停止播放"
+                    : "播放语音"
+              }
+            >
+              <IconButton
+                size="small"
+                color={ttsState === "playing" ? "primary" : "default"}
+                onClick={() => void handleToggleTts()}
+                disabled={!message.content || ttsState === "loading"}
+              >
+                {ttsState === "loading" ? (
+                  <CircularProgress size={15} />
+                ) : ttsState === "playing" ? (
+                  <VolumeOffOutlinedIcon sx={{ fontSize: 15 }} />
+                ) : (
+                  <VolumeUpOutlinedIcon sx={{ fontSize: 15, ...(ttsError ? { color: "error.main" } : {}) }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
           {!isUser && onRetry && (
             <Tooltip title="重试（time travel 重新生成）">
               <IconButton size="small" onClick={onRetry}>
