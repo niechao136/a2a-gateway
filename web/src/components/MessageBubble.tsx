@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Box, Avatar, IconButton, Tooltip, Typography, CircularProgress } from "@mui/material";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
@@ -8,7 +8,7 @@ import ReplayOutlinedIcon from "@mui/icons-material/ReplayOutlined";
 import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
 import VolumeOffOutlinedIcon from "@mui/icons-material/VolumeOffOutlined";
 import { ChatMessage } from "@/lib/api";
-import { synthesizeSpeech, playBlob, stopPlaying } from "@/lib/speech";
+import { TtsPlayer } from "@/lib/speech";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -22,32 +22,31 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
   const [copied, setCopied] = useState(false);
   const [ttsState, setTtsState] = useState<"idle" | "loading" | "playing">("idle");
   const [ttsError, setTtsError] = useState(false);
+  const playerRef = useRef<TtsPlayer | null>(null);
 
   const text = isTool ? (message.toolOutput || "") : message.content;
 
-  /** 播放 / 停止本条消息的语音合成（仅 assistant 消息）。 */
-  const handleToggleTts = async () => {
+  /** 播放 / 停止本条消息的语音合成（分句流式：首段就绪即开播，边播边合成后续段）。 */
+  const handleToggleTts = () => {
     if (ttsState === "playing") {
-      stopPlaying();
+      playerRef.current?.stop();
+      playerRef.current = null;
       setTtsState("idle");
       return;
     }
     if (!message.content) return;
     setTtsState("loading");
     setTtsError(false);
-    try {
-      const blob = await synthesizeSpeech(message.content);
-      const audio = playBlob(blob);
-      setTtsState("playing");
-      audio.addEventListener("ended", () => setTtsState("idle"));
-      audio.addEventListener("pause", () => {
-        // stopPlaying() 主动暂停时也复位（ended 在被替换时可能不触发）
-        if (audio.paused) setTtsState((s) => (s === "playing" ? "idle" : s));
-      });
-    } catch {
-      setTtsError(true);
-      setTtsState("idle");
-    }
+    const player = new TtsPlayer();
+    playerRef.current = player;
+    void player.play(message.content, {
+      onStart: () => setTtsState("playing"),
+      onEnd: () => setTtsState("idle"),
+      onError: () => {
+        setTtsError(true);
+        setTtsState("idle");
+      },
+    });
   };
 
   const handleCopy = async () => {
@@ -167,7 +166,7 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
               <IconButton
                 size="small"
                 color={ttsState === "playing" ? "primary" : "default"}
-                onClick={() => void handleToggleTts()}
+                onClick={handleToggleTts}
                 disabled={!message.content || ttsState === "loading"}
               >
                 {ttsState === "loading" ? (

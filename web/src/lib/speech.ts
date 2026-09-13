@@ -32,28 +32,173 @@ export async function synthesizeSpeech(text: string): Promise<Blob> {
   return await resp.blob();
 }
 
-/** 当前正在播放的音频（模块级单例：同时只播放一段）。 */
-let playingAudio: HTMLAudioElement | null = null;
-
-/** 播放 WAV Blob；返回 audio 元素（可手动 stop）。再次调用会停止上一次播放。 */
-export function playBlob(blob: Blob): HTMLAudioElement {
-  stopPlaying();
-  const audio = new Audio(URL.createObjectURL(blob));
-  playingAudio = audio;
-  audio.addEventListener("ended", () => {
-    if (playingAudio === audio) playingAudio = null;
-    URL.revokeObjectURL(audio.src);
-  });
-  void audio.play();
-  return audio;
-}
-
 /** 停止当前 TTS 播放。 */
 export function stopPlaying(): void {
-  if (playingAudio) {
-    playingAudio.pause();
-    URL.revokeObjectURL(playingAudio.src);
-    playingAudio = null;
+  TtsPlayer.stopActive();
+}
+
+/**
+ * 将长文本切分为适合 TTS 的短句段：先按句末标点切，超长句再按句内标点二次切，
+ * 相邻短句合并到 maxLen 上限内，减少请求次数的同时控制单段合成延迟。
+ */
+export function splitTtsText(text: string, maxLen = 60): string[] {
+  const parts: string[] = [];
+  let buf = "";
+  const pushBuf = () => {
+    const seg = buf.trim();
+    if (seg) parts.push(seg);
+    buf = "";
+  };
+  // 按句末标点/换行切句（保留标点），超长句再按句内标点细分
+  const sentences = text.split(/(?<=[。！？；!?;\n])/);
+  for (const sentence of sentences) {
+    if (!sentence.trim()) continue;
+    if ((buf + sentence).length <= maxLen) {
+      buf += sentence;
+      continue;
+    }
+    pushBuf();
+    if (sentence.length <= maxLen) {
+      buf = sentence;
+      continue;
+    }
+    // 超长句：按句内标点切分后逐段并入；单段仍超长时按 maxLen 硬切
+    let sub = "";
+    const flushSub = () => {
+      const seg = sub.trim();
+      if (seg) parts.push(seg);
+      sub = "";
+    };
+    for (const piece of sentence.split(/(?<=[，,、：:—])/)) {
+      if (!piece.trim()) continue;
+      if (piece.length >= maxLen) {
+        flushSub();
+        for (let i = 0; i < piece.length; i += maxLen) {
+          const seg = piece.slice(i, i + maxLen).trim();
+          if (seg) parts.push(seg);
+        }
+        continue;
+      }
+      if ((sub + piece).length > maxLen) {
+        flushSub();
+        sub = piece;
+      } else {
+        sub += piece;
+      }
+    }
+    buf = sub;
+  }
+  pushBuf();
+  return parts;
+}
+
+export interface TtsPlayerCallbacks {
+  /** 首段合成完成、即将开始播放（用于把 UI 置为“播放中”） */
+  onStart?: () => void;
+  /** 全部段落播放完毕 */
+  onEnd?: () => void;
+  /** 合成失败 */
+  onError?: (message: string) => void;
+}
+
+/**
+ * 长文本流式 TTS 播放器：切句后逐段「合成 → 播放」流水线化，
+ * 播放当前段时预取下一段音频，显著降低首字节播放延迟与段间等待。
+ */
+export class TtsPlayer {
+  /** 当前正在播放的实例（模块级唯一：同时只有一条消息在播放）。 */
+  private static active: TtsPlayer | null = null;
+
+  /** 停止当前正在播放的播放器。 */
+  static stopActive(): void {
+    TtsPlayer.active?.stop();
+  }
+
+  private segments: string[] = [];
+  private index = 0;
+  private stopped = true;
+  private audio: HTMLAudioElement | null = null;
+  private prefetch: Promise<Blob | null> | null = null;
+  private callbacks: TtsPlayerCallbacks = {};
+
+  /** 开始播放（自动停掉当前播放器）。 */
+  async play(text: string, callbacks: TtsPlayerCallbacks = {}): Promise<void> {
+    this.stop();
+    TtsPlayer.active?.stop();
+    TtsPlayer.active = this;
+
+    this.callbacks = callbacks;
+    this.segments = splitTtsText(text);
+    this.index = 0;
+    if (this.segments.length === 0) {
+      callbacks.onEnd?.();
+      return;
+    }
+    this.stopped = false;
+    try {
+      await this.runPipeline();
+      if (!this.stopped) this.callbacks.onEnd?.();
+    } catch (err) {
+      if (!this.stopped) this.callbacks.onError?.(err instanceof Error ? err.message : "语音合成失败");
+    }
+  }
+
+  /** 停止播放并取消预取。 */
+  stop(): void {
+    this.stopped = true;
+    this.prefetch = null;
+    this.callbacks = {};
+    if (this.audio) {
+      this.audio.pause();
+      URL.revokeObjectURL(this.audio.src);
+      this.audio = null;
+    }
+    if (TtsPlayer.active === this) TtsPlayer.active = null;
+  }
+
+  get isPlaying(): boolean {
+    return !this.stopped;
+  }
+
+  private async runPipeline(): Promise<void> {
+    while (this.index < this.segments.length) {
+      if (this.stopped) return;
+      const text = this.segments[this.index];
+      this.index += 1;
+
+      // 优先用预取结果，否则现合成首段
+      let blob = this.prefetch ? await this.prefetch : null;
+      this.prefetch = null;
+      if (this.stopped) return;
+      if (!blob) blob = await synthesizeSpeech(text);
+      if (this.stopped) return;
+
+      if (this.index === 1) this.callbacks.onStart?.();
+
+      // 播放当前段的同时预取下一段
+      const nextText = this.segments[this.index];
+      if (nextText) {
+        this.prefetch = synthesizeSpeech(nextText).catch(() => null);
+      }
+
+      await this.playSegment(blob);
+    }
+  }
+
+  private playSegment(blob: Blob): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.stopped) return resolve();
+      const audio = new Audio(URL.createObjectURL(blob));
+      this.audio = audio;
+      const done = () => {
+        URL.revokeObjectURL(audio.src);
+        if (this.audio === audio) this.audio = null;
+        resolve();
+      };
+      audio.addEventListener("ended", done);
+      audio.addEventListener("error", done);
+      void audio.play().catch(done);
+    });
   }
 }
 
