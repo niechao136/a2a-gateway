@@ -5,7 +5,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..a2a_client import A2AClientWrapper
@@ -13,8 +13,17 @@ from ..agent_factory import get_agent_instance, invalidate_agent
 from ..auth import create_access_token, verify_password
 from ..database import get_session
 from ..deps import get_current_admin, new_thread_id
+from ..identity import (
+    IDENTITY_KIND_USER,
+    IDENTITY_KIND_VISITOR,
+    Identity,
+    new_visitor_id,
+    read_identity,
+    set_identity_cookie,
+)
 from ..models import AdminUser, AgentStatus
 from ..repository import (
+    claim_conversations,
     create_agent,
     create_api_key,
     delete_agent,
@@ -53,9 +62,16 @@ RESERVED_SLUGS = {"/", "", "a2a"}
 @router.post("/login", response_model=Token)
 async def login(
     req: AdminLoginRequest,
+    request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ):
-    """管理员登录，返回 JWT。"""
+    """管理员登录，返回 JWT。
+
+    登录是「匿名 → 登录」会话归并的唯一时机：把当前匿名访客名下的会话
+    过户到该账号，再把身份 cookie 从 visitor 换成 user。
+    消息本体按 thread_id 存放在 checkpoints 表里，不需要搬迁。
+    """
     from ..repository import get_admin_by_username
 
     admin = await get_admin_by_username(session, req.username)
@@ -64,8 +80,31 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
         )
+
+    claimed = 0
+    previous = read_identity(request)
+    if previous is not None and previous.is_visitor:
+        claimed = await claim_conversations(session, previous.id, admin.username)
+
     token = create_access_token(admin.username)
-    return Token(access_token=token, expires_in=1440)
+    # 身份 cookie 与管理员 JWT 分开：前者管「会话归属」，有效期更长
+    set_identity_cookie(
+        response, Identity(kind=IDENTITY_KIND_USER, id=admin.username)
+    )
+    return Token(access_token=token, expires_in=1440, claimed=claimed)
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """退出登录：重新签发一个全新的匿名身份。
+
+    刻意不复用原 visitor id —— 退出后即从零开始，不会残留任何已归并走的会话。
+    """
+    set_identity_cookie(
+        response,
+        Identity(kind=IDENTITY_KIND_VISITOR, id=new_visitor_id()),
+    )
+    return {"ok": True}
 
 
 @router.get("/agents", response_model=list[AgentOut])

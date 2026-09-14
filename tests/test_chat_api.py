@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from a2a_gateway.models import AgentStatus
@@ -10,6 +11,22 @@ from a2a_gateway.routes import chat as chat_mod
 
 async def _fake_notify(*args, **kwargs):
     return None
+
+
+async def _no_conversation(session, thread_id):
+    """替身：会话未登记（历史遗留 thread），读写一律放行。"""
+    return None
+
+
+async def _ignore_upsert(*args, **kwargs):
+    return None
+
+
+@pytest.fixture(autouse=True)
+def stub_conversation_repo(monkeypatch):
+    """会话目录层默认打桩（具体归属行为见 tests/test_conversations.py）。"""
+    monkeypatch.setattr(chat_mod, "get_conversation", _no_conversation)
+    monkeypatch.setattr(chat_mod, "upsert_conversation", _ignore_upsert)
 
 
 async def test_chat_404_when_agent_missing(anon_client, monkeypatch):

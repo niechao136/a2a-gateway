@@ -26,7 +26,8 @@ import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
-import { hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
+import { adminApi, hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
+import { notifyIdentityChanged } from "@/lib/api";
 import { useColorMode } from "@/components/ThemeRegistry";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 
@@ -86,8 +87,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     }
   }, [isLoginPage, pathname, router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 后端会把身份 cookie 换成全新的匿名身份（会话随账号走，退出后不再可见）
+    try {
+      await adminApi.logout();
+    } catch {
+      /* 退出以本地为准，接口失败不阻断 */
+    }
     setAdminToken(null);
+    notifyIdentityChanged();
     router.replace(LOGIN_PATH);
   };
 

@@ -257,6 +257,8 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+    # 登录时归并到账号的匿名会话数量（0 表示本次没有可归并的会话）
+    claimed: int = 0
 
 
 # 前端公开对话请求
@@ -275,3 +277,53 @@ class RetryRequest(BaseModel):
 class AdminLoginRequest(BaseModel):
     username: str
     password: str
+
+
+# ---------------------------------------------------------------------------
+# 对话会话目录（thread_id → 身份归属）
+# ---------------------------------------------------------------------------
+class IdentityOut(BaseModel):
+    """当前对话身份。前端只用于判断「是否已登录」。"""
+
+    kind: Literal["visitor", "user"]
+    id: str
+
+
+class ConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    thread_id: str
+    agent_slug: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationCreate(BaseModel):
+    """登记 / 刷新一条会话。"""
+
+    thread_id: str = Field(description="会话 id（即 LangGraph thread_id）")
+    slug: str = Field(default="", description="Agent 路由；空串表示默认 Agent")
+    title: str | None = Field(default=None, description="标题；仅在原标题为空时写入")
+
+
+class ConversationRename(BaseModel):
+    title: str = Field(description="新的会话标题")
+
+
+class ConversationImportItem(BaseModel):
+    """前端 localStorage 里的一条历史会话。"""
+
+    thread_id: str
+    title: str = ""
+    created_at: int | None = Field(default=None, description="毫秒时间戳，仅用于排序")
+    updated_at: int | None = Field(default=None, description="毫秒时间戳，仅用于排序")
+
+
+class ConversationImportRequest(BaseModel):
+    slug: str = Field(default="", description="Agent 路由；空串表示默认 Agent")
+    items: list[ConversationImportItem] = Field(default_factory=list)
+
+
+class ConversationImportOut(BaseModel):
+    imported: int

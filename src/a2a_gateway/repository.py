@@ -16,11 +16,23 @@ import logging
 
 import secrets
 
-from sqlalchemy import select
+from datetime import datetime, timezone
+
+from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings
-from .models import A2AEndpoint, AdminUser, AgentConfig, AgentStatus, ApiKey, McpServer
+from .identity import IDENTITY_KIND_USER, IDENTITY_KIND_VISITOR, Identity
+from .models import (
+    A2AEndpoint,
+    AdminUser,
+    AgentConfig,
+    AgentStatus,
+    ApiKey,
+    Conversation,
+    McpServer,
+)
 from .schemas import (
     A2AEndpointCreate,
     A2AEndpointUpdate,
@@ -636,3 +648,178 @@ async def ensure_default_admin(session: AsyncSession) -> AdminUser:
     await session.commit()
     await session.refresh(admin)
     return admin
+
+
+# ---------------------------------------------------------------------------
+# Conversation（对话会话目录：thread_id → 身份归属）
+# ---------------------------------------------------------------------------
+def normalize_slug(slug: str | None) -> str:
+    """前端用空串表示默认 Agent，库里统一存 "/"。"""
+    return (slug or "").strip() or "/"
+
+
+async def list_conversations(
+    session: AsyncSession, identity: Identity, slug: str | None = None
+) -> list[Conversation]:
+    """列出某身份名下的会话（按最近更新倒序）。"""
+    stmt = select(Conversation).where(
+        Conversation.owner_kind == identity.kind,
+        Conversation.owner_id == identity.id,
+    )
+    if slug is not None:
+        stmt = stmt.where(Conversation.agent_slug == normalize_slug(slug))
+    stmt = stmt.order_by(Conversation.updated_at.desc())
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_conversation(
+    session: AsyncSession, thread_id: str
+) -> Conversation | None:
+    """按 thread_id 查会话目录（不校验归属，由调用方判断）。
+
+    返回 None 表示「未登记」——历史遗留会话与回填前的 thread 都不在目录里，
+    此时读写一律放行，保证升级过程不打断现有用户。
+    """
+    result = await session.execute(
+        select(Conversation).where(Conversation.thread_id == thread_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_conversation(
+    session: AsyncSession,
+    identity: Identity,
+    thread_id: str,
+    slug: str | None = None,
+    title: str | None = None,
+) -> Conversation | None:
+    """登记/刷新一条会话。
+
+    - 已登记且属于本身份：有 title 且原标题为空时补标题，并刷新 updated_at
+    - 已登记但属于他人：返回 None（不抢归属，避免分享链接被任意收编）
+    - 未登记：新建
+    """
+    existing = await get_conversation(session, thread_id)
+    if existing is not None:
+        if not identity.owns(existing):
+            return None
+        # 只在标题为空时写入：首条消息定标题，后续消息不应覆盖
+        if title and not existing.title:
+            existing.title = title[:255]
+        existing.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(existing)
+        return existing
+
+    conv = Conversation(
+        thread_id=thread_id,
+        agent_slug=normalize_slug(slug),
+        title=(title or "")[:255],
+        owner_kind=identity.kind,
+        owner_id=identity.id,
+    )
+    session.add(conv)
+    await session.commit()
+    await session.refresh(conv)
+    return conv
+
+
+async def rename_conversation(
+    session: AsyncSession, identity: Identity, thread_id: str, title: str
+) -> Conversation | None:
+    """重命名会话；不属于本身份时返回 None。"""
+    conv = await get_conversation(session, thread_id)
+    if conv is None or not identity.owns(conv):
+        return None
+    conv.title = title[:255]
+    conv.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(conv)
+    return conv
+
+
+async def delete_conversation(
+    session: AsyncSession, identity: Identity, thread_id: str
+) -> bool:
+    """删除会话目录；不属于本身份时返回 False。"""
+    conv = await get_conversation(session, thread_id)
+    if conv is None or not identity.owns(conv):
+        return False
+    await session.delete(conv)
+    await session.commit()
+    return True
+
+
+async def claim_conversations(
+    session: AsyncSession, visitor_id: str, username: str
+) -> int:
+    """登录归并：把某个匿名访客名下的会话过户给管理员账号。
+
+    单条 UPDATE，天然幂等（重复登录第二次影响 0 行）且原子。
+    消息本体在 checkpoints 表里按 thread_id 存储，不随归属变化搬迁。
+    """
+    result = await session.execute(
+        update(Conversation)
+        .where(
+            Conversation.owner_kind == IDENTITY_KIND_VISITOR,
+            Conversation.owner_id == visitor_id,
+        )
+        .values(owner_kind=IDENTITY_KIND_USER, owner_id=username)
+    )
+    await session.commit()
+    claimed = result.rowcount or 0
+    if claimed:
+        logger.info("登录归并：匿名访客 %s 的 %s 条会话已归属 %s", visitor_id, claimed, username)
+    return claimed
+
+
+async def import_conversations(
+    session: AsyncSession,
+    identity: Identity,
+    slug: str | None,
+    items: list[dict[str, Any]],
+) -> int:
+    """批量导入历史会话（前端 localStorage 迁移用）。
+
+    已存在的 thread_id 一律跳过：既不重复插入，也不会把别人的会话收编过来。
+    """
+    if not items:
+        return 0
+    normalized = normalize_slug(slug)
+    wanted: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in items:
+        thread_id = str(item.get("thread_id") or "").strip()
+        if not thread_id or thread_id in seen:
+            continue
+        seen.add(thread_id)
+        wanted.append(
+            {
+                "thread_id": thread_id[:64],
+                "agent_slug": normalized,
+                "title": str(item.get("title") or "")[:255],
+                "owner_kind": identity.kind,
+                "owner_id": identity.id,
+            }
+        )
+    if not wanted:
+        return 0
+
+    existing = (
+        await session.execute(
+            select(Conversation.thread_id).where(Conversation.thread_id.in_(list(seen)))
+        )
+    ).scalars().all()
+    rows = [row for row in wanted if row["thread_id"] not in set(existing)]
+    if not rows:
+        return 0
+
+    await session.execute(
+        pg_insert(Conversation)
+        .values(rows)
+        .on_conflict_do_nothing(index_elements=["thread_id"])
+    )
+    await session.commit()
+    logger.info("导入历史会话 %s 条（身份 %s:%s）", len(rows), identity.kind, identity.id)
+    return len(rows)

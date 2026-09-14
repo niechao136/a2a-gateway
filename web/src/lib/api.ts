@@ -1,11 +1,26 @@
 /**
- * 后端 API 客户端：SSE 流式对话 + 历史记录。
+ * 后端 API 客户端：SSE 流式对话 + 历史记录 + 会话目录。
  *
  * 开发期通过 next.config rewrite 走 /api/*（同源），生产期经 nginx 同源反向代理
  * （NEXT_PUBLIC_API_BASE_URL 为空），也可配置为后端绝对地址。
+ *
+ * 所有请求都带 credentials: "include" —— 会话归属由后端签发的 httpOnly
+ * 身份 cookie 决定，前端读不到也改不了它。
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+/**
+ * 身份变化事件：登录 / 退出后由对应页面派发，对话页收到后重新拉取会话列表
+ * （登录会把匿名会话归并到账号，列表内容随之变化）。
+ */
+export const IDENTITY_CHANGED_EVENT = "a2a:identity-changed";
+
+/** 派发身份变化事件（登录页 / 管理中心退出登录时调用）。 */
+export function notifyIdentityChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(IDENTITY_CHANGED_EVENT));
+}
 
 export type ChatRole = "user" | "assistant" | "tool";
 
@@ -138,6 +153,7 @@ export async function streamChatUrl(
       ...headers,
     },
     body: JSON.stringify({ message, thread_id: threadId }),
+    credentials: "include",
   });
 
   if (!resp.ok || !resp.body) {
@@ -195,6 +211,7 @@ export async function retryChat(
       Accept: "text/event-stream",
     },
     body: JSON.stringify({ thread_id: threadId }),
+    credentials: "include",
   });
 
   if (!resp.ok || !resp.body) {
@@ -217,8 +234,110 @@ export async function fetchHistory(slug: string, threadId: string): Promise<Chat
     slug && slug !== "/"
       ? `${API_BASE}/api/chat/${slug}/history?thread_id=${encodeURIComponent(threadId)}`
       : `${API_BASE}/api/chat/history?thread_id=${encodeURIComponent(threadId)}`;
-  const resp = await fetch(url);
+  const resp = await fetch(url, { credentials: "include" });
   if (!resp.ok) return [];
   const data = await resp.json();
   return Array.isArray(data) ? data : [];
+}
+
+// ---------------------------------------------------------------------------
+// 会话目录（服务端存储，按身份归属）
+// ---------------------------------------------------------------------------
+
+export type IdentityKind = "visitor" | "user";
+
+export interface ConversationRecord {
+  thread_id: string;
+  agent_slug: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 身份 cookie 由后端 httpOnly 下发；本接口只负责「确保它存在」。 */
+export async function ensureIdentity(): Promise<{
+  kind: IdentityKind;
+  id: string;
+} | null> {
+  try {
+    const resp = await fetch(`${API_BASE}/api/chat/identity`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!resp.ok) return null;
+    return (await resp.json()) as { kind: IdentityKind; id: string };
+  } catch {
+    return null;
+  }
+}
+
+/** 当前身份名下的会话列表（按最近更新倒序）。 */
+export async function fetchConversations(slug: string): Promise<ConversationRecord[]> {
+  const params = new URLSearchParams({ slug });
+  const resp = await fetch(`${API_BASE}/api/chat/conversations?${params.toString()}`, {
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error("读取会话列表失败");
+  const data = await resp.json();
+  return Array.isArray(data) ? (data as ConversationRecord[]) : [];
+}
+
+/** 登记 / 刷新一条会话；会话已归属他人时后端返回 null。 */
+export async function saveConversation(
+  slug: string,
+  threadId: string,
+  title?: string,
+): Promise<ConversationRecord | null> {
+  const resp = await fetch(`${API_BASE}/api/chat/conversations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ thread_id: threadId, slug, title: title ?? null }),
+    credentials: "include",
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return (data as ConversationRecord | null) ?? null;
+}
+
+/** 重命名会话。 */
+export async function renameConversation(
+  threadId: string,
+  title: string,
+): Promise<boolean> {
+  const resp = await fetch(
+    `${API_BASE}/api/chat/conversations/${encodeURIComponent(threadId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+      credentials: "include",
+    },
+  );
+  return resp.ok;
+}
+
+/** 删除会话（目录 + 服务端消息本体）。 */
+export async function deleteConversation(threadId: string): Promise<boolean> {
+  const resp = await fetch(
+    `${API_BASE}/api/chat/conversations/${encodeURIComponent(threadId)}`,
+    { method: "DELETE", credentials: "include" },
+  );
+  return resp.ok;
+}
+
+/** 批量导入旧 localStorage 里的会话（一次性迁移）。 */
+export async function importConversations(
+  slug: string,
+  items: { thread_id: string; title?: string }[],
+): Promise<number> {
+  if (items.length === 0) return 0;
+  const resp = await fetch(`${API_BASE}/api/chat/conversations/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug, items }),
+    credentials: "include",
+  });
+  if (!resp.ok) return 0;
+  const data = await resp.json();
+  return typeof data?.imported === "number" ? data.imported : 0;
 }

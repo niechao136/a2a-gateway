@@ -21,15 +21,23 @@ import ChatInput from "./ChatInput";
 import ConversationList from "./ConversationList";
 import AdminEntry from "./AdminEntry";
 import ThemeToggleButton from "./ThemeToggleButton";
-import { streamChat, retryChat, fetchHistory, ChatMessage, SSEEvent } from "@/lib/api";
+import {
+  streamChat,
+  retryChat,
+  fetchHistory,
+  IDENTITY_CHANGED_EVENT,
+  ChatMessage,
+  SSEEvent,
+} from "@/lib/api";
 import {
   Conversation,
-  listConversations,
   setActiveId,
-  migrateLegacy,
+  initIdentity,
+  migrateLegacyList,
+  loadConversations,
   createConversation,
-  upsertConversation,
-  deleteConversation,
+  touchConversation,
+  removeConversation,
 } from "@/lib/conversations";
 
 interface ChatPageProps {
@@ -96,29 +104,44 @@ export default function ChatPage({
     }
     mountedRef.current = true;
 
-    migrateLegacy(slug);
-    const list = listConversations(slug);
-    setConversations(list);
+    let cancelled = false;
     setError(null);
+    setHistoryLoaded(false);
 
-    let active: string | null = null;
-    if (initialConversationId) {
-      // 路由指定的会话：若本地列表没有（如分享链接），补一条记录
-      if (!list.some((c) => c.id === initialConversationId)) {
-        const conv = upsertConversation(slug, initialConversationId);
-        list.unshift(conv);
-        setConversations([...listConversations(slug)]);
+    void (async () => {
+      // 1) 确保身份 cookie 存在（后端 httpOnly 签发）
+      // 2) 把旧版本残留在 localStorage 的会话一次性导入服务端
+      // 3) 以服务端列表为准
+      await initIdentity();
+      await migrateLegacyList(slug);
+      let list = await loadConversations(slug);
+      if (cancelled) return;
+      setConversations(list);
+
+      let active: string | null = null;
+      if (initialConversationId) {
+        // 路由指定的会话（分享链接 / 旧书签）：列表里没有则补登记一次
+        if (!list.some((c) => c.id === initialConversationId)) {
+          await touchConversation(slug, initialConversationId);
+          list = await loadConversations(slug);
+          if (cancelled) return;
+          setConversations(list);
+        }
+        active = initialConversationId;
       }
-      active = initialConversationId;
-    }
-    updateActiveId(active);
-    if (active) {
-      setActiveId(slug, active);
-      void loadHistory(active, slug);
-    } else {
-      setMessages([]);
-      setHistoryLoaded(true);
-    }
+      updateActiveId(active);
+      if (active) {
+        setActiveId(slug, active);
+        void loadHistory(active, slug);
+      } else {
+        setMessages([]);
+        setHistoryLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, initialConversationId, loadHistory, updateActiveId]);
 
@@ -127,9 +150,19 @@ export default function ChatPage({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const refreshConversations = useCallback(() => {
-    setConversations(listConversations(slug));
+  const refreshConversations = useCallback(async () => {
+    setConversations(await loadConversations(slug));
   }, [slug]);
+
+  // 登录 / 退出后身份变化：匿名会话会被归并到账号，列表需要重新拉取。
+  // 只刷列表不重载消息，避免打断正在流式输出的回复。
+  useEffect(() => {
+    const onChange = () => {
+      void refreshConversations();
+    };
+    window.addEventListener(IDENTITY_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(IDENTITY_CHANGED_EVENT, onChange);
+  }, [refreshConversations]);
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -154,9 +187,9 @@ export default function ChatPage({
   }, [slug, updateActiveId]);
 
   const handleDelete = useCallback(
-    (id: string) => {
-      deleteConversation(slug, id);
-      const list = listConversations(slug);
+    async (id: string) => {
+      await removeConversation(slug, id);
+      const list = await loadConversations(slug);
       setConversations(list);
       if (activeId === id) {
         const next = list[0]?.id ?? null;
@@ -218,7 +251,7 @@ export default function ChatPage({
       let conversationId = activeId;
       const isFirstMessage = !messages.some((m) => m.role === "user");
       if (!conversationId) {
-        const conv = createConversation(slug, text.slice(0, 24));
+        const conv = await createConversation(slug, text.slice(0, 24));
         conversationId = conv.id;
         updateActiveId(conv.id);
         // 会话落地后把 id 无感写进路由：
@@ -226,11 +259,11 @@ export default function ChatPage({
         // Next.js 导航并重渲染页面，打断正在流式输出的回复
         window.history.replaceState(null, "", chatPath(slug, conv.id));
       } else if (isFirstMessage) {
-        upsertConversation(slug, conversationId, { title: text.slice(0, 24) });
+        await touchConversation(slug, conversationId, text.slice(0, 24));
       } else {
-        upsertConversation(slug, conversationId);
+        await touchConversation(slug, conversationId);
       }
-      refreshConversations();
+      void refreshConversations();
 
       // 追加用户消息 + 助手占位（流式填充）
       setMessages((prev) => [

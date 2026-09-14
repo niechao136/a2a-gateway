@@ -5,13 +5,24 @@
 - AgentConfig：自定义/默认 Agent 的配置（路由、绑定的 A2A/MCP 资源、system_prompt、工具集、状态）
 - ApiKey：对外提供 A2A 服务的调用凭据（/a2a/* 端点鉴权）
 - AdminUser：管理中心登录账号（JWT 认证）
+- Conversation：对话会话目录（thread_id → 身份归属，支持匿名 → 登录归并）
 """
 
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -151,3 +162,31 @@ class AdminUser(Base, BaseMixin):
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     disabled: Mapped[bool] = mapped_column(default=False)
+
+
+class Conversation(Base, BaseMixin):
+    """对话会话目录：把 LangGraph 的 thread_id 归属到某个身份。
+
+    消息本体仍由 Checkpointer 按 thread_id 存放在 checkpoints 系列表中，与用户无关；
+    本表只维护「谁有哪些会话 + 标题 / 时间」这一层目录。因此匿名 → 登录的归并
+    只需改 owner_kind / owner_id 两个字段，消息数据零搬迁、历史可原地续聊。
+
+    owner_kind 取值：
+      - visitor：匿名访客，owner_id 为后端签发的 uuid
+      - user：已登录管理员，owner_id 为 admin_users.username
+    """
+
+    __tablename__ = "conversations"
+    __table_args__ = (
+        UniqueConstraint("thread_id", name="uq_conversations_thread"),
+        Index("ix_conversations_owner", "owner_kind", "owner_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # LangGraph thread_id（前端会话 id，由前端生成或后端 new_thread_id 兜底）
+    thread_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # 所属 Agent 路由；默认 Agent 为 "/"
+    agent_slug: Mapped[str] = mapped_column(String(128), index=True, default="/")
+    title: Mapped[str] = mapped_column(String(255), default="")
+    owner_kind: Mapped[str] = mapped_column(String(16), index=True)
+    owner_id: Mapped[str] = mapped_column(String(64), index=True)

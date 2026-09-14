@@ -309,6 +309,14 @@ export const adminApi = {
     });
   },
 
+  /**
+   * 退出登录：后端会把身份 cookie 换成全新的匿名身份。
+   * 调用方应在成功后派发 IDENTITY_CHANGED_EVENT，让对话页刷新列表。
+   */
+  logout(): Promise<void> {
+    return request<void>("/api/admin/logout", { method: "POST" });
+  },
+
   listAgents(): Promise<Agent[]> {
     return request<Agent[]>("/api/admin/agents");
   },

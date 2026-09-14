@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     admin_username: str = Field(default="admin", alias="ADMIN_USERNAME")
     admin_password: str = Field(default="change-me", alias="ADMIN_PASSWORD")
 
+    # 对话身份 cookie（匿名访客 / 登录用户共用，见 identity.py）
+    # 登录态有效期刻意长于管理中心 JWT：否则 24h 后身份 cookie 失效，
+    # 会话列表会「无故消失」（正是本次要修的问题）
+    identity_expire_days: int = Field(default=30, alias="IDENTITY_EXPIRE_DAYS")
+    visitor_expire_days: int = Field(default=180, alias="VISITOR_EXPIRE_DAYS")
+    # HTTPS 部署时置为 true（cookie 加 Secure 属性）
+    cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
+
     # 应用
     app_host: str = Field(default="0.0.0.0", alias="APP_HOST")
     app_port: int = Field(default=8000, alias="APP_PORT")

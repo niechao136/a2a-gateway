@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { adminApi, setAdminToken } from "@/lib/adminApi";
+import { notifyIdentityChanged } from "@/lib/api";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 
 export default function AdminLoginPage() {
@@ -36,6 +37,8 @@ export default function AdminLoginPage() {
     try {
       const token = await adminApi.login(username.trim(), password);
       setAdminToken(token.access_token);
+      // 登录会把匿名会话归并到账号，通知对话页重新拉取列表
+      notifyIdentityChanged();
       router.replace("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败，请稍后重试");

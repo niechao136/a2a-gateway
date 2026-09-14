@@ -1,16 +1,24 @@
-"""公开对话路由：SSE 流式响应 + 会话历史 + 重试（time travel）。
+"""公开对话路由：SSE 流式响应 + 会话历史 + 重试（time travel）+ 会话目录。
 
+- POST /api/chat/identity                 → 确保身份 cookie（匿名访客 / 登录用户）
+- GET  /api/chat/conversations            → 当前身份的会话列表
+- POST /api/chat/conversations            → 登记 / 刷新一条会话
+- POST /api/chat/conversations/import     → 批量导入（前端 localStorage 迁移）
+- PATCH/DELETE /api/chat/conversations/{thread_id}
 - POST /api/chat              → 默认 Agent (slug=/)
 - POST /api/chat/retry        → 默认 Agent 重试最后一次回复（time travel）
 - POST /api/chat/{slug}       → 自定义 Agent（仅 published 可访问）
 - POST /api/chat/{slug}/retry → 自定义 Agent 重试
 - GET  /api/chat/history?thread_id=... → 会话历史
+
+⚠️ 路由顺序：带字面量的路径（identity / conversations）必须注册在
+``/api/chat/{slug}`` 之前，否则会被 slug 通配吃掉。
 """
 
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,13 +27,34 @@ from sse_starlette.sse import EventSourceResponse
 from ..agent_factory import get_agent_instance, get_checkpointer
 from ..database import get_session
 from ..deps import new_thread_id
+from ..identity import Identity, ensure_identity, set_identity_cookie
 from ..models import AgentConfig, AgentStatus
 from ..notifier import notify_alert
-from ..repository import get_agent_by_slug
-from ..schemas import ChatRequest, RetryRequest
+from ..repository import (
+    delete_conversation,
+    get_agent_by_slug,
+    get_conversation,
+    import_conversations,
+    list_conversations,
+    rename_conversation,
+    upsert_conversation,
+)
+from ..schemas import (
+    ChatRequest,
+    ConversationCreate,
+    ConversationImportOut,
+    ConversationImportRequest,
+    ConversationOut,
+    ConversationRename,
+    IdentityOut,
+    RetryRequest,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# 前端用空串表示默认 Agent，库里统一存 "/"
+DEFAULT_SLUG = "/"
 
 
 async def _resolve_agent(session: AsyncSession, slug: str) -> AgentConfig:
@@ -129,25 +158,138 @@ async def _retry_stream(agent: AgentConfig, thread_id: str):
         yield evt
 
 
+# ---------------------------------------------------------------------------
+# 身份与会话目录（必须注册在 /api/chat/{slug} 之前）
+# ---------------------------------------------------------------------------
+@router.post("/api/chat/identity", response_model=IdentityOut)
+async def ensure_chat_identity(request: Request, response: Response):
+    """确保身份 cookie 存在；首次访问时签发匿名身份。
+
+    前端在页面挂载时调用一次，之后所有请求由浏览器自动带上 cookie。
+    """
+    identity, issued = ensure_identity(request)
+    if issued:
+        set_identity_cookie(response, identity)
+    return IdentityOut(kind=identity.kind, id=identity.id)
+
+
+@router.get("/api/chat/conversations", response_model=list[ConversationOut])
+async def list_chat_conversations(
+    request: Request,
+    response: Response,
+    slug: str = "",
+    session: AsyncSession = Depends(get_session),
+):
+    """当前身份名下的会话列表（按最近更新倒序）。"""
+    identity, issued = ensure_identity(request)
+    # 普通 JSON 响应可正常写 cookie；首次访问顺带把匿名身份落盘
+    if issued:
+        set_identity_cookie(response, identity)
+    return await list_conversations(session, identity, slug)
+
+
+@router.post("/api/chat/conversations", response_model=ConversationOut | None)
+async def upsert_chat_conversation(
+    data: ConversationCreate,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """登记 / 刷新一条会话；会话已归属他人时返回 null（不抢归属）。"""
+    identity, _ = ensure_identity(request)
+    conv = await upsert_conversation(
+        session, identity, data.thread_id, data.slug, data.title
+    )
+    if conv is None:
+        return None
+    return conv
+
+
+@router.post(
+    "/api/chat/conversations/import", response_model=ConversationImportOut
+)
+async def import_chat_conversations(
+    data: ConversationImportRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """批量导入历史会话（前端 localStorage 一次性迁移）。"""
+    identity, _ = ensure_identity(request)
+    items = [item.model_dump() for item in data.items]
+    imported = await import_conversations(session, identity, data.slug, items)
+    return ConversationImportOut(imported=imported)
+
+
+@router.patch("/api/chat/conversations/{thread_id}", response_model=ConversationOut | None)
+async def rename_chat_conversation(
+    thread_id: str,
+    data: ConversationRename,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """重命名会话；不属于当前身份时返回 null。"""
+    identity, _ = ensure_identity(request)
+    conv = await rename_conversation(session, identity, thread_id, data.title)
+    if conv is None:
+        return None
+    return conv
+
+
+@router.delete("/api/chat/conversations/{thread_id}")
+async def delete_chat_conversation(
+    thread_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """删除会话：清目录 + 清 Checkpointer 中的消息本体。"""
+    identity, _ = ensure_identity(request)
+    removed = await delete_conversation(session, identity, thread_id)
+    if not removed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在"
+        )
+    # 消息本体也一并清理（失败不回滚目录删除，避免产生删不掉的幽灵会话）
+    try:
+        checkpointer = await get_checkpointer()
+        await checkpointer.adelete_thread(thread_id)
+    except Exception:
+        logger.exception("清理检查点失败 thread=%s", thread_id)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# 对话（SSE）
+# ---------------------------------------------------------------------------
 @router.post("/api/chat")
 async def chat_default(
     req: ChatRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     """默认 Agent 对话（slug=/）。"""
     agent = await _resolve_agent(session, "/")
     thread_id = req.thread_id or new_thread_id()
-    return EventSourceResponse(_stream_chat(agent, req.message, thread_id))
+    identity, issued = ensure_identity(request)
+    await _register(session, identity, thread_id, DEFAULT_SLUG, req)
+    resp = EventSourceResponse(_stream_chat(agent, req.message, thread_id))
+    if issued:
+        set_identity_cookie(resp, identity)
+    return resp
 
 
 @router.post("/api/chat/retry")
 async def retry_chat_default(
     req: RetryRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     """默认 Agent 重试最后一次回复（time travel）。"""
     agent = await _resolve_agent(session, "/")
-    return EventSourceResponse(_retry_stream(agent, req.thread_id))
+    identity, issued = ensure_identity(request)
+    await _ensure_owned(session, identity, req.thread_id)
+    resp = EventSourceResponse(_retry_stream(agent, req.thread_id))
+    if issued:
+        set_identity_cookie(resp, identity)
+    return resp
 
 
 # 注意：/api/chat/retry 必须注册在 /api/chat/{slug} 之前，避免 "retry" 被当作 slug
@@ -155,36 +297,94 @@ async def retry_chat_default(
 async def chat_custom(
     slug: str,
     req: ChatRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     """自定义 Agent 对话。"""
     agent = await _resolve_agent(session, slug)
     thread_id = req.thread_id or new_thread_id()
-    return EventSourceResponse(_stream_chat(agent, req.message, thread_id))
+    identity, issued = ensure_identity(request)
+    await _register(session, identity, thread_id, slug, req)
+    resp = EventSourceResponse(_stream_chat(agent, req.message, thread_id))
+    if issued:
+        set_identity_cookie(resp, identity)
+    return resp
 
 
 @router.post("/api/chat/{slug}/retry")
 async def retry_chat_custom(
     slug: str,
     req: RetryRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     """自定义 Agent 重试最后一次回复（time travel）。"""
     agent = await _resolve_agent(session, slug)
-    return EventSourceResponse(_retry_stream(agent, req.thread_id))
+    identity, issued = ensure_identity(request)
+    await _ensure_owned(session, identity, req.thread_id)
+    resp = EventSourceResponse(_retry_stream(agent, req.thread_id))
+    if issued:
+        set_identity_cookie(resp, identity)
+    return resp
 
 
 @router.get("/api/chat/history")
-async def chat_history_default(thread_id: str):
+async def chat_history_default(
+    thread_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     """默认 Agent 会话历史。"""
+    identity, _ = ensure_identity(request)
+    await _ensure_owned(session, identity, thread_id)
     return await _get_history(thread_id)
 
 
 @router.get("/api/chat/{slug}/history")
-async def chat_history_custom(slug: str, thread_id: str):
+async def chat_history_custom(
+    slug: str,
+    thread_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     """自定义 Agent 会话历史。slug 用于路由匹配，会话以 thread_id 为键。"""
     _ = slug  # 路由占位，会话历史按 thread_id 全局唯一
+    identity, _ = ensure_identity(request)
+    await _ensure_owned(session, identity, thread_id)
     return await _get_history(thread_id)
+
+
+# ---------------------------------------------------------------------------
+# 归属校验辅助
+# ---------------------------------------------------------------------------
+async def _register(
+    session: AsyncSession,
+    identity: Identity,
+    thread_id: str,
+    slug: str,
+    req: ChatRequest,
+) -> None:
+    """发消息时登记 / 刷新会话目录。
+
+    归属不成立（会话属于他人）时静默跳过：不阻断对话，只是不写目录。
+    """
+    try:
+        await upsert_conversation(
+            session, identity, thread_id, slug, (req.message or "")[:24]
+        )
+    except Exception:
+        logger.exception("登记会话目录失败 thread=%s", thread_id)
+
+
+async def _ensure_owned(
+    session: AsyncSession, identity: Identity, thread_id: str
+) -> None:
+    """校验会话归属；未登记的会话放行（回填前的历史数据不受影响）。"""
+    conv = await get_conversation(session, thread_id)
+    if conv is not None and not identity.owns(conv):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在"
+        )
 
 
 async def _get_history(thread_id: str) -> list[dict[str, str]]:

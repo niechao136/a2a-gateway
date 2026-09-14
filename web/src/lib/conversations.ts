@@ -1,9 +1,26 @@
 /**
- * 对话历史管理（localStorage，匿名访客）。
+ * 对话历史管理（服务端存储，按身份归属）。
  *
- * 每个 Agent 路由 (slug) 维护一个会话列表，每个会话对应后端 Checkpointer 的一个
- * thread_id。列表与「当前选中会话」都按 slug 分开存储，互不影响。
+ * 会话目录存在后端 conversations 表里，归属由后端签发的 httpOnly 身份 cookie
+ * 决定：匿名时归 visitor，登录时自动归并到账号 —— 因此换机器 / 换浏览器登录后
+ * 仍能看到自己的全部会话。
+ *
+ * 迁移策略：旧版本把会话列表放在 localStorage（`a2a_convs_<slug>`）。
+ * 首次加载时若发现本地残留，会一次性导入服务端并清掉本地数据（见
+ * `migrateLegacyList`），之后一律以服务端为准。
+ *
+ * 「当前选中的会话」仍存在 localStorage：它是「这台浏览器正在看哪一条」的
+ * 临时状态，不需要跨设备同步。
  */
+
+import {
+  ConversationRecord,
+  deleteConversation as apiDeleteConversation,
+  ensureIdentity,
+  fetchConversations,
+  importConversations,
+  saveConversation,
+} from "@/lib/api";
 
 export interface Conversation {
   /** 后端 thread_id */
@@ -16,6 +33,8 @@ export interface Conversation {
 const LIST_PREFIX = "a2a_convs_";
 const ACTIVE_PREFIX = "a2a_active_";
 const LEGACY_PREFIX = "a2a_session_";
+/** 标记某 slug 的本地列表是否已导入服务端（避免重复导入） */
+const IMPORTED_PREFIX = "a2a_imported_";
 
 function listKey(slug: string): string {
   return `${LIST_PREFIX}${slug || "/"}`;
@@ -23,6 +42,10 @@ function listKey(slug: string): string {
 
 function activeKey(slug: string): string {
   return `${ACTIVE_PREFIX}${slug || "/"}`;
+}
+
+function importedKey(slug: string): string {
+  return `${IMPORTED_PREFIX}${slug || "/"}`;
 }
 
 function isBrowser(): boolean {
@@ -37,27 +60,17 @@ export function generateId(): string {
   return `t-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-/** 读取某个 slug 下的会话列表（按最近更新倒序）。 */
-export function listConversations(slug: string): Conversation[] {
-  if (!isBrowser()) return [];
-  try {
-    const raw = localStorage.getItem(listKey(slug));
-    const parsed = raw ? (JSON.parse(raw) as Conversation[]) : [];
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((c) => c && typeof c.id === "string")
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  } catch {
-    return [];
-  }
+/** 服务端记录 → 前端会话结构（ISO 时间串转毫秒时间戳）。 */
+export function fromRecord(record: ConversationRecord): Conversation {
+  return {
+    id: record.thread_id,
+    title: record.title,
+    createdAt: Date.parse(record.created_at) || 0,
+    updatedAt: Date.parse(record.updated_at) || 0,
+  };
 }
 
-function save(slug: string, conversations: Conversation[]): void {
-  if (!isBrowser()) return;
-  localStorage.setItem(listKey(slug), JSON.stringify(conversations));
-}
-
-/** 读取当前选中的会话 id。 */
+/** 读取当前选中的会话 id（仅本地临时状态）。 */
 export function getActiveId(slug: string): string | null {
   if (!isBrowser()) return null;
   return localStorage.getItem(activeKey(slug));
@@ -70,8 +83,21 @@ export function setActiveId(slug: string, id: string | null): void {
   else localStorage.removeItem(activeKey(slug));
 }
 
+/** 读取旧版本遗留在 localStorage 的会话列表（只读，不清理）。 */
+function readLocalList(slug: string): Conversation[] {
+  if (!isBrowser()) return [];
+  try {
+    const raw = localStorage.getItem(listKey(slug));
+    const parsed = raw ? (JSON.parse(raw) as Conversation[]) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((c) => c && typeof c.id === "string");
+  } catch {
+    return [];
+  }
+}
+
 /**
- * 兼容旧版本：把单个 `a2a_session_<slug>` 的 thread_id 迁移为一条会话记录。
+ * 兼容旧版本：把单个 `a2a_session_<slug>` 的 thread_id 并入本地列表。
  * @returns 迁移出的会话（若有）
  */
 export function migrateLegacy(slug: string): Conversation | null {
@@ -81,7 +107,7 @@ export function migrateLegacy(slug: string): Conversation | null {
   if (!legacy) return null;
   localStorage.removeItem(legacyKey);
 
-  const conversations = listConversations(slug);
+  const conversations = readLocalList(slug);
   const existing = conversations.find((c) => c.id === legacy);
   if (existing) return existing;
 
@@ -91,54 +117,81 @@ export function migrateLegacy(slug: string): Conversation | null {
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
-  save(slug, [conv, ...conversations]);
+  localStorage.setItem(listKey(slug), JSON.stringify([conv, ...conversations]));
   setActiveId(slug, conv.id);
   return conv;
 }
 
-/** 新建会话并置为当前选中。 */
-export function createConversation(slug: string, title = "新对话"): Conversation {
+/**
+ * 一次性迁移：把本地残留的会话列表导入服务端，成功后清掉本地数据。
+ *
+ * 只在「本 slug 尚未迁移过」且「本地确实有数据」时真正发请求。
+ * @returns 是否执行了导入
+ */
+export async function migrateLegacyList(slug: string): Promise<boolean> {
+  if (!isBrowser()) return false;
+  if (localStorage.getItem(importedKey(slug))) return false;
+
+  migrateLegacy(slug);
+  const local = readLocalList(slug);
+  // 标记前置：即使导入失败也不再重试，避免每次刷新都打一次接口
+  localStorage.setItem(importedKey(slug), "1");
+  if (local.length === 0) return false;
+
+  try {
+    await importConversations(
+      slug,
+      local.map((c) => ({ thread_id: c.id, title: c.title || "" })),
+    );
+  } catch {
+    return false;
+  }
+  localStorage.removeItem(listKey(slug));
+  return true;
+}
+
+/** 身份 cookie 由后端 httpOnly 下发，这里只确保它已存在。 */
+export async function initIdentity(): Promise<boolean> {
+  const identity = await ensureIdentity();
+  return identity !== null;
+}
+
+/** 从服务端读取会话列表（按最近更新倒序）；失败时返回空数组。 */
+export async function loadConversations(slug: string): Promise<Conversation[]> {
+  try {
+    const records = await fetchConversations(slug);
+    return records.map(fromRecord);
+  } catch {
+    return [];
+  }
+}
+
+/** 新建会话：先在本地落地（保证对话不被打断），再异步登记到服务端。 */
+export async function createConversation(
+  slug: string,
+  title = "新对话",
+): Promise<Conversation> {
   const conv: Conversation = {
     id: generateId(),
     title,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
-  save(slug, [conv, ...listConversations(slug)]);
   setActiveId(slug, conv.id);
+  await saveConversation(slug, conv.id, title);
   return conv;
 }
 
-/** 新增或更新一条会话（按 id 匹配），并刷新 updatedAt。 */
-export function upsertConversation(
+/** 刷新一条会话（续聊时更新排序）；首条消息会带标题。 */
+export async function touchConversation(
   slug: string,
   id: string,
-  patch: Partial<Pick<Conversation, "title">> = {},
-): Conversation {
-  const conversations = listConversations(slug);
-  const idx = conversations.findIndex((c) => c.id === id);
-  let conv: Conversation;
-  if (idx >= 0) {
-    conv = { ...conversations[idx], ...patch, updatedAt: Date.now() };
-    conversations[idx] = conv;
-  } else {
-    conv = {
-      id,
-      title: patch.title || "新对话",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    conversations.unshift(conv);
-  }
-  save(slug, conversations);
-  return conv;
+  title?: string,
+): Promise<void> {
+  await saveConversation(slug, id, title);
 }
 
-/** 删除一条会话；若删除的是当前会话，则自动切换到最近的一条。 */
-export function deleteConversation(slug: string, id: string): void {
-  const conversations = listConversations(slug).filter((c) => c.id !== id);
-  save(slug, conversations);
-  if (getActiveId(slug) === id) {
-    setActiveId(slug, conversations[0]?.id ?? null);
-  }
+/** 删除会话。 */
+export async function removeConversation(slug: string, id: string): Promise<void> {
+  await apiDeleteConversation(id);
 }
