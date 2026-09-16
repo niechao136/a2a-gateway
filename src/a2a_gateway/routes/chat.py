@@ -17,6 +17,7 @@
 
 import json
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from langchain_core.messages import HumanMessage
@@ -69,12 +70,12 @@ async def _resolve_agent(session: AsyncSession, slug: str) -> AgentConfig:
     return agent
 
 
-def _sse(event: str, payload: dict) -> dict:
+def _sse(event: str, payload: dict[str, Any]) -> dict[str, str]:
     return {"event": event, "data": json.dumps(payload, ensure_ascii=False)}
 
 
 async def _stream_graph_events(
-    graph, config: RunnableConfig, graph_input: dict | None, thread_id: str
+    graph: Any, config: RunnableConfig, graph_input: dict[str, Any] | None, thread_id: str
 ):
     """把 graph.astream_events 转成对话 SSE 事件流（新对话 / 重试共用）。
 

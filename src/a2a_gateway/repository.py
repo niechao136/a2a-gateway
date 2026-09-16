@@ -8,7 +8,7 @@
 - 这样运行时（agent_factory）无需访问数据库即可构造工具，且注册表变更后统一刷新
 """
 
-from typing import Any
+from typing import Any, cast
 
 from urllib.parse import urlparse
 
@@ -18,7 +18,7 @@ import secrets
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -759,13 +759,17 @@ async def claim_conversations(
     单条 UPDATE，天然幂等（重复登录第二次影响 0 行）且原子。
     消息本体在 checkpoints 表里按 thread_id 存储，不随归属变化搬迁。
     """
-    result = await session.execute(
-        update(Conversation)
-        .where(
-            Conversation.owner_kind == IDENTITY_KIND_VISITOR,
-            Conversation.owner_id == visitor_id,
-        )
-        .values(owner_kind=IDENTITY_KIND_USER, owner_id=username)
+    # 类型上 session.execute 返回 Result[Any]，但 DML 实际返回 CursorResult（带 rowcount）
+    result = cast(
+        "CursorResult[Any]",
+        await session.execute(
+            update(Conversation)
+            .where(
+                Conversation.owner_kind == IDENTITY_KIND_VISITOR,
+                Conversation.owner_id == visitor_id,
+            )
+            .values(owner_kind=IDENTITY_KIND_USER, owner_id=username)
+        ),
     )
     await session.commit()
     claimed = result.rowcount or 0
