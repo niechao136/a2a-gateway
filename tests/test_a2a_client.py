@@ -1,10 +1,11 @@
-"""A2A 客户端单元测试：错误分类、瞬时错误重试、不重复输出、接口地址改写。"""
+"""A2A 客户端单元测试：错误分类、瞬时错误重试、不重复输出、接口地址改写、文本提取。"""
 
 from typing import Any
 
 import httpx
 import pytest
 from a2a.helpers.proto_helpers import new_text_message
+from a2a.types import a2a_pb2
 from a2a.types.a2a_pb2 import StreamResponse
 
 from a2a_gateway import a2a_client
@@ -268,3 +269,51 @@ async def test_ensure_client_reports_network_error_when_card_unreachable(monkeyp
         await wrapper._ensure_client()
 
     assert excinfo.value.kind == "network"
+
+
+# ---------------------------------------------------------------------------
+# 响应文本提取：task 快照里的追问 / 结果内容不能丢
+# ---------------------------------------------------------------------------
+async def _collect(response: StreamResponse) -> list[str]:
+    return [chunk async for chunk in A2AClientWrapper._extract(response)]
+
+
+def _task_response(
+    *, state: int, message_text: str | None = None, artifact_text: str | None = None
+) -> StreamResponse:
+    task = a2a_pb2.Task(id="t-1", context_id="c-1")
+    task.status.state = state
+    if message_text is not None:
+        task.status.message.CopyFrom(new_text_message(message_text))
+    if artifact_text is not None:
+        artifact = task.artifacts.add()
+        artifact.name = "itinerary"
+        artifact.parts.add().text = artifact_text
+    return StreamResponse(task=task)
+
+
+async def test_extract_reads_input_required_message_from_task():
+    """线上实测形态：追问文本在 task.status.message，不能被丢弃。"""
+    resp = _task_response(state=a2a_pb2.TASK_STATE_INPUT_REQUIRED, message_text="请补充目的地")
+
+    assert await _collect(resp) == ["请补充目的地"]
+
+
+async def test_extract_reads_completed_task_message_and_artifacts():
+    resp = _task_response(
+        state=a2a_pb2.TASK_STATE_COMPLETED,
+        message_text="行程方案已生成完毕。",
+        artifact_text="D1：西湖",
+    )
+
+    assert await _collect(resp) == ["行程方案已生成完毕。", "D1：西湖"]
+
+
+async def test_extract_keeps_status_and_artifact_update_paths():
+    status_resp = StreamResponse()
+    status_resp.status_update.status.message.CopyFrom(new_text_message("处理中"))
+    assert await _collect(status_resp) == ["处理中"]
+
+    artifact_resp = StreamResponse()
+    artifact_resp.artifact_update.artifact.parts.add().text = "行程"
+    assert await _collect(artifact_resp) == ["行程"]

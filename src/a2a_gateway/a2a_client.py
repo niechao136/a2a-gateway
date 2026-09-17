@@ -186,8 +186,21 @@ class A2AClientWrapper:
 
     @staticmethod
     async def _extract(response: Any) -> AsyncIterator[str]:
-        """从 a2a-sdk 1.x 的流式响应中提取文本片段。"""
+        """从 a2a-sdk 1.x 的流式响应中提取文本片段。
+
+        注意：目标 Agent 的最终结果常被 SDK 聚合成**单个 task 快照**返回——
+        追问文本在 task.status.message、结果内容在 task.artifacts；若对 task
+        直接跳过，会丢掉全部内容（前端只能显示"未返回内容"）。
+        """
         if response.HasField("task"):
+            task = response.task
+            if task.status.HasField("message"):
+                text = get_message_text(task.status.message)
+                if text:
+                    yield text
+            for artifact in task.artifacts:
+                async for chunk in A2AClientWrapper._extract_artifact(artifact):
+                    yield chunk
             return
         if response.HasField("status_update"):
             update = response.status_update
@@ -198,17 +211,22 @@ class A2AClientWrapper:
             if update.status.state in TERMINAL_STATES:
                 return
         elif response.HasField("artifact_update"):
-            artifact = response.artifact_update.artifact
-            text = get_artifact_text(artifact)
-            if text:
-                yield text
-            for part in artifact.parts:
-                if part.HasField("data"):
-                    yield json.dumps(json_format.MessageToDict(part.data), ensure_ascii=False)
+            async for chunk in A2AClientWrapper._extract_artifact(response.artifact_update.artifact):
+                yield chunk
         elif response.HasField("message"):
             text = get_message_text(response.message)
             if text:
                 yield text
+
+    @staticmethod
+    async def _extract_artifact(artifact: Any) -> AsyncIterator[str]:
+        """提取 artifact 的文本片段与 data part（JSON 序列化）。"""
+        text = get_artifact_text(artifact)
+        if text:
+            yield text
+        for part in artifact.parts:
+            if part.HasField("data"):
+                yield json.dumps(json_format.MessageToDict(part.data), ensure_ascii=False)
 
     async def test_connection(self) -> tuple[bool, str]:
         try:
