@@ -49,6 +49,21 @@ TERMINAL_STATES = frozenset(
 )
 
 
+def _restore_integers(value: Any) -> Any:
+    """``google.protobuf.Value`` 只有 double 一种数字类型。
+
+    ``MessageToDict`` 会把所有整数值变成浮点（``10`` → ``10.0``），
+    这里把整数值还原为 int，避免下游（大模型 / 前端）看到不自然的表示。
+    """
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, dict):
+        return {key: _restore_integers(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_restore_integers(item) for item in value]
+    return value
+
+
 class A2ATargetError(Exception):
     """A2A 调用失败，携带错误类别（network / timeout / target_error）。"""
 
@@ -162,10 +177,32 @@ class A2AClientWrapper:
 
         for attempt in range(retries + 1):
             yielded = False
+            # 终态兜底判定：已见产物 or 已见终态 task 快照 → 无需补拉
+            saw_artifact = False
+            saw_final_task = False
+            terminal_task_id: str | None = None
             try:
                 client = await self._ensure_client()
                 async for response in client.send_message(request):
+                    if response.HasField("task"):
+                        task = response.task
+                        if task.artifacts:
+                            saw_artifact = True
+                        if task.status.state in TERMINAL_STATES:
+                            saw_final_task = True
+                            terminal_task_id = task.id
+                    elif response.HasField("artifact_update"):
+                        saw_artifact = True
+                    elif response.HasField("status_update"):
+                        if response.status_update.status.state in TERMINAL_STATES:
+                            terminal_task_id = response.status_update.task_id
                     async for chunk in self._extract(response):
+                        yielded = True
+                        yield chunk
+                # 零产出兜底：目标可能只在任务的最终快照里放产物（流中没有 artifact 事件），
+                # 此时补拉一次 GetTask，避免"目标已跑完但调用方拿不到任何内容"。
+                if terminal_task_id and not saw_artifact and not saw_final_task:
+                    async for chunk in self._fetch_task_artifacts(client, terminal_task_id):
                         yielded = True
                         yield chunk
                 return
@@ -220,13 +257,28 @@ class A2AClientWrapper:
 
     @staticmethod
     async def _extract_artifact(artifact: Any) -> AsyncIterator[str]:
-        """提取 artifact 的文本片段与 data part（JSON 序列化）。"""
+        """提取 artifact 的文本片段与 data part（JSON 序列化，整数已还原）。"""
         text = get_artifact_text(artifact)
         if text:
             yield text
         for part in artifact.parts:
             if part.HasField("data"):
-                yield json.dumps(json_format.MessageToDict(part.data), ensure_ascii=False)
+                payload = _restore_integers(json_format.MessageToDict(part.data))
+                yield json.dumps(payload, ensure_ascii=False)
+
+    async def _fetch_task_artifacts(self, client: Any, task_id: str) -> AsyncIterator[str]:
+        """终态补拉：从 GetTask 的任务快照里提取产物（零产出兜底）。
+
+        补拉失败不影响主流程——产物是尽力而为，异常只记 debug 日志。
+        """
+        try:
+            task = await client.get_task(a2a_pb2.GetTaskRequest(id=task_id))
+        except Exception as error:  # 兜底：补拉失败不应让整个调用失败
+            logger.debug("补拉终态任务失败 task=%s: %r", task_id, error)
+            return
+        for artifact in task.artifacts:
+            async for chunk in A2AClientWrapper._extract_artifact(artifact):
+                yield chunk
 
     async def test_connection(self) -> tuple[bool, str]:
         try:

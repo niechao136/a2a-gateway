@@ -1,10 +1,11 @@
-"""A2A 客户端单元测试：错误分类、瞬时错误重试、不重复输出、接口地址改写、文本提取。"""
+"""A2A 客户端单元测试：错误分类、瞬时错误重试、不重复输出、接口地址改写、文本提取、终态补拉。"""
 
+import json
 from typing import Any
 
 import httpx
 import pytest
-from a2a.helpers.proto_helpers import new_text_message
+from a2a.helpers.proto_helpers import new_data_part, new_text_message
 from a2a.types import a2a_pb2
 from a2a.types.a2a_pb2 import StreamResponse
 
@@ -317,3 +318,93 @@ async def test_extract_keeps_status_and_artifact_update_paths():
     artifact_resp = StreamResponse()
     artifact_resp.artifact_update.artifact.parts.add().text = "行程"
     assert await _collect(artifact_resp) == ["行程"]
+
+
+# ---------------------------------------------------------------------------
+# 终态兜底与数据修正：零产出补拉 GetTask + Part.data 整数还原
+# ---------------------------------------------------------------------------
+def _completed_status_response(task_id: str) -> StreamResponse:
+    resp = StreamResponse()
+    resp.status_update.task_id = task_id
+    resp.status_update.status.state = a2a_pb2.TASK_STATE_COMPLETED
+    return resp
+
+
+class _TaskFetchingClient:
+    """流里只发 status_update(completed)，产物只存在于 GetTask 的快照里。"""
+
+    def __init__(self, *, artifact_text: str = "兜底结果"):
+        self.artifact_text = artifact_text
+        self.get_task_calls: list[str] = []
+
+    def send_message(self, request):
+        async def gen():
+            yield _completed_status_response("t-1")
+
+        return gen()
+
+    async def get_task(self, request):
+        self.get_task_calls.append(request.id)
+        task = a2a_pb2.Task(id="t-1", context_id="c-1")
+        task.status.state = a2a_pb2.TASK_STATE_COMPLETED
+        task.artifacts.add().parts.add().text = self.artifact_text
+        return task
+
+
+async def test_fetches_task_artifacts_when_stream_has_none():
+    """流中没有 artifact 事件时，终态后补拉 GetTask 取回产物（不丢结果）。"""
+    wrapper = _wrapper()
+    fake = _TaskFetchingClient()
+
+    async def ensure():
+        return fake
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    out = [chunk async for chunk in wrapper.stream_message("hi")]
+
+    assert out == ["兜底结果"]
+    assert fake.get_task_calls == ["t-1"]
+
+
+async def test_does_not_refetch_when_artifact_already_received():
+    """已从流中收到产物 → 不补拉，避免同一内容重复输出。"""
+    wrapper = _wrapper()
+
+    class Client:
+        def send_message(self, request):
+            async def gen():
+                first = StreamResponse()
+                first.artifact_update.artifact.parts.add().text = "流内结果"
+                yield first
+                yield _completed_status_response("t-1")
+
+            return gen()
+
+        async def get_task(self, request):
+            raise AssertionError("已有产物时不应补拉 GetTask")
+
+    async def ensure():
+        return Client()
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    out = [chunk async for chunk in wrapper.stream_message("hi")]
+
+    assert out == ["流内结果"]
+
+
+async def test_restores_integers_in_artifact_data_part():
+    """Part.data 的数字是 double：整数值必须还原成 int，小数保持。"""
+    artifact = a2a_pb2.Artifact()
+    part = artifact.parts.add()
+    part.CopyFrom(
+        new_data_part({"counts": {"fetched": 10.0, "selected": 3.0}, "score": 0.75})
+    )
+
+    chunks = [c async for c in A2AClientWrapper._extract_artifact(artifact)]
+
+    payload = json.loads(chunks[-1])
+    assert payload["counts"]["fetched"] == 10
+    assert isinstance(payload["counts"]["fetched"], int)
+    assert payload["counts"]["selected"] == 3
+    assert isinstance(payload["counts"]["selected"], int)
+    assert payload["score"] == 0.75
