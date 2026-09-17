@@ -13,14 +13,13 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
-from google.protobuf import json_format
-
 from a2a.client import (
+    A2ACardResolver,
     A2AClientError,
     A2AClientTimeoutError,
-    A2ACardResolver,
     AgentCardResolutionError,
     ClientConfig,
     ClientFactory,
@@ -33,6 +32,7 @@ from a2a.helpers.proto_helpers import (
 )
 from a2a.types import a2a_pb2
 from a2a.utils.constants import TransportProtocol
+from google.protobuf import json_format
 
 from .auth_scheme import apply_query_auth, build_headers
 from .schemas import A2ATarget
@@ -58,6 +58,50 @@ class A2ATargetError(Exception):
         super().__init__(f"[{kind}] {detail}")
 
 
+def _origin_url(url: str) -> str:
+    """取 URL 的 scheme://host[:port] 部分；本就不带路径时原样返回（查询串保留）。"""
+    parts = urlsplit(url)
+    if not parts.path or parts.path == "/":
+        return url
+    return urlunsplit((parts.scheme, parts.netloc, "", parts.query, ""))
+
+
+def _merge_interface_url(iface_url: str, target_url: str) -> str:
+    """把卡片声明的接口地址改写为网关实际可达的地址。
+
+    卡片里的 url 常是目标内部地址（如 http://localhost:9901/a2a），需要用配置的
+    target_url 替换；但 target_url 通常只填基础地址（http://host:port），若整体
+    覆盖会丢掉卡片声明的 RPC 路径（如 /a2a），请求便会打到根路径而 404。
+
+    规则：
+    - target_url 自带路径（非 /）→ 视为用户显式指定的端点地址，原样使用；
+    - 否则 → 以 target_url 的 scheme/host/port 为基准，路径取卡片声明，
+      并保留 target_url 上的查询串（query 鉴权参数挂在这里）。
+    """
+    target = urlsplit(target_url)
+    card = urlsplit(iface_url)
+    if target.path and target.path != "/":
+        return target_url
+    return urlunsplit((target.scheme, target.netloc, card.path or "", target.query, ""))
+
+
+async def _fetch_agent_card(http: httpx.AsyncClient, url: str):
+    """解析 Agent Card；带路径的 URL 解析失败时回退到 origin 再试一次。
+
+    常见误配：把 RPC 端点（如 http://host:10101/a2a）当作服务地址填入，
+    此时 well-known 路径被拼成 /a2a/.well-known/... 而 404；卡片实际挂在
+    origin 下，回退即可解析。
+    """
+    try:
+        return await A2ACardResolver(http, url).get_agent_card()
+    except (AgentCardResolutionError, httpx.HTTPError):
+        origin = _origin_url(url)
+        if origin == url:
+            raise
+        logger.info("A2A 目标卡片解析失败（%s），回退到 %s 重试", url, origin)
+        return await A2ACardResolver(http, origin).get_agent_card()
+
+
 class A2AClientWrapper:
     def __init__(self, target: A2ATarget):
         self.target = target
@@ -72,16 +116,16 @@ class A2AClientWrapper:
         url = apply_query_auth(self.target.url, self.target.auth_type, self.target.auth_name, self.target.token)
         http = httpx.AsyncClient(headers=headers, timeout=60.0)
         try:
-            resolver = A2ACardResolver(http, url)
-            card = await resolver.get_agent_card()
+            card = await _fetch_agent_card(http, url)
         except (AgentCardResolutionError, httpx.HTTPError) as e:
             await http.aclose()
             raise A2ATargetError("network", f"A2A 目标 {url} 不可达或未发布 Agent Card：{e}") from e
         # 目标 Agent Card 中声明的回连地址通常是其内部地址（如 http://localhost:9901），
         # 网关容器据此回连会连到自己而失败。A2A 1.0 的 url 位于 supported_interfaces，
-        # 逐个改写为实际可达的 target.url。
+        # 逐个改写为实际可达地址：只替换 host，保留卡片声明的 RPC 路径（如 /a2a），
+        # 否则请求会打到根路径而 404。
         for _iface in card.supported_interfaces:
-            _iface.url = url
+            _iface.url = _merge_interface_url(_iface.url, url)
         config = ClientConfig(
             streaming=True,
             polling=False,

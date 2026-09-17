@@ -1,13 +1,19 @@
-"""A2A 客户端单元测试：错误分类、瞬时错误重试、不重复输出。"""
+"""A2A 客户端单元测试：错误分类、瞬时错误重试、不重复输出、接口地址改写。"""
+
+from typing import Any
 
 import httpx
 import pytest
-
 from a2a.helpers.proto_helpers import new_text_message
 from a2a.types.a2a_pb2 import StreamResponse
 
 from a2a_gateway import a2a_client
-from a2a_gateway.a2a_client import A2AClientWrapper, A2ATargetError
+from a2a_gateway.a2a_client import (
+    A2AClientWrapper,
+    A2ATargetError,
+    _merge_interface_url,
+    _origin_url,
+)
 from a2a_gateway.schemas import A2ATarget
 
 
@@ -126,3 +132,139 @@ async def test_test_connection_reports_failure():
 
     assert ok is False
     assert "unreachable" in message
+
+
+# ---------------------------------------------------------------------------
+# 接口地址改写：保留卡片声明的 RPC 路径（修复「POST 到根路径 404」）
+# ---------------------------------------------------------------------------
+def test_merge_interface_url_keeps_card_rpc_path():
+    """目标只填基础地址时，保留卡片声明的 RPC 路径。"""
+    assert (
+        _merge_interface_url("http://localhost:9901/a2a", "http://43.156.187.79:10101")
+        == "http://43.156.187.79:10101/a2a"
+    )
+
+
+def test_merge_interface_url_prefers_explicit_target_path():
+    """目标显式带路径时视为端点地址，原样使用。"""
+    assert (
+        _merge_interface_url("http://localhost:9901/a2a", "http://host:10101/custom")
+        == "http://host:10101/custom"
+    )
+
+
+def test_merge_interface_url_keeps_query_auth():
+    """基础地址上挂着 query 鉴权参数时不能丢。"""
+    assert (
+        _merge_interface_url("http://localhost:9901/a2a", "http://host:10101?access_token=tk")
+        == "http://host:10101/a2a?access_token=tk"
+    )
+
+
+def test_origin_url_strips_path_and_keeps_query():
+    assert _origin_url("http://host:10101/a2a") == "http://host:10101"
+    assert (
+        _origin_url("http://host:10101/a2a?access_token=tk")
+        == "http://host:10101?access_token=tk"
+    )
+    assert _origin_url("http://host:10101") == "http://host:10101"
+    assert _origin_url("http://host:10101/") == "http://host:10101/"
+
+
+class _Iface:
+    def __init__(self, url: str):
+        self.url = url
+
+
+class _Card:
+    def __init__(self, iface_url: str):
+        self.supported_interfaces = [_Iface(iface_url)]
+
+
+def _not_found(url: str) -> httpx.HTTPStatusError:
+    request = httpx.Request("GET", url)
+    return httpx.HTTPStatusError(
+        "404 Not Found", request=request, response=httpx.Response(404, request=request)
+    )
+
+
+def _patch_card_stack(monkeypatch, resolver_cls) -> dict[str, Any]:
+    """把 A2ACardResolver 换成假实现，并记录 ClientFactory 收到的卡片。"""
+    captured: dict[str, Any] = {}
+
+    class Factory:
+        def __init__(self, config):
+            pass
+
+        def create(self, card):
+            captured["card"] = card
+            return FakeClient()
+
+    monkeypatch.setattr(a2a_client, "A2ACardResolver", resolver_cls)
+    monkeypatch.setattr(a2a_client, "ClientFactory", Factory)
+    return captured
+
+
+async def test_ensure_client_keeps_card_path_when_target_has_none(monkeypatch):
+    """线上 404 的复现：卡片声明 /a2a，目标只填 origin，不能被改写成根路径。"""
+    calls: list[str] = []
+
+    class Resolver:
+        def __init__(self, http, url):
+            self.url = url
+
+        async def get_agent_card(self):
+            calls.append(self.url)
+            return _Card("http://localhost:9901/a2a")
+
+    captured = _patch_card_stack(monkeypatch, Resolver)
+    wrapper = A2AClientWrapper(A2ATarget(url="http://43.156.187.79:10101"))
+
+    await wrapper._ensure_client()
+
+    assert calls == ["http://43.156.187.79:10101"]
+    assert captured["card"].supported_interfaces[0].url == "http://43.156.187.79:10101/a2a"
+    await wrapper.close()
+
+
+async def test_ensure_client_falls_back_to_origin_when_target_has_path(monkeypatch):
+    """目标误填成 RPC 端点（带路径）时，卡片解析回退到 origin。"""
+    calls: list[str] = []
+
+    class Resolver:
+        def __init__(self, http, url):
+            self.url = url
+
+        async def get_agent_card(self):
+            calls.append(self.url)
+            if self.url != "http://43.156.187.79:10101":
+                raise _not_found(self.url)
+            return _Card("http://43.156.187.79:10101/a2a")
+
+    captured = _patch_card_stack(monkeypatch, Resolver)
+    wrapper = A2AClientWrapper(A2ATarget(url="http://43.156.187.79:10101/a2a"))
+
+    await wrapper._ensure_client()
+
+    assert calls == ["http://43.156.187.79:10101/a2a", "http://43.156.187.79:10101"]
+    assert captured["card"].supported_interfaces[0].url == "http://43.156.187.79:10101/a2a"
+    await wrapper.close()
+
+
+async def test_ensure_client_reports_network_error_when_card_unreachable(monkeypatch):
+    """回退后仍解析失败 → 归类为 network（配置/网络问题），而不是 target_error。"""
+
+    class Resolver:
+        def __init__(self, http, url):
+            self.url = url
+
+        async def get_agent_card(self):
+            raise _not_found(self.url)
+
+    _patch_card_stack(monkeypatch, Resolver)
+    wrapper = A2AClientWrapper(A2ATarget(url="http://host:10101/a2a"))
+
+    with pytest.raises(A2ATargetError) as excinfo:
+        await wrapper._ensure_client()
+
+    assert excinfo.value.kind == "network"
