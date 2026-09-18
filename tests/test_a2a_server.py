@@ -1,8 +1,10 @@
 """A2A Server 端点测试（不依赖数据库：repository 层全部 monkeypatch）。"""
 
 import json
+from types import SimpleNamespace
 
 from a2a_gateway import repository
+from a2a_gateway.a2a_client import Completed, TextChunk
 from a2a_gateway.models import AgentStatus
 from a2a_gateway.routes import a2a_server as a2a_server_mod
 from a2a_gateway.routes import admin as admin_mod
@@ -258,3 +260,187 @@ async def test_rpc_unknown_method(anon_client, monkeypatch, make_agent, make_api
     resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
     assert resp.status_code == 200
     assert resp.json()["error"]["code"] == -32601
+
+
+# ---------------------------------------------------------------------------
+# input-required：中断映射与任务恢复
+# ---------------------------------------------------------------------------
+class FakePendingStore:
+    def __init__(self, pending=None):
+        self.pending = pending
+        self.upserts = []
+        self.deleted = []
+
+    async def get(self, thread_id):
+        return self.pending
+
+    async def upsert(self, **kwargs):
+        self.upserts.append(kwargs)
+        self.pending = _pending(**kwargs)
+
+    async def delete(self, thread_id):
+        self.deleted.append(thread_id)
+        self.pending = None
+
+
+def _pending(**overrides):
+    base = {
+        "thread_id": "task-1",
+        "agent_id": 1,
+        "target_url": "http://h:9900/",
+        "target_name": "travel",
+        "task_id": "task-1",
+        "context_id": "ctx-1",
+        "question": "请补充目的地",
+    }
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+class FakeResumeWrapper:
+    def __init__(self, url, events):
+        self.target = SimpleNamespace(url=url)
+        self._events = events
+        self.calls = []
+
+    async def stream_message_events(self, text, *, task_id=None, context_id=None, **kwargs):
+        self.calls.append({"text": text, "task_id": task_id, "context_id": context_id})
+        for event in self._events:
+            yield event
+
+
+def _parse_sse(text: str) -> list:
+    return [
+        json.loads(line[len("data: "):])
+        for line in text.splitlines()
+        if line.startswith("data: ")
+    ]
+
+
+def _published(make_agent):
+    async def fake_get_agent(session, slug):
+        return make_agent(slug=slug, status=AgentStatus.PUBLISHED)
+
+    return fake_get_agent
+
+
+async def test_streaming_new_task_emits_input_required(
+    anon_client, monkeypatch, make_agent, make_api_key
+):
+    """下游在本次调用中进入 input-required → 终帧应为 INPUT_REQUIRED 且带追问。"""
+    _patch_api_key(monkeypatch, make_api_key)
+    store = FakePendingStore()
+
+    async def fake_stream(agent, text, thread_id):
+        store.pending = _pending(thread_id=thread_id)
+        yield "请补充目的地"
+
+    monkeypatch.setattr(a2a_server_mod, "get_agent_by_slug", _published(make_agent))
+    monkeypatch.setattr(a2a_server_mod, "_stream_agent_text", fake_stream)
+    monkeypatch.setattr(a2a_server_mod, "default_pending_store", store)
+
+    body = {"jsonrpc": "2.0", "id": 1, "method": "SendStreamingMessage",
+            "params": {"message": {"messageId": "m1", "parts": [{"text": "帮我规划"}]}}}
+    resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
+
+    events = _parse_sse(resp.text)
+    final_status = events[-1]["result"]["statusUpdate"]["status"]
+    assert final_status["state"] == "TASK_STATE_INPUT_REQUIRED"
+    texts = "".join(p["text"] for p in final_status["message"]["parts"] if "text" in p)
+    assert texts == "请补充目的地"
+
+
+async def test_resume_streaming_with_task_id(
+    anon_client, monkeypatch, make_agent, make_api_key
+):
+    """带 task_id 的请求命中挂起 → 透明转发恢复，不经 LLM。"""
+    _patch_api_key(monkeypatch, make_api_key)
+    store = FakePendingStore(pending=_pending())
+    wrapper = FakeResumeWrapper(
+        "http://h:9900/", [TextChunk("行程"), Completed(task_id="task-1")]
+    )
+
+    async def fake_wrappers(agent):
+        return [wrapper]
+
+    async def fake_stream(agent, text, thread_id):
+        raise AssertionError("恢复轮不应经过 LLM 图")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(a2a_server_mod, "get_agent_by_slug", _published(make_agent))
+    monkeypatch.setattr(a2a_server_mod, "default_pending_store", store)
+    monkeypatch.setattr(a2a_server_mod, "get_agent_wrappers", fake_wrappers)
+    monkeypatch.setattr(a2a_server_mod, "_stream_agent_text", fake_stream)
+
+    body = {"jsonrpc": "2.0", "id": 1, "method": "SendStreamingMessage",
+            "params": {"message": {"messageId": "m2", "taskId": "task-1",
+                                   "parts": [{"text": "杭州 10/1-10/3 预算3000"}]}}}
+    resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
+
+    events = _parse_sse(resp.text)
+    assert events[-1]["result"]["statusUpdate"]["status"]["state"] == "TASK_STATE_COMPLETED"
+    assert wrapper.calls == [
+        {"text": "杭州 10/1-10/3 预算3000", "task_id": "task-1", "context_id": "ctx-1"}
+    ]
+    assert store.deleted == ["task-1"]
+
+
+async def test_resume_unknown_task_returns_error(
+    anon_client, monkeypatch, make_agent, make_api_key
+):
+    _patch_api_key(monkeypatch, make_api_key)
+    store = FakePendingStore(pending=None)
+
+    monkeypatch.setattr(a2a_server_mod, "get_agent_by_slug", _published(make_agent))
+    monkeypatch.setattr(a2a_server_mod, "default_pending_store", store)
+
+    body = {"jsonrpc": "2.0", "id": 1, "method": "SendStreamingMessage",
+            "params": {"message": {"messageId": "m2", "taskId": "gone",
+                                   "parts": [{"text": "补充"}]}}}
+    resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
+
+    assert "error" in resp.json()
+
+
+async def test_new_task_uses_same_id_for_task_and_context(
+    anon_client, monkeypatch, make_agent, make_api_key
+):
+    """标识统一：新任务的对外 task_id 与 context_id 相同（挂起表主键可被恢复命中）。"""
+    _patch_api_key(monkeypatch, make_api_key)
+
+    async def fake_stream(agent, text, thread_id):
+        yield "ok"
+
+    monkeypatch.setattr(a2a_server_mod, "get_agent_by_slug", _published(make_agent))
+    monkeypatch.setattr(a2a_server_mod, "_stream_agent_text", fake_stream)
+
+    body = {"jsonrpc": "2.0", "id": 1, "method": "SendStreamingMessage",
+            "params": {"message": {"messageId": "m1", "parts": [{"text": "hi"}]}}}
+    resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
+
+    events = _parse_sse(resp.text)
+    task = events[0]["result"]["task"]
+    assert task["id"] == task["contextId"]
+
+
+async def test_send_message_nonstream_returns_input_required_task(
+    anon_client, monkeypatch, make_agent, make_api_key
+):
+    _patch_api_key(monkeypatch, make_api_key)
+    store = FakePendingStore()
+
+    async def fake_stream(agent, text, thread_id):
+        store.pending = _pending(thread_id=thread_id)
+        yield "请补充预算"
+
+    monkeypatch.setattr(a2a_server_mod, "get_agent_by_slug", _published(make_agent))
+    monkeypatch.setattr(a2a_server_mod, "_stream_agent_text", fake_stream)
+    monkeypatch.setattr(a2a_server_mod, "default_pending_store", store)
+
+    body = {"jsonrpc": "2.0", "id": 7, "method": "SendMessage",
+            "params": {"message": {"messageId": "m1", "parts": [{"text": "帮我规划"}]}}}
+    resp = await anon_client.post("/a2a/demo", json=body, headers={"X-Api-Key": TEST_KEY})
+
+    task = resp.json()["result"]["task"]
+    assert task["status"]["state"] == "TASK_STATE_INPUT_REQUIRED"
+    assert task["id"] == task["contextId"]

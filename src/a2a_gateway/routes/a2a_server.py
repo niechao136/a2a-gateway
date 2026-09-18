@@ -29,7 +29,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from google.protobuf.json_format import MessageToDict, ParseDict
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -49,6 +49,7 @@ from a2a.server.request_handlers.response_helpers import (
 from a2a.types.a2a_pb2 import (
     TASK_STATE_COMPLETED,
     TASK_STATE_FAILED,
+    TASK_STATE_INPUT_REQUIRED,
     TASK_STATE_WORKING,
     AgentCapabilities,
     AgentCard,
@@ -59,15 +60,19 @@ from a2a.types.a2a_pb2 import (
     SendMessageRequest,
     SendMessageResponse,
     StreamResponse,
+    Task,
     TaskStatus,
     TaskStatusUpdateEvent,
 )
 from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH, TransportProtocol
 from a2a.utils.errors import TaskNotFoundError
 
-from ..agent_factory import get_agent_instance
+from ..a2a_client import A2ATargetError, InputRequired, TextChunk
+from ..agent_factory import get_agent_instance, get_agent_wrappers
 from ..database import get_session
 from ..models import AgentConfig, AgentStatus
+from ..notifier import notify_alert
+from ..pending_store import PendingRecord, default_pending_store
 from ..repository import get_agent_by_slug, get_api_key_by_key
 
 logger = logging.getLogger(__name__)
@@ -230,6 +235,23 @@ def _rpc_error(request_id: Any, error: Any) -> JSONResponse:
     return JSONResponse(build_error_response(request_id, error))
 
 
+def _rpc_error_payload(request_id: Any, error: Any) -> dict[str, Any]:
+    """与 ``_rpc_error`` 同构，但返回 dict（供需要返回值而非响应对象的路径使用）。"""
+    return build_error_response(request_id, error)
+
+
+def _stream_error(request_id: Any, detail: str) -> dict[str, str]:
+    """SSE 流内错误帧（与既有「流式处理失败」格式一致）。"""
+    return {
+        "event": "error",
+        "data": json.dumps(
+            build_error_response(request_id, InvalidRequestError(message=detail)),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ),
+    }
+
+
 @router.post("/a2a")
 async def a2a_rpc_default(
     request: Request,
@@ -298,8 +320,37 @@ async def a2a_rpc(
             request_id, InvalidRequestError(message="消息中未找到文本内容")
         )
 
-    context_id = req.message.context_id or req.message.task_id or uuid.uuid4().hex
-    task_id = req.message.task_id or uuid.uuid4().hex
+    incoming_task_id = req.message.task_id or ""
+    incoming_context_id = req.message.context_id or ""
+    if incoming_task_id:
+        task_id = incoming_task_id
+        context_id = incoming_context_id or incoming_task_id
+    else:
+        # 标识统一：新任务的对外 task_id 与 context_id 同值，
+        # 挂起表主键（thread_id）即可被后续恢复请求的 task_id 命中。
+        task_id = context_id = incoming_context_id or uuid.uuid4().hex
+
+    if incoming_task_id:
+        try:
+            pending = await default_pending_store.get(incoming_task_id)
+        except Exception:
+            logger.exception("查询挂起任务失败 task=%s", incoming_task_id)
+            pending = None
+        if pending is None or pending.agent_id != agent.id:
+            return _rpc_error(request_id, TaskNotFoundError())
+        try:
+            if method in STREAMING_METHODS:
+                return EventSourceResponse(
+                    _rpc_resume_stream(request_id, agent, pending, text, task_id, context_id)
+                )
+            return JSONResponse(
+                await _rpc_resume_message(request_id, agent, pending, text, task_id, context_id)
+            )
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("A2A 恢复处理失败 slug=%s task=%s", agent.slug, task_id)
+            return _rpc_error(request_id, InvalidRequestError(message="Agent 处理失败"))
 
     try:
         if method in STREAMING_METHODS:
@@ -336,12 +387,26 @@ async def _stream_agent_text(
 async def _rpc_send_message(
     agent: AgentConfig, text: str, context_id: str, task_id: str, request_id: Any
 ) -> dict[str, Any]:
-    """非流式 SendMessage：等 Agent 跑完后返回完整消息。"""
+    """非流式 SendMessage：等 Agent 跑完后返回；下游中断时返回 INPUT_REQUIRED 任务快照。"""
     chunks: list[str] = []
     async for chunk in _stream_agent_text(agent, text, context_id):
         chunks.append(chunk)
-    message = new_text_message("".join(chunks), context_id=context_id, task_id=task_id)
-    response = SendMessageResponse(message=message)
+
+    try:
+        pending = await default_pending_store.get(context_id)
+    except Exception:
+        logger.exception("查询挂起任务失败 task=%s", task_id)
+        pending = None
+    if pending is not None:
+        task = Task(id=task_id, context_id=context_id)
+        task.status.state = TASK_STATE_INPUT_REQUIRED
+        task.status.message.CopyFrom(
+            new_text_message(pending.question, context_id=context_id, task_id=task_id)
+        )
+        response = SendMessageResponse(task=task)
+    else:
+        message = new_text_message("".join(chunks), context_id=context_id, task_id=task_id)
+        response = SendMessageResponse(message=message)
     result = MessageToDict(response)
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
@@ -388,16 +453,36 @@ async def _rpc_stream(
                     )
                 ),
             )
-        yield _sse_result(
-            request_id,
-            StreamResponse(
-                status_update=TaskStatusUpdateEvent(
-                    task_id=task_id,
-                    context_id=context_id,
-                    status=TaskStatus(state=TASK_STATE_COMPLETED),
-                )
-            ),
-        )
+        # 轮末复查挂起表：下游本次进入 input-required 时对外暴露该状态与追问
+        # （挂起表不可用时降级为完成，保证无中断场景行为不变）
+        try:
+            pending = await default_pending_store.get(context_id)
+        except Exception:
+            logger.exception("查询挂起任务失败 task=%s", task_id)
+            pending = None
+        if pending is not None:
+            yield _sse_result(
+                request_id,
+                StreamResponse(
+                    status_update=new_text_status_update_event(
+                        task_id=task_id,
+                        context_id=context_id,
+                        state=TASK_STATE_INPUT_REQUIRED,
+                        text=pending.question,
+                    )
+                ),
+            )
+        else:
+            yield _sse_result(
+                request_id,
+                StreamResponse(
+                    status_update=TaskStatusUpdateEvent(
+                        task_id=task_id,
+                        context_id=context_id,
+                        status=TaskStatus(state=TASK_STATE_COMPLETED),
+                    )
+                ),
+            )
     except Exception:
         logger.exception("A2A 流式处理失败 slug=%s", agent.slug)
         yield {
@@ -410,3 +495,180 @@ async def _rpc_stream(
                 separators=(",", ":"),
             ),
         }
+
+
+# ---------------------------------------------------------------------------
+# input-required 恢复（链路 B）：带 task_id 的请求 → 透明转发下游
+# ---------------------------------------------------------------------------
+async def _match_wrapper(agent: AgentConfig, pending: PendingRecord) -> Any | None:
+    """按挂起记录匹配 Agent 当前的 A2A wrapper（配置变化时返回 None）。"""
+    try:
+        wrappers = await get_agent_wrappers(agent)
+    except Exception:
+        logger.exception("加载 Agent wrappers 失败 slug=%s", agent.slug)
+        return None
+    return next((w for w in wrappers if w.target.url == pending.target_url), None)
+
+
+async def _append_resume_history(
+    agent: AgentConfig, thread_id: str, user_text: str, reply_text: str
+) -> None:
+    """把恢复轮的「用户补充 + 下游回复」追加进会话历史（失败不影响主流程）。"""
+    try:
+        graph = await get_agent_instance(agent)
+        messages: list[Any] = [HumanMessage(content=user_text)]
+        if reply_text:
+            messages.append(AIMessage(content=reply_text))
+        await graph.aupdate_state(
+            {"configurable": {"thread_id": thread_id}},
+            {"messages": messages},
+            as_node="agent",
+        )
+    except Exception:
+        logger.exception("追加恢复轮历史失败 thread=%s", thread_id)
+
+
+async def _settle_pending(pending: PendingRecord, again: InputRequired | None) -> None:
+    """恢复结束后的挂起表收尾：再次中断 → 刷新；完成 → 删除。"""
+    if again is not None:
+        await default_pending_store.upsert(
+            thread_id=pending.thread_id,
+            agent_id=pending.agent_id,
+            target_url=pending.target_url,
+            target_name=pending.target_name,
+            task_id=again.task_id,
+            context_id=again.context_id,
+            question=again.question,
+        )
+    else:
+        await default_pending_store.delete(pending.thread_id)
+
+
+async def _rpc_resume_stream(
+    request_id: Any,
+    agent: AgentConfig,
+    pending: PendingRecord,
+    text: str,
+    task_id: str,
+    context_id: str,
+) -> AsyncGenerator[dict[str, str], None]:
+    """恢复挂起任务（流式）：不重发 Task 首帧，增量文本走 working 状态事件。"""
+    wrapper = await _match_wrapper(agent, pending)
+    if wrapper is None:
+        await default_pending_store.delete(pending.thread_id)
+        yield _stream_error(request_id, "下游目标配置已变化，请重新发起任务")
+        return
+
+    chunks: list[str] = []
+    again: InputRequired | None = None
+    try:
+        async for event in wrapper.stream_message_events(
+            text, task_id=pending.task_id, context_id=pending.context_id or None
+        ):
+            if isinstance(event, TextChunk):
+                chunks.append(event.text)
+                yield _sse_result(
+                    request_id,
+                    StreamResponse(
+                        status_update=new_text_status_update_event(
+                            task_id=task_id,
+                            context_id=context_id,
+                            state=TASK_STATE_WORKING,
+                            text=event.text,
+                        )
+                    ),
+                )
+            elif isinstance(event, InputRequired):
+                again = event
+    except A2ATargetError as exc:
+        logger.warning("恢复挂起任务失败 task=%s: %s", task_id, exc)
+        await notify_alert(
+            "A2A 恢复失败",
+            f"task={pending.thread_id} target={pending.target_url} error={exc}",
+        )
+        await default_pending_store.delete(pending.thread_id)
+        yield _stream_error(request_id, "目标暂时不可用，请稍后重试")
+        return
+
+    await _settle_pending(pending, again)
+    await _append_resume_history(agent, context_id, text, "".join(chunks))
+
+    if again is not None:
+        yield _sse_result(
+            request_id,
+            StreamResponse(
+                status_update=new_text_status_update_event(
+                    task_id=task_id,
+                    context_id=context_id,
+                    state=TASK_STATE_INPUT_REQUIRED,
+                    text=again.question,
+                )
+            ),
+        )
+    else:
+        yield _sse_result(
+            request_id,
+            StreamResponse(
+                status_update=TaskStatusUpdateEvent(
+                    task_id=task_id,
+                    context_id=context_id,
+                    status=TaskStatus(state=TASK_STATE_COMPLETED),
+                )
+            ),
+        )
+
+
+async def _rpc_resume_message(
+    request_id: Any,
+    agent: AgentConfig,
+    pending: PendingRecord,
+    text: str,
+    task_id: str,
+    context_id: str,
+) -> dict[str, Any]:
+    """恢复挂起任务（非流式）：返回任务快照（INPUT_REQUIRED 或 COMPLETED）。"""
+    wrapper = await _match_wrapper(agent, pending)
+    if wrapper is None:
+        await default_pending_store.delete(pending.thread_id)
+        return _rpc_error_payload(
+            request_id, InvalidRequestError(message="下游目标配置已变化，请重新发起任务")
+        )
+
+    chunks: list[str] = []
+    again: InputRequired | None = None
+    try:
+        async for event in wrapper.stream_message_events(
+            text, task_id=pending.task_id, context_id=pending.context_id or None
+        ):
+            if isinstance(event, TextChunk):
+                chunks.append(event.text)
+            elif isinstance(event, InputRequired):
+                again = event
+    except A2ATargetError as exc:
+        logger.warning("恢复挂起任务失败 task=%s: %s", task_id, exc)
+        await notify_alert(
+            "A2A 恢复失败",
+            f"task={pending.thread_id} target={pending.target_url} error={exc}",
+        )
+        await default_pending_store.delete(pending.thread_id)
+        return _rpc_error_payload(
+            request_id, InvalidRequestError(message="目标暂时不可用，请稍后重试")
+        )
+
+    await _settle_pending(pending, again)
+    await _append_resume_history(agent, context_id, text, "".join(chunks))
+
+    task = Task(id=task_id, context_id=context_id)
+    if again is not None:
+        task.status.state = TASK_STATE_INPUT_REQUIRED
+        task.status.message.CopyFrom(
+            new_text_message(again.question, context_id=context_id, task_id=task_id)
+        )
+    else:
+        task.status.state = TASK_STATE_COMPLETED
+        if chunks:
+            task.status.message.CopyFrom(
+                new_text_message("".join(chunks), context_id=context_id, task_id=task_id)
+            )
+    response = SendMessageResponse(task=task)
+    return {"jsonrpc": "2.0", "id": request_id, "result": MessageToDict(response)}
