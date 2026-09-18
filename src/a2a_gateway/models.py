@@ -6,6 +6,7 @@
 - ApiKey：对外提供 A2A 服务的调用凭据（/a2a/* 端点鉴权）
 - AdminUser：管理中心登录账号（JWT 认证）
 - Conversation：对话会话目录（thread_id → 身份归属，支持匿名 → 登录归并）
+- PendingA2ATask：挂起任务（input-required 中断 → 恢复映射）
 """
 
 from datetime import datetime
@@ -190,3 +191,24 @@ class Conversation(Base, BaseMixin):
     title: Mapped[str] = mapped_column(String(255), default="")
     owner_kind: Mapped[str] = mapped_column(String(16), index=True)
     owner_id: Mapped[str] = mapped_column(String(64), index=True)
+
+
+class PendingA2ATask(Base, BaseMixin):
+    """挂起任务：网关会话 / 对外 task_id → 下游任务（task_id）的映射。
+
+    链路 A（对话界面）以会话 thread_id 为键；链路 B（A2A Server）以对外 task_id
+    为键（创建新任务时两者取同一标识）。下游完成即删除；读取时按 TTL 过期清理。
+    """
+
+    __tablename__ = "pending_a2a_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    thread_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    agent_id: Mapped[int] = mapped_column(
+        ForeignKey("agent_configs.id", ondelete="CASCADE"), index=True
+    )
+    target_url: Mapped[str] = mapped_column(String(512))
+    target_name: Mapped[str] = mapped_column(String(128), default="")
+    task_id: Mapped[str] = mapped_column(String(128))
+    context_id: Mapped[str] = mapped_column(String(128), default="")
+    question: Mapped[str] = mapped_column(Text, default="")

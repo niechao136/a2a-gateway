@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, alias="APP_PORT")
     frontend_origin: str = Field(default="http://localhost:3000", alias="FRONTEND_ORIGIN")
 
+    # 挂起任务（input-required）：超过该秒数未恢复的挂起在读取时视为失效并清理
+    pending_a2a_ttl_seconds: int = Field(default=86400, alias="PENDING_A2A_TTL_SECONDS")
+
     # 语音服务（onnx-hub）：ASR 语音识别 / TTS 语音合成
     # 网关代理请求并注入 API Key，前端无需接触真实 Key
     onnx_hub_base_url: str = Field(

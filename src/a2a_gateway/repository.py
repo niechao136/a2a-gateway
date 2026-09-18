@@ -32,6 +32,7 @@ from .models import (
     ApiKey,
     Conversation,
     McpServer,
+    PendingA2ATask,
 )
 from .schemas import (
     A2AEndpointCreate,
@@ -827,3 +828,62 @@ async def import_conversations(
     await session.commit()
     logger.info("导入历史会话 %s 条（身份 %s:%s）", len(rows), identity.kind, identity.id)
     return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# 挂起任务（input-required）
+# ---------------------------------------------------------------------------
+async def get_pending_a2a_task(
+    session: AsyncSession, thread_id: str
+) -> PendingA2ATask | None:
+    """按 thread_id 取挂起任务（TTL 判定由 store 层负责）。"""
+    result = await session.execute(
+        select(PendingA2ATask).where(PendingA2ATask.thread_id == thread_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_pending_a2a_task(
+    session: AsyncSession,
+    *,
+    thread_id: str,
+    agent_id: int,
+    target_url: str,
+    target_name: str,
+    task_id: str,
+    context_id: str,
+    question: str,
+) -> None:
+    """登记/刷新一条挂起任务（按 thread_id 冲突更新）。"""
+    existing = await get_pending_a2a_task(session, thread_id)
+    if existing is not None:
+        existing.agent_id = agent_id
+        existing.target_url = target_url
+        existing.target_name = target_name
+        existing.task_id = task_id
+        existing.context_id = context_id
+        existing.question = question
+        existing.updated_at = datetime.now(timezone.utc)
+    else:
+        session.add(
+            PendingA2ATask(
+                thread_id=thread_id,
+                agent_id=agent_id,
+                target_url=target_url,
+                target_name=target_name,
+                task_id=task_id,
+                context_id=context_id,
+                question=question,
+            )
+        )
+    await session.commit()
+
+
+async def delete_pending_a2a_task(session: AsyncSession, thread_id: str) -> bool:
+    """删除挂起任务；不存在时返回 False。"""
+    row = await get_pending_a2a_task(session, thread_id)
+    if row is None:
+        return False
+    await session.delete(row)
+    await session.commit()
+    return True
