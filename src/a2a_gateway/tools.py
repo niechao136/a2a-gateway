@@ -35,6 +35,10 @@ class A2ACallArgs(BaseModel):
     message: str = Field(description="要发送给该 A2A 目标 Agent 的消息内容")
 
 
+class A2AResumeArgs(BaseModel):
+    answer: str = Field(description="用户对追问的补充信息，原样转发给下游 Agent")
+
+
 def _build_a2a_tool(
     name: str,
     description: str,
@@ -91,6 +95,78 @@ def _build_a2a_tool(
     )
 
 
+def _build_a2a_resume_tool(
+    wrappers: list[A2AClientWrapper],
+    *,
+    agent_id: int,
+    pending_store: PendingStore,
+) -> StructuredTool:
+    """构造恢复工具：把用户的补充信息转发给挂起的下游任务。
+
+    目标由挂起记录锁定（不按目标拆分工具）；无挂起时返回提示文本，
+    引导模型改用 a2a_call 发起新请求。
+    """
+
+    async def _acall(answer: str, config: RunnableConfig) -> str:
+        thread_id = (config.get("configurable") or {}).get("thread_id") or ""
+        if not thread_id:
+            return "无法定位当前会话，请让用户重新描述需求。"
+        pending = await pending_store.get(thread_id)
+        if pending is None:
+            return "当前没有等待补充的远端任务，请改用 a2a_call 发起新请求。"
+        wrapper = next((w for w in wrappers if w.target.url == pending.target_url), None)
+        if wrapper is None:
+            await pending_store.delete(thread_id)
+            return "下游目标配置已变化，请让用户重新描述需求。"
+
+        chunks: list[str] = []
+        again: InputRequired | None = None
+        try:
+            async for event in wrapper.stream_message_events(
+                answer, task_id=pending.task_id, context_id=pending.context_id or None
+            ):
+                if isinstance(event, TextChunk):
+                    chunks.append(event.text)
+                elif isinstance(event, InputRequired):
+                    again = event
+        except A2ATargetError as e:
+            await pending_store.delete(thread_id)
+            await notify_alert(
+                "挂起任务恢复失败",
+                f"thread={thread_id} target={pending.target_url} kind={e.kind} error={e.detail}",
+            )
+            return f"目标暂时不可用（{e}），请稍后重试或重新描述需求。"
+
+        if again is not None:
+            await pending_store.upsert(
+                thread_id=thread_id,
+                agent_id=agent_id,
+                target_url=pending.target_url,
+                target_name=pending.target_name,
+                task_id=again.task_id,
+                context_id=again.context_id,
+                question=again.question,
+            )
+            return again.question or "（需要用户继续补充信息）"
+        await pending_store.delete(thread_id)
+        return "".join(chunks) or "（A2A 目标未返回内容）"
+
+    def _call(answer: str) -> str:
+        raise RuntimeError("a2a_resume 仅支持异步调用")
+
+    return StructuredTool.from_function(
+        coroutine=_acall,
+        func=_call,
+        name="a2a_resume",
+        description=(
+            "把用户对追问的补充信息转发给正在等待补充的远端 A2A 任务，并让该任务继续执行。"
+            "仅当上下文中出现「等待用户补充信息」的远端任务时使用；"
+            "当前没有等待补充的任务时请改用 a2a_call。"
+        ),
+        args_schema=A2AResumeArgs,
+    )
+
+
 def make_a2a_tools(
     targets: list[A2ATarget],
     *,
@@ -136,6 +212,11 @@ def make_a2a_tools(
                 agent_id=agent_id,
                 pending_store=store,
             )
+        )
+
+    if usable:
+        tools.append(
+            _build_a2a_resume_tool(wrappers, agent_id=agent_id, pending_store=store)
         )
     return tools, wrappers
 

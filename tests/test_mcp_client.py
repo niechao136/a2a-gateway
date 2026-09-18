@@ -157,7 +157,7 @@ def test_make_a2a_tools_single_target_keeps_legacy_name():
     tools, wrappers = make_a2a_tools(
         [A2ATarget(url="http://h:9900/", token="t", name="Hermes", description="通用助手")]
     )
-    assert [t.name for t in tools] == ["a2a_call"]
+    assert [t.name for t in tools] == ["a2a_call", "a2a_resume"]
     # 关键：描述必须进入工具说明，模型才能判断该不该调它
     assert "通用助手" in tools[0].description
     assert len(wrappers) == 1
@@ -170,7 +170,7 @@ def test_make_a2a_tools_multiple_targets_are_distinct():
             A2ATarget(url="http://b/", name="flight", description="擅长订机票"),
         ]
     )
-    assert [t.name for t in tools] == ["a2a_call__weather", "a2a_call__flight"]
+    assert [t.name for t in tools] == ["a2a_call__weather", "a2a_call__flight", "a2a_resume"]
     assert "擅长查天气" in tools[0].description
     assert "擅长订机票" in tools[1].description
     # 描述必须各自独立，否则模型无法区分
@@ -186,8 +186,9 @@ def test_make_a2a_tools_guards_name_collisions():
             A2ATarget(url="http://b/", name="机票服务", description="订机票"),
         ]
     )
-    assert len(tools) == 2
-    assert len({t.name for t in tools}) == 2
+    # 两个按目标拆分的 a2a_call，外加一个统一的 a2a_resume
+    assert len(tools) == 3
+    assert len({t.name for t in tools}) == 3
 
 
 def test_make_a2a_tools_ignores_empty_url():
@@ -234,7 +235,7 @@ def test_build_tools_combines_a2a_and_mcp():
             "S1": [{"name": "echo", "description": "回声", "inputSchema": {"type": "object"}}]
         },
     )
-    assert [t.name for t in tools] == ["a2a_call", "mcp_S1__echo"]
+    assert [t.name for t in tools] == ["a2a_call", "a2a_resume", "mcp_S1__echo"]
 
 
 def test_web_search_and_optional_tools_removed():
