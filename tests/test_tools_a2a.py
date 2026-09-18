@@ -33,7 +33,7 @@ class FakeWrapper:
         self.calls = []
 
     async def stream_message_events(self, text, *, task_id=None, context_id=None, **kwargs):
-        self.calls.append({"text": text, "task_id": task_id})
+        self.calls.append({"text": text, "task_id": task_id, "context_id": context_id})
         if self._error is not None:
             raise self._error
         for event in self._events:
@@ -182,7 +182,9 @@ async def test_resume_tool_forwards_answer_with_task_id(monkeypatch):
     )
 
     assert result == "行程内容"
-    assert wrapper.calls == [{"text": "杭州 10/1-10/3", "task_id": "t-1"}]
+    assert wrapper.calls == [
+        {"text": "杭州 10/1-10/3", "task_id": "t-1", "context_id": "c-1"}
+    ]
     assert store.deleted == ["th-1"]
 
 

@@ -1,7 +1,7 @@
 # A2A 恢复轮工具化设计（`a2a_resume`）
 
 - 日期：2026-09-18
-- 状态：已实现
+- 状态：已实现（远程联调待补）
 - 范围：`a2a-gateway` 后端（工具层 / graph / 对话路由）
 - 关联：取代 `2026-09-17-a2a-input-required-design.md` 中「链路 A 恢复分支」的实现方式（3.4.1 / 3.4.2）
 - 实测背景：2026-09-18 在 devops-43 用 news agent（下行目标 travel）验证，中断 → 补充 → 同一 task 恢复已跑通；但恢复轮的输出由路由层直接透传，未经过网关 LLM
@@ -178,8 +178,8 @@ def _make_history_hook(llm: Any, pending_store: PendingStore | None = None):
 
 | 假设 | 验证方式 | 结论 |
 | --- | --- | --- |
-| `create_react_agent` 的 `pre_model_hook` 支持 `(state, config)` 签名 | 本地脚本（langgraph 实装，打印 hook 收到的参数） | 待验证 |
-| `pre_model_hook` 返回 `llm_input_messages` 时前置 `SystemMessage` 能被模型正确消费 | 本地脚本（Fake store 注入 + 假的 chat model 记录入参） | 待验证 |
+| `create_react_agent` 的 `pre_model_hook` 支持 `(state, config)` 签名 | 本地脚本（langgraph 实装，打印 hook 收到的参数） | ✅ 已验证通过：**支持**，但 `config` 形参必须注解为 `RunnableConfig` / `RunnableConfig \| None`（注解为 `Any` 时 langgraph 不注入，报 `missing 1 required positional argument: 'config'`），无需走第 9 节的退路。实测见 `.superpowers/sdd/2026-09-18-a2a-resume-tool/task-0-report.md`，图级回归用例见 `tests/test_graph.py`（`test_history_hook_injects_pending_notice` 等） |
+| `pre_model_hook` 返回 `llm_input_messages` 时前置 `SystemMessage` 能被模型正确消费 | 本地脚本（Fake store 注入 + 假的 chat model 记录入参） | ✅ 已验证通过：同一脚本的 `PregelTaskWrites.writes` 中出现 `('llm_input_messages', [SystemMessage(content='NOTICE'), HumanMessage(...)])`，图接受该返回值并写入通道，末行 `final: ok`。实测见 `.superpowers/sdd/2026-09-18-a2a-resume-tool/task-0-report.md`，图级回归用例见 `tests/test_graph.py`（`test_graph_injects_pending_notice_into_model_input`） |
 
 ## 8. 实施顺序与文件清单
 
