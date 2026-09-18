@@ -9,7 +9,7 @@
 > - ✅ **Phase 5**（A2A Client 封装/连通性测试/Hermes 全链路联调均已完成；含 Gemini 3 thought_signature 兼容层与瞬时错误自动重试）
 > - ✅ **Phase 6**（容器化 + nginx 统一入口 + 环境变量清单 + Alembic 迁移 + 可选告警 Webhook 已完成；安全组/防火墙清单待补）
 > - ✅ **Phase 7**（后端单元 40 用例 + 前端 vitest 7 用例 + 端到端冒烟脚本，均已实测通过；顺带修复前端 SSE CRLF 解析缺陷）
-> - ✅ **2026-09-18：A2A 恢复轮工具化**（新增 `a2a_resume` 工具把用户补充信息带 `task_id` / `context_id` 转发给挂起的下游任务，结果作为工具输出回到模型上下文；对话前以「模型可见但不入历史」方式注入挂起上下文并引导模型调用该工具；`routes/chat.py` 移除恢复拦截与手工补历史，恢复轮回归正常 graph 流程）—— 后端 **205 用例全绿** + basedpyright standard **0 error**，远程链路联调待补
+> - ✅ **2026-09-18：A2A 恢复轮工具化**（新增 `a2a_resume` 工具把用户补充信息带 `task_id` / `context_id` 转发给挂起的下游任务，结果作为工具输出回到模型上下文；对话前以「模型可见但不入历史」方式注入挂起上下文并引导模型调用该工具；`routes/chat.py` 移除恢复拦截与手工补历史，恢复轮回归正常 graph 流程）—— 后端 **205 用例全绿** + basedpyright standard **0 error**；devops-43 联调已通过：同一会话内模型自主调用 `a2a_resume`，下游 travel-agent 同一 task 恢复（thread `0cecf085`，checkpoint 9 个跨两轮增长）
 > - ⏳ **下一步**：管理中心表单校验的前端用例（需先把校验逻辑抽为纯函数）、云安全组核对、二期功能（长任务 Task 轮询 / input-required）
 > - ⚠️ **注意**：LLM 使用 Gemini 3 系列（OpenAI 兼容端点）时，函数调用必须回传 `thought_signature`，否则第二轮报 400；已在 `src/a2a_gateway/llm.py` 内置兼容适配层（入站捕获 + 出站回填），对其它 OpenAI 兼容端点透明。
 > - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
