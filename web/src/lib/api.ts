@@ -36,6 +36,7 @@ export type SSEEvent =
   | { type: "token"; content: string }
   | { type: "tool_start"; name: string }
   | { type: "tool_end"; name: string; output: string }
+  | { type: "interrupt"; question: string }
   | { type: "done"; thread_id: string }
   | { type: "error"; detail: string };
 
@@ -67,6 +68,38 @@ export function parseSSEBlock(block: string): { event: string; data: string } | 
 }
 
 /**
+ * 把单个 SSE 事件的 event 名与 data 负载映射为 SSEEvent；
+ * 未知事件或非法 JSON 返回 null。独立导出便于单测（consumeSSE 内部同样走这里）。
+ */
+export function parseSSEEvent(eventName: string, raw: string): SSEEvent | null {
+  try {
+    const parsed = JSON.parse(raw);
+    switch (eventName) {
+      case "token":
+        return { type: "token", content: parsed.content || "" };
+      case "tool_start":
+        return { type: "tool_start", name: parsed.name || "" };
+      case "tool_end":
+        return {
+          type: "tool_end",
+          name: parsed.name || "",
+          output: String(parsed.output ?? ""),
+        };
+      case "interrupt":
+        return { type: "interrupt", question: String(parsed.question ?? "") };
+      case "done":
+        return { type: "done", thread_id: parsed.thread_id || "" };
+      case "error":
+        return { type: "error", detail: parsed.detail || "对话出错" };
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 解析 SSE 响应流并回调事件。返回最终的 thread_id。
  */
 async function consumeSSE(
@@ -91,38 +124,10 @@ async function consumeSSE(
     for (const block of blocks) {
       const parsedBlock = parseSSEBlock(block);
       if (!parsedBlock) continue;
-      const eventName = parsedBlock.event;
-      const raw = parsedBlock.data;
-
-      try {
-        const parsed = JSON.parse(raw);
-        switch (eventName) {
-          case "token":
-            onEvent({ type: "token", content: parsed.content || "" });
-            break;
-          case "tool_start":
-            onEvent({ type: "tool_start", name: parsed.name || "" });
-            break;
-          case "tool_end":
-            onEvent({
-              type: "tool_end",
-              name: parsed.name || "",
-              output: String(parsed.output ?? ""),
-            });
-            break;
-          case "done":
-            finalThreadId = parsed.thread_id || finalThreadId;
-            onEvent({ type: "done", thread_id: finalThreadId });
-            break;
-          case "error":
-            onEvent({ type: "error", detail: parsed.detail || "对话出错" });
-            break;
-          default:
-            break;
-        }
-      } catch {
-        // 忽略非 JSON 数据块
-      }
+      const event = parseSSEEvent(parsedBlock.event, parsedBlock.data);
+      if (!event) continue;
+      if (event.type === "done") finalThreadId = event.thread_id || finalThreadId;
+      onEvent(event);
     }
   }
 

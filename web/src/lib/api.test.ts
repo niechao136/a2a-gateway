@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { parseSSEBlock, splitSSEBlocks } from "./api";
+import { parseSSEBlock, parseSSEEvent, splitSSEBlocks } from "./api";
 
 describe("splitSSEBlocks", () => {
   it("能切分 CRLF 分隔的事件块（sse-starlette 的实际输出）", () => {
@@ -59,5 +59,30 @@ describe("parseSSEBlock", () => {
 
   it("无 data 的块返回 null", () => {
     expect(parseSSEBlock("event: ping")).toBeNull();
+  });
+});
+
+describe("parseSSEEvent", () => {
+  it("解析 interrupt 事件（等待用户补充信息）", () => {
+    expect(parseSSEEvent("interrupt", '{"question":"请补充目的地"}')).toEqual({
+      type: "interrupt",
+      question: "请补充目的地",
+    });
+  });
+
+  it("interrupt 缺少 question 字段时降级为空串", () => {
+    expect(parseSSEEvent("interrupt", "{}")).toEqual({ type: "interrupt", question: "" });
+  });
+
+  it("解析 token 事件", () => {
+    expect(parseSSEEvent("token", '{"content":"hi"}')).toEqual({ type: "token", content: "hi" });
+  });
+
+  it("未知事件返回 null", () => {
+    expect(parseSSEEvent("ping", "{}")).toBeNull();
+  });
+
+  it("非法 JSON 返回 null", () => {
+    expect(parseSSEEvent("token", "not-json")).toBeNull();
   });
 });

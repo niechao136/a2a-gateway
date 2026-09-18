@@ -71,6 +71,8 @@ export default function ChatPage({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveIdState] = useState<string | null>(initialConversationId);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // 下游任务要求补充信息（interrupt）时置 true；用户发送下一条消息时复位
+  const [waiting, setWaiting] = useState(false);
 
   // activeId 的同步引用：供 effect 判断「路由变化是否指向当前已在看的会话」
   const activeIdRef = useRef<string | null>(initialConversationId);
@@ -235,6 +237,8 @@ export default function ChatPage({
           }
           return next;
         });
+      } else if (e.type === "interrupt") {
+        setWaiting(true);
       } else if (e.type === "error") {
         setError(e.detail || "对话处理失败");
       }
@@ -265,6 +269,7 @@ export default function ChatPage({
       }
       void refreshConversations();
 
+      setWaiting(false);
       // 追加用户消息 + 助手占位（流式填充）
       setMessages((prev) => [
         ...prev,
@@ -449,6 +454,13 @@ export default function ChatPage({
             </Box>
           )}
         </Box>
+
+        {/* 等待补充提示（下游任务追问用户） */}
+        {waiting && (
+          <Alert severity="info" sx={{ mx: 2, mb: 1 }}>
+            等待你补充信息，请直接回复
+          </Alert>
+        )}
 
         {/* 错误提示 */}
         {error && (
