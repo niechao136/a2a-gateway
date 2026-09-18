@@ -74,7 +74,7 @@ async def get_agent_instance(agent: AgentConfig) -> Any:
         return _cache[key][1]
     # 每个 A2A 目标各一个工具（说明里带目标描述，便于模型选择）
     targets = [A2ATarget(**t) for t in (agent.a2a_targets or [])]
-    a2a_tools, wrappers = make_a2a_tools(targets)
+    a2a_tools, wrappers = make_a2a_tools(targets, agent_id=agent.id)
     # MCP 服务快照（由 repository 解析 mcp_server_ids 得到），无 DB 依赖
     mcp_servers = list(getattr(agent, "mcp_servers", None) or [])
     mcp_tool_index = await _probe_mcp_tools(mcp_servers)

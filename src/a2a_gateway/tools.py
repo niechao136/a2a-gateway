@@ -10,13 +10,15 @@
 import re
 from typing import Any
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field, create_model
 
-from .a2a_client import A2AClientWrapper, A2ATargetError
+from .a2a_client import A2AClientWrapper, A2ATargetError, InputRequired, TextChunk
 from .mcp_client import call_tool as mcp_invoke
 from .mcp_client import connection_from_snapshot, format_tools_for_prompt
 from .notifier import notify_alert
+from .pending_store import PendingStore, default_pending_store
 from .schemas import A2ATarget
 
 
@@ -34,20 +36,47 @@ class A2ACallArgs(BaseModel):
 
 
 def _build_a2a_tool(
-    name: str, description: str, wrapper: A2AClientWrapper
+    name: str,
+    description: str,
+    wrapper: A2AClientWrapper,
+    *,
+    agent_id: int,
+    pending_store: PendingStore,
 ) -> StructuredTool:
-    async def _acall(message: str) -> str:
-        """向绑定的 A2A 目标发送消息并聚合返回文本。"""
+    async def _acall(message: str, config: RunnableConfig) -> str:
+        """向绑定的 A2A 目标发送消息并聚合返回文本。
+
+        下游要求补充信息（input-required）时，把挂起状态写入 pending_store，
+        并把追问原样返回给模型转述；用户的下一条消息由路由层直接恢复该任务。
+        """
         chunks: list[str] = []
+        required: InputRequired | None = None
         try:
-            async for chunk in wrapper.stream_message(message):
-                chunks.append(chunk)
+            async for event in wrapper.stream_message_events(message):
+                if isinstance(event, TextChunk):
+                    chunks.append(event.text)
+                elif isinstance(event, InputRequired):
+                    required = event
         except A2ATargetError as e:
             await notify_alert(
                 "A2A 调用失败",
                 f"target={wrapper.target.url} kind={e.kind} error={e.detail}",
             )
             return f"A2A 调用失败：{e}"
+
+        if required is not None:
+            thread_id = (config.get("configurable") or {}).get("thread_id") or ""
+            if thread_id:
+                await pending_store.upsert(
+                    thread_id=thread_id,
+                    agent_id=agent_id,
+                    target_url=wrapper.target.url,
+                    target_name=wrapper.target.name or "",
+                    task_id=required.task_id,
+                    context_id=required.context_id,
+                    question=required.question,
+                )
+            return required.question or "（需要用户补充信息）"
         return "".join(chunks) if chunks else "（A2A 目标未返回内容）"
 
     def _call(message: str) -> str:
@@ -64,14 +93,20 @@ def _build_a2a_tool(
 
 def make_a2a_tools(
     targets: list[A2ATarget],
+    *,
+    agent_id: int = 0,
+    pending_store: PendingStore | None = None,
 ) -> tuple[list[StructuredTool], list[A2AClientWrapper]]:
     """为每个 A2A 目标各构造一个调用工具。
 
     - 仅一个目标时沿用历史名称 `a2a_call`；多个目标时按目标名区分
     - 目标描述写进工具说明，让大模型判断该调用哪一个
+    - `agent_id` 用于挂起登记（0 表示未知，仅影响链路 B 恢复时的归属校验）
+    - `pending_store` 缺省用全局单例；测试可注入替身
 
     @returns (工具列表, 需要由调用方关闭的 client wrapper 列表)
     """
+    store = pending_store or default_pending_store
     usable = [t for t in targets if t.url.strip()]
     wrappers = [A2AClientWrapper(t) for t in usable]
     single = len(usable) == 1
@@ -93,7 +128,15 @@ def make_a2a_tools(
         description = f"调用远端 A2A 目标「{label}」处理用户请求，返回其回复内容。"
         if target.description:
             description += f"\n该目标的能力与适用场景：{target.description}"
-        tools.append(_build_a2a_tool(name, description, wrapper))
+        tools.append(
+            _build_a2a_tool(
+                name,
+                description,
+                wrapper,
+                agent_id=agent_id,
+                pending_store=store,
+            )
+        )
     return tools, wrappers
 
 
