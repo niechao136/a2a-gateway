@@ -13,6 +13,9 @@ from a2a_gateway import a2a_client
 from a2a_gateway.a2a_client import (
     A2AClientWrapper,
     A2ATargetError,
+    Completed,
+    InputRequired,
+    TextChunk,
     _merge_interface_url,
     _origin_url,
 )
@@ -408,3 +411,124 @@ async def test_restores_integers_in_artifact_data_part():
     assert payload["counts"]["selected"] == 3
     assert isinstance(payload["counts"]["selected"], int)
     assert payload["score"] == 0.75
+
+
+# ---------------------------------------------------------------------------
+# 结构化事件流：中断信号（InputRequired）与 task 续接
+# ---------------------------------------------------------------------------
+class _ScriptedClient:
+    """按脚本产出响应的假客户端，记录收到的请求。"""
+
+    def __init__(self, responses):
+        self.responses = responses
+        self.requests = []
+
+    def send_message(self, request):
+        self.requests.append(request)
+
+        async def gen():
+            for response in self.responses:
+                yield response
+
+        return gen()
+
+
+def _status_update(*, state, text=None, task_id="t-1", context_id="c-1") -> StreamResponse:
+    resp = StreamResponse()
+    resp.status_update.task_id = task_id
+    resp.status_update.context_id = context_id
+    resp.status_update.status.state = state
+    if text is not None:
+        resp.status_update.status.message.CopyFrom(new_text_message(text))
+    return resp
+
+
+async def test_stream_events_emits_text_then_input_required_from_task_snapshot():
+    """线上实测形态：追问在 task 快照的 status.message，须产出 InputRequired。"""
+    wrapper = _wrapper()
+    fake = _ScriptedClient(
+        [_task_response(state=a2a_pb2.TASK_STATE_INPUT_REQUIRED, message_text="请补充目的地")]
+    )
+
+    async def ensure():
+        return fake
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    events = [e async for e in wrapper.stream_message_events("hi")]
+
+    assert events == [
+        TextChunk("请补充目的地"),
+        InputRequired(task_id="t-1", context_id="c-1", question="请补充目的地"),
+    ]
+
+
+async def test_stream_events_emits_input_required_from_status_update():
+    wrapper = _wrapper()
+    fake = _ScriptedClient(
+        [
+            _status_update(text="先选个城市？", state=a2a_pb2.TASK_STATE_WORKING),
+            _status_update(state=a2a_pb2.TASK_STATE_INPUT_REQUIRED, text="请补充日期与预算"),
+        ]
+    )
+
+    async def ensure():
+        return fake
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    events = [e async for e in wrapper.stream_message_events("hi")]
+
+    assert events == [
+        TextChunk("先选个城市？"),
+        TextChunk("请补充日期与预算"),
+        InputRequired(task_id="t-1", context_id="c-1", question="请补充日期与预算"),
+    ]
+
+
+async def test_stream_events_emits_completed_after_terminal_status():
+    wrapper = _wrapper()
+    fake = _ScriptedClient([_status_update(state=a2a_pb2.TASK_STATE_COMPLETED, task_id="t-9")])
+
+    async def ensure():
+        return fake
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    events = [e async for e in wrapper.stream_message_events("hi")]
+
+    assert events == [Completed(task_id="t-9")]
+
+
+async def test_stream_events_passes_task_id_and_context_id():
+    """恢复语义：task_id / context_id 必须写入发送的消息。"""
+    wrapper = _wrapper()
+    fake = _ScriptedClient([_status_update(state=a2a_pb2.TASK_STATE_COMPLETED)])
+
+    async def ensure():
+        return fake
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    _ = [
+        e
+        async for e in wrapper.stream_message_events(
+            "补充", task_id="t-1", context_id="c-1"
+        )
+    ]
+
+    sent = fake.requests[0].message
+    assert sent.task_id == "t-1"
+    assert sent.context_id == "c-1"
+
+
+async def test_stream_message_wrapper_still_yields_text_only():
+    """旧 API（stream_message）保持只产出文本，中断信号不外漏。"""
+    wrapper = _wrapper()
+    fake = _ScriptedClient(
+        [_task_response(state=a2a_pb2.TASK_STATE_INPUT_REQUIRED, message_text="请补充")]
+    )
+
+    async def ensure():
+        return fake
+
+    wrapper._ensure_client = ensure  # type: ignore[method-assign]
+    out = [c async for c in wrapper.stream_message("hi")]
+
+    assert out == ["请补充"]

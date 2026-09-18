@@ -12,6 +12,7 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -47,6 +48,32 @@ TERMINAL_STATES = frozenset(
         a2a_pb2.TASK_STATE_REJECTED,
     }
 )
+
+
+@dataclass(frozen=True)
+class TextChunk:
+    """下游产出的文本片段。"""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class InputRequired:
+    """下游任务进入 input-required（等待用户补充信息）。"""
+
+    task_id: str
+    context_id: str
+    question: str
+
+
+@dataclass(frozen=True)
+class Completed:
+    """下游任务进入终态。"""
+
+    task_id: str
+
+
+StreamEvent = TextChunk | InputRequired | Completed
 
 
 def _restore_integers(value: Any) -> Any:
@@ -163,8 +190,63 @@ class A2AClientWrapper:
             return A2ATargetError("network", f"A2A 网络错误：{error}")
         return A2ATargetError("target_error", f"A2A 调用异常：{error}")
 
-    async def stream_message(self, text: str, *, retries: int = 2, backoff: float = 0.5) -> AsyncIterator[str]:
-        """向目标发送文本并流式产出结果片段。"""
+    @staticmethod
+    def _state_events(response: Any) -> list[StreamEvent]:
+        """从响应派生状态事件：input-required（中断）与终态（完成）。
+
+        文本由 ``_extract`` 负责；本方法只产出信号，调用方保证「先文本后信号」。
+        """
+        if response.HasField("task"):
+            task = response.task
+            if task.status.state == a2a_pb2.TASK_STATE_INPUT_REQUIRED:
+                question = (
+                    get_message_text(task.status.message)
+                    if task.status.HasField("message")
+                    else ""
+                )
+                return [
+                    InputRequired(
+                        task_id=task.id, context_id=task.context_id, question=question
+                    )
+                ]
+            if task.status.state in TERMINAL_STATES:
+                return [Completed(task_id=task.id)]
+            return []
+        if response.HasField("status_update"):
+            update = response.status_update
+            if update.status.state == a2a_pb2.TASK_STATE_INPUT_REQUIRED:
+                question = (
+                    get_message_text(update.status.message)
+                    if update.status.HasField("message")
+                    else ""
+                )
+                return [
+                    InputRequired(
+                        task_id=update.task_id,
+                        context_id=update.context_id,
+                        question=question,
+                    )
+                ]
+            if update.status.state in TERMINAL_STATES:
+                return [Completed(task_id=update.task_id)]
+        return []
+
+    async def stream_message_events(
+        self,
+        text: str,
+        *,
+        task_id: str | None = None,
+        context_id: str | None = None,
+        retries: int = 2,
+        backoff: float = 0.5,
+    ) -> AsyncIterator[StreamEvent]:
+        """向目标发送文本并流式产出结构化事件。
+
+        - 普通文本 → ``TextChunk``
+        - 下游要求补充信息（input-required）→ ``InputRequired``（带 task_id 供恢复）
+        - 任务终态 → ``Completed``
+        - 传入 ``task_id`` 表示「恢复已有任务」（A2A 协议：向任务追加用户输入）
+        """
         message = a2a_pb2.Message(
             message_id=uuid.uuid4().hex,
             role=a2a_pb2.ROLE_USER,
@@ -173,6 +255,10 @@ class A2AClientWrapper:
                 new_text_part(text, media_type="text/plain"),
             ],
         )
+        if task_id:
+            message.task_id = task_id
+        if context_id:
+            message.context_id = context_id
         request = a2a_pb2.SendMessageRequest(message=message)
 
         for attempt in range(retries + 1):
@@ -191,20 +277,20 @@ class A2AClientWrapper:
                         if task.status.state in TERMINAL_STATES:
                             saw_final_task = True
                             terminal_task_id = task.id
-                    elif response.HasField("artifact_update"):
-                        saw_artifact = True
                     elif response.HasField("status_update"):
                         if response.status_update.status.state in TERMINAL_STATES:
                             terminal_task_id = response.status_update.task_id
                     async for chunk in self._extract(response):
                         yielded = True
-                        yield chunk
+                        yield TextChunk(chunk)
+                    for state_event in self._state_events(response):
+                        yield state_event
                 # 零产出兜底：目标可能只在任务的最终快照里放产物（流中没有 artifact 事件），
                 # 此时补拉一次 GetTask，避免"目标已跑完但调用方拿不到任何内容"。
                 if terminal_task_id and not saw_artifact and not saw_final_task:
                     async for chunk in self._fetch_task_artifacts(client, terminal_task_id):
                         yielded = True
-                        yield chunk
+                        yield TextChunk(chunk)
                 return
             except Exception as error:
                 classified = self._classify(error)
@@ -220,6 +306,14 @@ class A2AClientWrapper:
                     classified.detail,
                 )
                 await asyncio.sleep(delay)
+
+    async def stream_message(
+        self, text: str, *, retries: int = 2, backoff: float = 0.5
+    ) -> AsyncIterator[str]:
+        """向目标发送文本并流式产出结果片段（兼容旧调用方：仅文本）。"""
+        async for event in self.stream_message_events(text, retries=retries, backoff=backoff):
+            if isinstance(event, TextChunk):
+                yield event.text
 
     @staticmethod
     async def _extract(response: Any) -> AsyncIterator[str]:
