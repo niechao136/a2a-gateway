@@ -11,7 +11,13 @@
 
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langgraph.checkpoint.memory import InMemorySaver
 
 from a2a_gateway import graph as graph_mod
@@ -55,8 +61,61 @@ class BindeableFakeChatModel(GenericFakeChatModel):
         return self
 
 
+class RecordingFakeChatModel(BindeableFakeChatModel):
+    """记录每次送进模型的消息列表（用于验证真实图内的注入内容）。"""
+
+    seen: list[list[BaseMessage]] = []
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        self.seen.append(list(messages))
+        return super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+
+
 def _graph_llm() -> BindeableFakeChatModel:
     return BindeableFakeChatModel(messages=iter([AIMessage(content="ok")]))
+
+
+class FakePendingStore:
+    """挂起存储替身：固定返回一条（或没有）挂起记录。"""
+
+    def __init__(self, pending=None):
+        self.pending = pending
+
+    async def get(self, thread_id):
+        return self.pending
+
+    async def upsert(self, **kwargs):
+        return None
+
+    async def delete(self, thread_id):
+        return None
+
+
+class ExplodingPendingStore:
+    """挂起存储替身：查询即抛异常（模拟 DB 不可用）。"""
+
+    async def get(self, thread_id):
+        raise RuntimeError("db down")
+
+    async def upsert(self, **kwargs):
+        return None
+
+    async def delete(self, thread_id):
+        return None
+
+
+def _pending_record(question="请补充目的地"):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        thread_id="t1",
+        agent_id=1,
+        target_url="http://h:9900/",
+        target_name="travel",
+        task_id="task-1",
+        context_id="c-1",
+        question=question,
+    )
 
 
 def test_build_graph_requires_remaining_steps_in_state_schema(monkeypatch):
@@ -79,7 +138,13 @@ def test_build_graph_uses_agent_system_prompt(monkeypatch):
 async def test_graph_runs_a_turn(monkeypatch):
     """图能完整跑一轮（同时验证 pre_model_hook 在真实图内可执行）。"""
     monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
-    graph = build_graph(_agent(), [], checkpointer=InMemorySaver())
+    # 必须显式注入替身：缺省时 hook 会用 default_pending_store（真实 DbPendingStore，会连库）
+    graph = build_graph(
+        _agent(),
+        [],
+        checkpointer=InMemorySaver(),
+        pending_store=FakePendingStore(None),
+    )
 
     result = await graph.ainvoke(
         {"messages": [HumanMessage(content="hi")]},
@@ -164,49 +229,6 @@ async def test_history_hook_survives_summary_failure():
     assert "summary" not in result
 
 
-class FakePendingStore:
-    """挂起存储替身：固定返回一条（或没有）挂起记录。"""
-
-    def __init__(self, pending=None):
-        self.pending = pending
-
-    async def get(self, thread_id):
-        return self.pending
-
-    async def upsert(self, **kwargs):
-        return None
-
-    async def delete(self, thread_id):
-        return None
-
-
-class ExplodingPendingStore:
-    """挂起存储替身：查询即抛异常（模拟 DB 不可用）。"""
-
-    async def get(self, thread_id):
-        raise RuntimeError("db down")
-
-    async def upsert(self, **kwargs):
-        return None
-
-    async def delete(self, thread_id):
-        return None
-
-
-def _pending_record(question="请补充目的地"):
-    from types import SimpleNamespace
-
-    return SimpleNamespace(
-        thread_id="t1",
-        agent_id=1,
-        target_url="http://h:9900/",
-        target_name="travel",
-        task_id="task-1",
-        context_id="c-1",
-        question=question,
-    )
-
-
 async def test_history_hook_injects_pending_notice():
     hook = _make_history_hook(FakeLLM(), FakePendingStore(_pending_record()))
     messages = [HumanMessage(content="m0")]
@@ -260,3 +282,36 @@ async def test_history_hook_keeps_notice_first_when_summarizing():
     assert "请补充预算" in llm_input[0].content
     assert "摘要内容" in llm_input[1].content
     assert llm_input[2:] == messages[-KEEP_RECENT:]
+
+
+async def test_graph_injects_pending_notice_into_model_input(monkeypatch):
+    """图级回归：langgraph 真实调用 pre_model_hook 时会注入 config（含 thread_id）。
+
+    上面几条用例是自行给 hook 传 config，证明不了真实链路会注入——注入与否取决于
+    hook 的 config 形参注解：注解成 Any 时 langgraph 只告警并跳过，表现为
+    「单测全绿但线上永不注入」。这条用例跑真实图，因此能捕捉到那种静默失效。
+    """
+    question = "请补充出行城市"
+    recorder = RecordingFakeChatModel(messages=iter([AIMessage(content="ok")]))
+    monkeypatch.setattr(graph_mod, "build_llm", lambda: recorder)
+
+    graph = build_graph(
+        _agent(),
+        [],
+        checkpointer=InMemorySaver(),
+        pending_store=FakePendingStore(_pending_record(question)),
+    )
+
+    result = await graph.ainvoke(
+        {"messages": [HumanMessage(content="hi")]},
+        {"configurable": {"thread_id": "t1"}},
+    )
+
+    assert result["messages"][-1].content == "ok"
+    sent = recorder.seen[-1]
+    notices = [
+        m
+        for m in sent
+        if isinstance(m, SystemMessage) and question in m.content and "a2a_resume" in m.content
+    ]
+    assert notices, f"模型输入里没有挂起提示，实际收到：{[type(m).__name__ for m in sent]}"
