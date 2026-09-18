@@ -16,12 +16,14 @@ from langchain_core.messages import (
     ToolMessage,
     get_buffer_string,
 )
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import StructuredTool
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 
 from .llm import build_llm
 from .models import AgentConfig
+from .pending_store import PendingStore, default_pending_store
 from .tools import make_mcp_call_tool, make_mcp_tools
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,9 @@ DEFAULT_SYSTEM_PROMPT = (
     "对于一般性对话或你能直接回答的问题，直接回复即可。"
     "若某个工具的结果是要求用户补充信息（例如追问目的地、日期），"
     "请把问题原样转述给用户并等待其回复，不要自行编造答案。"
+    "若上下文中出现等待用户补充信息的远端任务，请调用 a2a_resume 工具"
+    "把用户的补充内容转发出去；拿到结果后整理作答，其中关键数据"
+    "（行程、金额、日期、名称等）请原样保留，不要改写或编造。"
 )
 
 # ---------------------------------------------------------------------------
@@ -84,27 +89,58 @@ def _safe_recent(messages: list[Any], keep: int) -> list[Any]:
     return recent
 
 
-def _make_history_hook(llm: Any):
-    """构造 pre_model_hook：超出窗口的历史滚动摘要为一段文字。"""
+def _make_history_hook(llm: Any, pending_store: PendingStore | None = None):
+    """构造 pre_model_hook：超出窗口的历史滚动摘要为一段文字。
 
-    async def history_compression_hook(state: Any) -> dict[str, Any]:
+    另按会话 thread_id 查询挂起任务，命中时在模型可见输入最前面插入一条
+    提示（仅影响 llm_input_messages，不写入 checkpoint 历史）。
+    """
+    store = pending_store or default_pending_store
+
+    async def _pending_notice(config: Any) -> list[Any]:
+        try:
+            thread_id = ((config or {}).get("configurable") or {}).get("thread_id") or ""
+            if not thread_id:
+                return []
+            pending = await store.get(thread_id)
+        except Exception:
+            logger.warning("查询挂起任务失败，本轮跳过上下文注入", exc_info=True)
+            return []
+        if pending is None:
+            return []
+        return [
+            SystemMessage(
+                content=(
+                    "当前有一个远端 Agent 任务正在等待用户补充信息"
+                    f"（目标「{pending.target_name or pending.target_url}」，"
+                    f"追问：{pending.question}）。"
+                    "用户若已给出补充，请调用 a2a_resume 工具把补充内容转发出去；"
+                    "不要自行编造结果。"
+                )
+            )
+        ]
+
+    async def history_compression_hook(
+        state: Any, config: RunnableConfig | None = None
+    ) -> dict[str, Any]:
         messages: list[Any] = state.get("messages") or []
         summary: str = state.get("summary") or ""
         covered: int = state.get("summarized_count") or 0
 
         recent = _safe_recent(messages, KEEP_RECENT)
+        notice = await _pending_notice(config)
 
         def build_llm_input(cur_summary: str) -> list[Any]:
             if cur_summary:
                 system = SystemMessage(
                     content=f"以下是与用户的早期对话摘要（供参考上下文）：\n{cur_summary}"
                 )
-                return [system, *recent]
-            return recent
+                return [*notice, system, *recent]
+            return [*notice, *recent]
 
         overflow = len(messages) - KEEP_RECENT
-        pending = overflow - covered
-        if len(messages) <= KEEP_RECENT or pending < SUMMARIZE_BATCH:
+        pending_count = overflow - covered
+        if len(messages) <= KEEP_RECENT or pending_count < SUMMARIZE_BATCH:
             return {"llm_input_messages": build_llm_input(summary)}
 
         # 仅摘要尚未覆盖的增量段落，避免每次全量重摘
@@ -168,10 +204,12 @@ def build_graph(
     checkpointer,
     mcp_servers: list[McpServerConfig] | None = None,
     mcp_tool_index: McpToolIndex | None = None,
+    pending_store: PendingStore | None = None,
 ):
     """根据 Agent 配置构建 LangGraph 图实例（共用同一套图结构）。
 
     @param a2a_tools 已按目标构造好的 A2A 工具（含各自描述）
+    @param pending_store 挂起任务存储（缺省用 default_pending_store）
     """
     llm = build_llm()
     tools = build_tools(a2a_tools, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index)
@@ -184,5 +222,5 @@ def build_graph(
         state_schema=AgentChatState,
         # 历史压缩：进入模型前做「摘要 + 最近窗口」裁剪（状态里的完整历史保留，
         # 压缩只影响模型可见的 llm_input_messages，time travel 不受影响）
-        pre_model_hook=_make_history_hook(llm),
+        pre_model_hook=_make_history_hook(llm, pending_store),
     )

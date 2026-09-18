@@ -11,7 +11,7 @@
 
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
 from a2a_gateway import graph as graph_mod
@@ -162,3 +162,101 @@ async def test_history_hook_survives_summary_failure():
     # 摘要失败不影响本轮对话：仍返回最近窗口
     assert result["llm_input_messages"] == messages[-KEEP_RECENT:]
     assert "summary" not in result
+
+
+class FakePendingStore:
+    """挂起存储替身：固定返回一条（或没有）挂起记录。"""
+
+    def __init__(self, pending=None):
+        self.pending = pending
+
+    async def get(self, thread_id):
+        return self.pending
+
+    async def upsert(self, **kwargs):
+        return None
+
+    async def delete(self, thread_id):
+        return None
+
+
+class ExplodingPendingStore:
+    """挂起存储替身：查询即抛异常（模拟 DB 不可用）。"""
+
+    async def get(self, thread_id):
+        raise RuntimeError("db down")
+
+    async def upsert(self, **kwargs):
+        return None
+
+    async def delete(self, thread_id):
+        return None
+
+
+def _pending_record(question="请补充目的地"):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        thread_id="t1",
+        agent_id=1,
+        target_url="http://h:9900/",
+        target_name="travel",
+        task_id="task-1",
+        context_id="c-1",
+        question=question,
+    )
+
+
+async def test_history_hook_injects_pending_notice():
+    hook = _make_history_hook(FakeLLM(), FakePendingStore(_pending_record()))
+    messages = [HumanMessage(content="m0")]
+
+    result = await hook(
+        {"messages": messages}, {"configurable": {"thread_id": "t1"}}
+    )
+
+    first = result["llm_input_messages"][0]
+    assert isinstance(first, SystemMessage)
+    assert "请补充目的地" in first.content
+    assert "a2a_resume" in first.content
+    assert result["llm_input_messages"][1:] == messages
+    # 注入只影响模型可见输入，不得写回 state 历史
+    assert "messages" not in result
+    assert messages == [HumanMessage(content="m0")]
+
+
+async def test_history_hook_without_pending_injects_nothing():
+    hook = _make_history_hook(FakeLLM(), FakePendingStore(None))
+    messages = [HumanMessage(content="m0")]
+
+    result = await hook(
+        {"messages": messages}, {"configurable": {"thread_id": "t1"}}
+    )
+
+    assert result["llm_input_messages"] == messages
+
+
+async def test_history_hook_survives_pending_lookup_failure():
+    hook = _make_history_hook(FakeLLM(), ExplodingPendingStore())
+    messages = [HumanMessage(content="m0")]
+
+    result = await hook(
+        {"messages": messages}, {"configurable": {"thread_id": "t1"}}
+    )
+
+    assert result["llm_input_messages"] == messages
+
+
+async def test_history_hook_keeps_notice_first_when_summarizing():
+    fake = FakeLLM(summary_reply="摘要内容")
+    hook = _make_history_hook(fake, FakePendingStore(_pending_record("请补充预算")))
+    messages = [HumanMessage(content=f"m{i}") for i in range(KEEP_RECENT + SUMMARIZE_BATCH)]
+
+    result = await hook(
+        {"messages": messages}, {"configurable": {"thread_id": "t1"}}
+    )
+
+    llm_input = result["llm_input_messages"]
+    assert "请补充预算" in llm_input[0].content
+    assert "摘要内容" in llm_input[1].content
+    assert llm_input[2:] == messages[-KEEP_RECENT:]
