@@ -96,7 +96,7 @@
   - 工具需处理：发现（Card 解析）、发送消息、流式接收、超时重试 → `src/a2a_gateway/a2a_client.py`（错误分类 network/timeout/target_error）
 - [x] 实现"Agent 实例工厂"：根据 Agent 配置（含缓存机制，避免每次请求都重新构建图）动态生成绑定了对应 A2A 目标 / system_prompt / 工具集的 LangGraph 图实例 ✅ `src/a2a_gateway/agent_factory.py`（按 `(id, updated_at)` 缓存）
 - [x] 实现配置变更后的缓存失效机制（管理中心修改配置后，无需重启进程即可生效）✅ `updated_at` 自动失效 + `invalidate_agent()` 显式失效
-- [ ] 实现 A2A 调用中 `input-required` 状态的处理策略（按问题 8 结论：**二期再做**，MVP 不透传）
+- [x] 实现 A2A 调用中 `input-required` 状态的处理策略（pending_a2a_tasks 挂起表 + 结构化事件流 + 双链路恢复）
 
 ---
 
@@ -156,7 +156,7 @@
   - [ ] Task 状态轮询（针对长任务）—— MVP 暂不需要，二期按需补
 - [x] 默认 Agent 与服务器 Hermes 的 A2A 连接联调 ✅ 已在 devops-43 配置 `HERMES_A2A_URL=http://43.156.187.79:9900` + token，**全链路已验证通过**：用户消息 → LLM 决策 → `a2a_call` → Hermes → 取回回复 → 流式返回用户（SSE 事件：tool_start / tool_end / token / done）
 - [x] 自定义 Agent 绑定任意 A2A 目标的连通性测试功能（管理中心"测试连接"按钮）
-- [ ] （若待讨论问题 8 确定支持）`input-required` 状态在前端的呈现与用户确认交互
+- [x] `input-required` 状态在前端的呈现与用户确认交互（SSE interrupt 事件 + 等待补充提示）
 
 ---
 
