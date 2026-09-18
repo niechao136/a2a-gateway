@@ -20,17 +20,19 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from ..agent_factory import get_agent_instance, get_checkpointer
+from ..a2a_client import A2ATargetError, InputRequired, TextChunk
+from ..agent_factory import get_agent_instance, get_agent_wrappers, get_checkpointer
 from ..database import get_session
 from ..deps import new_thread_id
 from ..identity import Identity, ensure_identity, set_identity_cookie
 from ..models import AgentConfig, AgentStatus
 from ..notifier import notify_alert
+from ..pending_store import PendingRecord, default_pending_store
 from ..repository import (
     delete_conversation,
     get_agent_by_slug,
@@ -100,6 +102,14 @@ async def _stream_graph_events(
                     "tool_end",
                     {"name": event.get("name", ""), "output": str(output)},
                 )
+        # 轮末复查挂起表：本轮开始无挂起、结束时出现 → 下游刚进入中断
+        try:
+            pending = await default_pending_store.get(thread_id)
+        except Exception:
+            logger.exception("查询挂起任务失败 thread=%s", thread_id)
+            pending = None
+        if pending is not None:
+            yield _sse("interrupt", {"question": pending.question})
         yield _sse("done", {"thread_id": thread_id})
     except Exception as exc:
         logger.exception("对话流式失败 thread=%s", thread_id)
@@ -108,7 +118,7 @@ async def _stream_graph_events(
 
 
 async def _stream_chat(agent: AgentConfig, message: str, thread_id: str):
-    """生成新对话的 SSE 事件流。"""
+    """生成新对话的 SSE 事件流；命中挂起任务时走透明转发恢复。"""
     try:
         graph = await get_agent_instance(agent)
     except Exception as exc:
@@ -117,10 +127,100 @@ async def _stream_chat(agent: AgentConfig, message: str, thread_id: str):
         yield _sse("error", {"detail": "Agent 加载失败"})
         return
 
+    try:
+        pending = await default_pending_store.get(thread_id)
+    except Exception:
+        logger.exception("查询挂起任务失败 thread=%s", thread_id)
+        pending = None
+    if pending is not None:
+        async for evt in _resume_pending(agent, pending, message, thread_id):
+            yield evt
+        return
+
     config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     graph_input = {"messages": [HumanMessage(content=message)]}
     async for evt in _stream_graph_events(graph, config, graph_input, thread_id):
         yield evt
+
+
+async def _resume_pending(
+    agent: AgentConfig, pending: PendingRecord, message: str, thread_id: str
+):
+    """挂起任务的恢复轮：带 task_id 透明转发给下游（不经网关 LLM）。"""
+    try:
+        wrappers = await get_agent_wrappers(agent)
+    except Exception:
+        logger.exception("恢复轮加载 Agent 失败 slug=%s", agent.slug)
+        await default_pending_store.delete(thread_id)
+        yield _sse("error", {"detail": "Agent 加载失败，请重新发起对话"})
+        yield _sse("done", {"thread_id": thread_id})
+        return
+
+    wrapper = next((w for w in wrappers if w.target.url == pending.target_url), None)
+    if wrapper is None:
+        await default_pending_store.delete(thread_id)
+        yield _sse("error", {"detail": "下游目标配置已变化，请重新描述需求"})
+        yield _sse("done", {"thread_id": thread_id})
+        return
+
+    collected: list[str] = []
+    again: InputRequired | None = None
+    try:
+        async for event in wrapper.stream_message_events(
+            message, task_id=pending.task_id, context_id=pending.context_id or None
+        ):
+            if isinstance(event, TextChunk):
+                collected.append(event.text)
+                yield _sse("token", {"content": event.text})
+            elif isinstance(event, InputRequired):
+                again = event
+    except A2ATargetError as exc:
+        logger.warning("恢复挂起任务失败 thread=%s: %s", thread_id, exc)
+        await notify_alert(
+            "挂起任务恢复失败",
+            f"thread={thread_id} target={pending.target_url} error={exc}",
+        )
+        await default_pending_store.delete(thread_id)
+        yield _sse("error", {"detail": "目标暂时不可用，请稍后重试或重新描述需求"})
+        yield _sse("done", {"thread_id": thread_id})
+        return
+
+    if again is not None:
+        await default_pending_store.upsert(
+            thread_id=thread_id,
+            agent_id=pending.agent_id,
+            target_url=pending.target_url,
+            target_name=pending.target_name,
+            task_id=again.task_id,
+            context_id=again.context_id,
+            question=again.question,
+        )
+    else:
+        await default_pending_store.delete(thread_id)
+
+    await _append_history(agent, thread_id, message, "".join(collected))
+
+    if again is not None:
+        yield _sse("interrupt", {"question": again.question})
+    yield _sse("done", {"thread_id": thread_id})
+
+
+async def _append_history(
+    agent: AgentConfig, thread_id: str, user_text: str, reply_text: str
+) -> None:
+    """把恢复轮的「用户补充 + 下游回复」追加进会话历史（失败不影响主流程）。"""
+    try:
+        graph = await get_agent_instance(agent)
+        messages: list[Any] = [HumanMessage(content=user_text)]
+        if reply_text:
+            messages.append(AIMessage(content=reply_text))
+        await graph.aupdate_state(
+            {"configurable": {"thread_id": thread_id}},
+            {"messages": messages},
+            as_node="agent",
+        )
+    except Exception:
+        logger.exception("追加恢复轮历史失败 thread=%s", thread_id)
 
 
 async def _retry_stream(agent: AgentConfig, thread_id: str):
@@ -248,6 +348,11 @@ async def delete_chat_conversation(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在"
         )
+    # 挂起任务一并清理（失败不影响主流程）
+    try:
+        await default_pending_store.delete(thread_id)
+    except Exception:
+        logger.exception("清理挂起任务失败 thread=%s", thread_id)
     # 消息本体也一并清理（失败不回滚目录删除，避免产生删不掉的幽灵会话）
     try:
         checkpointer = await get_checkpointer()

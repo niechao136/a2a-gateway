@@ -96,6 +96,15 @@ async def get_agent_instance(agent: AgentConfig) -> Any:
     return graph
 
 
+async def get_agent_wrappers(agent: AgentConfig) -> list[A2AClientWrapper]:
+    """获取 Agent 的 A2A 客户端包装列表（命中缓存；未构建则先构建图实例）。"""
+    key = (agent.id, agent.updated_at.isoformat() if agent.updated_at else "")
+    if key in _cache:
+        return _cache[key][0]
+    await get_agent_instance(agent)
+    return _cache[key][0]
+
+
 async def invalidate_agent(agent_id: int) -> None:
     """显式失效某个 Agent 的缓存（管理中心修改配置后调用）。"""
     stale = [k for k in _cache if k[0] == agent_id]
