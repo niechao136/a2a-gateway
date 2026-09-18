@@ -88,6 +88,7 @@ def main() -> int:
         agents = resp.json()
         default_agent = next((a for a in agents if a["slug"] == "/"), None)
         _require(default_agent is not None, "未找到默认 Agent（slug=/）")
+        assert default_agent is not None  # 收窄类型（_require 不具备类型守卫语义）
         targets = default_agent.get("a2a_targets") or []
         _require(bool(targets), "默认 Agent 未绑定 A2A 目标，无法验证 A2A 链路")
         print(f"[2/6] 复用默认 Agent 的 A2A 目标：{targets[0].get('url')}")

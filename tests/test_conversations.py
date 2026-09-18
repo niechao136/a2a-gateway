@@ -7,9 +7,12 @@
 """
 
 import time
+from datetime import datetime
 from types import SimpleNamespace
+from typing import Literal, TypedDict
 
 import pytest
+from fastapi import Request, Response
 from jose import jwt
 
 from a2a_gateway import repository
@@ -31,28 +34,73 @@ from a2a_gateway.routes import chat as chat_mod
 _settings = get_settings()
 
 
-def _make_request(cookies: dict | None = None):
-    """构造一个最小 Request 替身（只需 cookies）。"""
-    return SimpleNamespace(cookies=cookies or {})
+def _make_request(cookies: dict[str, str] | None = None) -> Request:
+    """构造一个最小 Request（只携带 cookies）。
 
-
-def _make_response():
-    """构造一个最小 Response 替身，记录被写入的 cookie。
-
-    ``set_cookie`` 的调用形式是 ``set_cookie(key, value, **opts)``，
-    所以这里用 *args 接收并把 value 记到 ``cookies["key"]`` 上。
+    走真实的 ASGI scope 而不是属性替身：`read_identity` / `ensure_identity`
+    只依赖 `request.cookies`，用真对象才能让 cookie 解析逻辑一并被测到。
     """
-    store: dict = {}
+    header = "; ".join(f"{name}={value}" for name, value in (cookies or {}).items())
+    scope: dict[str, object] = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": [(b"cookie", header.encode("latin-1"))] if header else [],
+    }
+    return Request(scope)
 
-    def _set_cookie(*args, **kwargs):
-        name = args[0] if args else kwargs.get("key")
-        opts = dict(kwargs)
-        if len(args) >= 2:
-            opts["key"] = args[1]  # set_cookie(key, value, ...)
-        store[name] = opts
-        return opts
 
-    return SimpleNamespace(cookies=store, set_cookie=_set_cookie)
+class _CookieOpts(TypedDict):
+    """被写入的 cookie 选项（`set_cookie` 未显式传的项按 Starlette 默认值补齐）。"""
+
+    key: str
+    max_age: int
+    httponly: bool
+    samesite: str
+    secure: bool
+    path: str
+
+
+class _RecordingResponse(Response):
+    """Response 替身：拦截 `set_cookie`，把写入的 cookie 记到 `cookies` 供断言。
+
+    不调用父类实现——这里只关心「写了什么」，不关心序列化出的 Set-Cookie 头。
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.cookies: dict[str, _CookieOpts] = {}
+
+    def set_cookie(
+        self,
+        key: str,
+        value: str = "",
+        max_age: int | None = None,
+        expires: datetime | str | int | None = None,
+        path: str | None = "/",
+        domain: str | None = None,
+        secure: bool = False,
+        httponly: bool = False,
+        samesite: Literal["lax", "strict", "none"] | None = "lax",
+        partitioned: bool = False,
+    ) -> None:
+        self.cookies[key] = {
+            "key": value,
+            "max_age": max_age or 0,
+            "httponly": httponly,
+            "samesite": samesite or "lax",
+            "secure": secure,
+            "path": path or "/",
+        }
+
+
+def _make_response() -> _RecordingResponse:
+    return _RecordingResponse()
+
+
+def _issued_token(response: _RecordingResponse) -> str:
+    """取出被写入的身份 cookie 值。"""
+    return response.cookies[IDENTITY_COOKIE]["key"]
 
 
 async def _no_conversation(session, thread_id):
@@ -75,8 +123,7 @@ def test_visitor_identity_roundtrip():
     assert resp.cookies[IDENTITY_COOKIE]["httponly"] is True
     assert resp.cookies[IDENTITY_COOKIE]["samesite"] == "lax"
 
-    token = resp.cookies[IDENTITY_COOKIE]["key"]
-    parsed = read_identity(_make_request({IDENTITY_COOKIE: token}))
+    parsed = read_identity(_make_request({IDENTITY_COOKIE: _issued_token(resp)}))
     assert parsed == identity
 
 
@@ -114,9 +161,10 @@ def test_ensure_identity_issues_visitor_only_once():
 
     resp = _make_response()
     set_identity_cookie(resp, first)
-    token = resp.cookies[IDENTITY_COOKIE]["key"]
 
-    second, issued_again = ensure_identity(_make_request({IDENTITY_COOKIE: token}))
+    second, issued_again = ensure_identity(
+        _make_request({IDENTITY_COOKIE: _issued_token(resp)})
+    )
     assert issued_again is False and second == first
 
 
@@ -151,7 +199,7 @@ async def test_login_claims_visitor_conversations(anon_client, monkeypatch, make
     set_identity_cookie(resp_obj, visitor)
 
     # 用 Cookie 头而非 client.cookies，避免 httpx 的「按请求设置 cookie」弃用告警
-    token = resp_obj.cookies[IDENTITY_COOKIE]["key"]
+    token = _issued_token(resp_obj)
     resp = await anon_client.post(
         "/api/admin/login",
         json={"username": "admin", "password": "pw"},
@@ -164,9 +212,9 @@ async def test_login_claims_visitor_conversations(anon_client, monkeypatch, make
     assert captured["username"] == "admin"
     # 身份 cookie 换成 user
     assert IDENTITY_COOKIE in resp.cookies
-    assert read_identity(_make_request({IDENTITY_COOKIE: resp.cookies[IDENTITY_COOKIE]})).kind == (
-        IDENTITY_KIND_USER
-    )
+    identity = read_identity(_make_request({IDENTITY_COOKIE: resp.cookies[IDENTITY_COOKIE]}))
+    assert identity is not None
+    assert identity.kind == IDENTITY_KIND_USER
 
 
 async def test_login_without_visitor_cookie_claims_nothing(

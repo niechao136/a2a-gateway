@@ -3,9 +3,13 @@
 from a2a_gateway.config import Settings
 
 
-def _settings(**env) -> Settings:
-    # _env_file=None：不读取本地 .env，保证测试可复现
-    return Settings(_env_file=None, **env)
+def _settings(**env: object) -> Settings:
+    """只按显式传入的值构造配置。
+
+    走 `model_validate` 而非 `Settings(**env)`：后者会叠加进程环境变量与 .env 文件，
+    让测试依赖开发机的本地配置；这里只吃显式入参 + 字段默认值，保证可复现。
+    """
+    return Settings.model_validate(env)
 
 
 def test_default_db_urls():

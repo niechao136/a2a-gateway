@@ -2,21 +2,35 @@
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from typing import Self, cast
+
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from a2a_gateway import pending_store as ps_mod
 from a2a_gateway.pending_store import DbPendingStore, PendingRecord, _is_expired
 
 
 class _FakeSession:
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, *exc: object) -> bool:
         return False
 
 
 def _factory():
     return _FakeSession()
+
+
+def _store(ttl_seconds: int = 3600) -> DbPendingStore:
+    """用替身会话工厂构造存储（不连数据库）。
+
+    存储层只要求 session_factory 可调用且返回值支持 `async with`，这里把替身函数
+    标注成 `async_sessionmaker`，与生产端类型保持一致。
+    """
+    return DbPendingStore(
+        session_factory=cast(async_sessionmaker, _factory), ttl_seconds=ttl_seconds
+    )
 
 
 def _row(**overrides):
@@ -48,7 +62,7 @@ async def test_store_get_returns_record_for_fresh_row(monkeypatch):
         return _row()
 
     monkeypatch.setattr(ps_mod, "get_pending_a2a_task", fake_get)
-    store = DbPendingStore(session_factory=_factory, ttl_seconds=3600)
+    store = _store()
 
     record = await store.get("th-1")
 
@@ -75,7 +89,7 @@ async def test_store_get_deletes_expired_row(monkeypatch):
 
     monkeypatch.setattr(ps_mod, "get_pending_a2a_task", fake_get)
     monkeypatch.setattr(ps_mod, "delete_pending_a2a_task", fake_delete)
-    store = DbPendingStore(session_factory=_factory, ttl_seconds=86400)
+    store = _store(ttl_seconds=86400)
 
     assert await store.get("th-1") is None
     assert calls["deleted"] == "th-1"
@@ -86,7 +100,7 @@ async def test_store_get_returns_none_for_missing_row(monkeypatch):
         return None
 
     monkeypatch.setattr(ps_mod, "get_pending_a2a_task", fake_get)
-    store = DbPendingStore(session_factory=_factory, ttl_seconds=3600)
+    store = _store()
 
     assert await store.get("nope") is None
 
@@ -103,7 +117,7 @@ async def test_store_upsert_and_delete_delegate(monkeypatch):
 
     monkeypatch.setattr(ps_mod, "upsert_pending_a2a_task", fake_upsert)
     monkeypatch.setattr(ps_mod, "delete_pending_a2a_task", fake_delete)
-    store = DbPendingStore(session_factory=_factory, ttl_seconds=3600)
+    store = _store()
 
     await store.upsert(
         thread_id="th-1",

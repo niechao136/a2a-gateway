@@ -283,7 +283,7 @@ async def _collect(response: StreamResponse) -> list[str]:
 
 
 def _task_response(
-    *, state: int, message_text: str | None = None, artifact_text: str | None = None
+    *, state: a2a_pb2.TaskState, message_text: str | None = None, artifact_text: str | None = None
 ) -> StreamResponse:
     task = a2a_pb2.Task(id="t-1", context_id="c-1")
     task.status.state = state

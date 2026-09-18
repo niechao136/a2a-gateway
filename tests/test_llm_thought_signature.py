@@ -1,7 +1,8 @@
 """Gemini thought_signature 兼容层测试：入站捕获 + 出站回填。"""
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langchain_openai.chat_models import base as lc_base
+from pydantic import SecretStr
 
 from a2a_gateway.llm import ThoughtSignatureChatOpenAI, install_thought_signature_patch
 
@@ -10,7 +11,9 @@ SIG = {"google": {"thought_signature": "SIG-123"}}
 
 
 def _llm() -> ThoughtSignatureChatOpenAI:
-    return ThoughtSignatureChatOpenAI(model="x", api_key="k", base_url="http://127.0.0.1:1/v1")
+    return ThoughtSignatureChatOpenAI(
+        model="x", api_key=SecretStr("k"), base_url="http://127.0.0.1:1/v1"
+    )
 
 
 def test_inbound_stream_captures_signature():
@@ -28,7 +31,7 @@ def test_inbound_stream_captures_signature():
             }
         ],
     }
-    chunk = lc_base._convert_delta_to_message_chunk(delta, lc_base.AIMessageChunk)
+    chunk = lc_base._convert_delta_to_message_chunk(delta, AIMessageChunk)
     assert chunk.additional_kwargs[_SIG_KEY] == {"call_1": SIG}
 
 

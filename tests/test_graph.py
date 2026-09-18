@@ -9,8 +9,6 @@
    且不会产生以 ToolMessage 开头的非法消息序列。
 """
 
-from types import SimpleNamespace
-
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -24,6 +22,12 @@ from a2a_gateway.graph import (
     _safe_recent,
     build_graph,
 )
+from a2a_gateway.models import AgentConfig
+
+
+def _agent(system_prompt: str | None = None) -> AgentConfig:
+    """最小 Agent 配置（构建图只用到 system_prompt）。"""
+    return AgentConfig(slug="t", name="t", system_prompt=system_prompt)
 
 
 class FakeLLM:
@@ -59,8 +63,7 @@ def test_build_graph_requires_remaining_steps_in_state_schema(monkeypatch):
     """回归：图必须能成功构建（state_schema 含 prebuilt 要求的 remaining_steps）。"""
     monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
 
-    agent = SimpleNamespace(system_prompt=None)
-    graph = build_graph(agent, [], checkpointer=InMemorySaver())
+    graph = build_graph(_agent(), [], checkpointer=InMemorySaver())
 
     assert graph is not None
 
@@ -68,8 +71,7 @@ def test_build_graph_requires_remaining_steps_in_state_schema(monkeypatch):
 def test_build_graph_uses_agent_system_prompt(monkeypatch):
     monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
 
-    agent = SimpleNamespace(system_prompt="你是测试助手")
-    graph = build_graph(agent, [], checkpointer=InMemorySaver())
+    graph = build_graph(_agent("你是测试助手"), [], checkpointer=InMemorySaver())
 
     assert graph is not None
 
@@ -77,9 +79,7 @@ def test_build_graph_uses_agent_system_prompt(monkeypatch):
 async def test_graph_runs_a_turn(monkeypatch):
     """图能完整跑一轮（同时验证 pre_model_hook 在真实图内可执行）。"""
     monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
-    graph = build_graph(
-        SimpleNamespace(system_prompt=None), [], checkpointer=InMemorySaver()
-    )
+    graph = build_graph(_agent(), [], checkpointer=InMemorySaver())
 
     result = await graph.ainvoke(
         {"messages": [HumanMessage(content="hi")]},

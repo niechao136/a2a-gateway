@@ -7,13 +7,14 @@ from a2a_gateway import mcp_client as mc
 from a2a_gateway import tools as tools_mod
 from a2a_gateway.graph import DEFAULT_SYSTEM_PROMPT, build_tools
 from a2a_gateway.mcp_client import _format_error, connection_from_snapshot, format_tools_for_prompt
+from a2a_gateway.models import McpServer
 from a2a_gateway.repository import mcp_server_snapshot
 from a2a_gateway.schemas import A2ATarget
 from a2a_gateway.tools import json_schema_to_model, make_a2a_tools, make_mcp_call_tool, make_mcp_tools
 
 
-def _server(**kw):
-    base = {
+def _server(**kw: object) -> McpServer:
+    base: dict[str, object] = {
         "id": 1,
         "name": "Local MCP",
         "description": "",
@@ -28,7 +29,7 @@ def _server(**kw):
         "enabled": True,
     }
     base.update(kw)
-    return SimpleNamespace(**base)
+    return McpServer(**base)
 
 
 # ---------------------------------------------------------------------------

@@ -43,8 +43,8 @@ async def test_mcp_tools_bind_own_tool_name(monkeypatch):
     ]
 
     # 每个绑定工具必须转发自己的真实工具名，而不是循环末尾的那个
-    assert await bound[0].coroutine() == "ok:get_node_overview"
-    assert await bound[1].coroutine(project_name="a2a-gateway") == "ok:query_audit_logs"
+    assert await bound[0].ainvoke({}) == "ok:get_node_overview"
+    assert await bound[1].ainvoke({"project_name": "a2a-gateway"}) == "ok:query_audit_logs"
 
     assert [c[0] for c in calls] == ["get_node_overview", "query_audit_logs"]
     assert calls[1][1] == {"project_name": "a2a-gateway"}
@@ -72,5 +72,5 @@ async def test_mcp_tool_forwarded_args_skip_none(monkeypatch):
     ]
 
     (tool,) = make_mcp_tools(server, tools)
-    await tool.coroutine(a="x", b=None)
+    await tool.ainvoke({"a": "x", "b": None})
     assert calls == [("echo", {"a": "x"})]

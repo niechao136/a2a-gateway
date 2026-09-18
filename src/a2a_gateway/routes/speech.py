@@ -171,10 +171,11 @@ async def speech_asr(ws: WebSocket, model_id: str | None = None) -> None:
             pass
     except websockets.exceptions.InvalidStatus as exc:
         # onnx-hub 网关用自定义关闭码表达认证/模型错误
+        # 关闭码来自上游响应，取不到或非整数时不参与映射，按未知处理
         code = getattr(exc.response, "status_code", None)
-        reason = {4401: "API Key 无效", 4404: "模型不存在", 4409: "模型未启动"}.get(
-            code, f"上游连接被拒绝（{code}）"
-        )
+        known = {4401: "API Key 无效", 4404: "模型不存在", 4409: "模型未启动"}
+        reason = known.get(code) if isinstance(code, int) else None
+        reason = reason or f"上游连接被拒绝（{code}）"
         logger.warning("ASR 上游握手失败 code=%s", code)
         await ws.close(code=4502, reason=reason)
     except Exception as exc:
