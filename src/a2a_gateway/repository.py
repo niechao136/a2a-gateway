@@ -5,6 +5,7 @@
 - Agent 只保存**勾选的 id**，由后端解析成运行时快照
   - a2a_target_ids → a2a_targets（[{url, token}]）
   - mcp_server_ids → mcp_servers（[{name, transport, url, command, args, env}]）
+  - skill_ids → skills（[{name, content, load_mode, files, ...}]）
 - 这样运行时（agent_factory）无需访问数据库即可构造工具，且注册表变更后统一刷新
 """
 
@@ -33,6 +34,8 @@ from .models import (
     Conversation,
     McpServer,
     PendingA2ATask,
+    Skill,
+    SkillReviewStatus,
 )
 from .schemas import (
     A2AEndpointCreate,
@@ -42,6 +45,8 @@ from .schemas import (
     ApiKeyCreate,
     McpServerCreate,
     McpServerUpdate,
+    SkillCreate,
+    SkillUpdate,
 )
 from .auth import hash_password
 
@@ -173,6 +178,8 @@ async def _resolve_bindings(session: AsyncSession, data: AgentCreate):
 # ---------------------------------------------------------------------------
 async def create_agent(session: AsyncSession, data: AgentCreate) -> AgentConfig:
     a2a_ids, a2a_targets, mcp_ids, mcp_snapshot = await _resolve_bindings(session, data)
+    skill_ids = list(data.skill_ids or [])
+    skills_snapshot = await resolve_skills(session, skill_ids)
     agent = AgentConfig(
         slug=data.slug,
         name=data.name,
@@ -181,6 +188,8 @@ async def create_agent(session: AsyncSession, data: AgentCreate) -> AgentConfig:
         a2a_targets=a2a_targets,
         mcp_server_ids=mcp_ids,
         mcp_servers=mcp_snapshot,
+        skill_ids=skill_ids,
+        skills=skills_snapshot,
         system_prompt=data.system_prompt,
         status=AgentStatus.DRAFT,
     )
@@ -245,6 +254,11 @@ async def update_agent(
         agent.mcp_servers = _merge_bindings(
             mcp_resolved, manual_mcp, agent.mcp_servers, key="name"
         )
+
+    # Skill 绑定：只有 approved 的技能会被解析进快照（无手动条目，不做合并）
+    if data.skill_ids is not None:
+        agent.skill_ids = list(data.skill_ids)
+        agent.skills = await resolve_skills(session, agent.skill_ids)
 
     await session.commit()
     await session.refresh(agent)
@@ -443,6 +457,246 @@ async def detach_mcp_server_from_agents(session: AsyncSession, server_id: int) -
         if server_id in ids:
             agent.mcp_server_ids = [i for i in ids if i != server_id]
             agent.mcp_servers = await resolve_mcp_snapshot(session, agent.mcp_server_ids)
+            changed += 1
+    if changed:
+        await session.commit()
+    return changed
+
+
+# ---------------------------------------------------------------------------
+# Skill 注册表（编排方法论）
+# ---------------------------------------------------------------------------
+def skill_snapshot(skill: Skill) -> dict[str, Any]:
+    """Skill 运行时快照：正文与附件全量，供注入 / load_skill 闭包使用。"""
+    review: Any = skill.review_status
+    return {
+        "id": skill.id,
+        "name": skill.name,
+        "description": skill.description,
+        "content": skill.content,
+        "load_mode": skill.load_mode,
+        "files": list(skill.files or []),
+        # 纵深防御：正常路径 resolve 已过滤，恒为 approved；防绕过路径多一道闸
+        "review_status": review.value if isinstance(review, SkillReviewStatus) else str(review),
+    }
+
+
+def binding_content_bytes(snapshots: list[dict[str, Any]]) -> int:
+    """绑定正文总量（不含附件），用于 MAX_BINDING_CONTENT_BYTES 门禁。"""
+    return sum(len(str(s.get("content") or "").encode("utf-8")) for s in snapshots)
+
+
+def validate_skill_bindings(
+    *,
+    records: list[Any],
+    statuses: dict[int, str],
+    requested_ids: list[int] | None = None,
+) -> None:
+    """绑定门禁：缺记录 / pending / rejected / 正文总量超限一律拒绝。
+
+    enabled 不参与门禁（宽松语义：保留勾选、静默跳过、启用即恢复）。
+    @param records 解析到的 Skill ORM 对象；@param statuses id → 审核状态值
+    @param requested_ids Agent 提交的完整 id 清单（缺失即「勾选了不存在的技能」）
+    """
+    from .skills import MAX_BINDING_CONTENT_BYTES
+
+    ids = list(requested_ids if requested_ids is not None else [r.id for r in records])
+    found = {r.id for r in records}
+    missing = [i for i in ids if i not in found]
+    if missing:
+        raise ValueError(f"技能不存在或不可用：id {missing}")
+    total = binding_content_bytes([skill_snapshot(r) for r in records])
+    if total > MAX_BINDING_CONTENT_BYTES:
+        raise ValueError(f"绑定技能正文总量超过 {MAX_BINDING_CONTENT_BYTES} 字节上限")
+    for record in records:
+        status = statuses.get(record.id)
+        if status == "pending":
+            raise ValueError(f"技能「{record.name}」尚未审核通过（pending），不能绑定")
+        if status == "rejected":
+            raise ValueError(f"技能「{record.name}」审核未通过（rejected），不能绑定")
+
+
+async def resolve_skills(session: AsyncSession, ids: list[int]) -> list[dict[str, Any]]:
+    """按勾选顺序解析技能快照；已删除 / 停用 / 未审核通过的静默跳过。"""
+    if not ids:
+        return []
+    rows = (
+        await session.execute(select(Skill).where(Skill.id.in_(ids)))
+    ).scalars().all()
+    by_id = {row.id: row for row in rows}
+    snapshots: list[dict[str, Any]] = []
+    for skill_id in ids:
+        skill = by_id.get(skill_id)
+        if skill is None or not skill.enabled:
+            continue
+        if skill.review_status != SkillReviewStatus.APPROVED:
+            continue
+        snapshots.append(skill_snapshot(skill))
+    return snapshots
+
+
+async def list_skills(session: AsyncSession) -> list[Skill]:
+    result = await session.execute(select(Skill).order_by(Skill.id))
+    return list(result.scalars().all())
+
+
+async def get_skill(session: AsyncSession, skill_id: int) -> Skill | None:
+    return await session.get(Skill, skill_id)
+
+
+async def get_skill_by_name(session: AsyncSession, name: str) -> Skill | None:
+    result = await session.execute(select(Skill).where(Skill.name == name))
+    return result.scalar_one_or_none()
+
+
+async def create_skill(
+    session: AsyncSession,
+    *,
+    name: str,
+    description: str,
+    content: str,
+    frontmatter: dict[str, Any],
+    files: list[dict[str, Any]],
+    load_mode: str,
+    size_bytes: int,
+    source: str,
+    source_ref: str = "",
+    review_status: SkillReviewStatus = SkillReviewStatus.PENDING,
+) -> Skill:
+    skill = Skill(
+        name=name,
+        description=description,
+        content=content,
+        frontmatter=frontmatter,
+        files=files,
+        load_mode=load_mode,
+        size_bytes=size_bytes,
+        file_count=len(files),
+        source=source,
+        source_ref=source_ref,
+        review_status=review_status,
+    )
+    session.add(skill)
+    await session.commit()
+    await session.refresh(skill)
+    return skill
+
+
+async def update_skill(session: AsyncSession, skill: Skill, data: "SkillUpdate") -> Skill:
+    """编辑技能：description / content 变更即重置审核为 pending（内容变了必须重审）。"""
+    content_changed = False
+    if data.description is not None and data.description != skill.description:
+        skill.description = data.description
+        content_changed = True
+    if data.content is not None and data.content != skill.content:
+        skill.content = data.content
+        content_changed = True
+    if data.load_mode is not None and data.load_mode != skill.load_mode:
+        skill.load_mode = data.load_mode
+    if data.enabled is not None:
+        skill.enabled = data.enabled
+    if content_changed:
+        skill.review_status = SkillReviewStatus.PENDING
+        skill.reviewed_at = None
+    await session.commit()
+    await session.refresh(skill)
+    return skill
+
+
+async def set_skill_review(
+    session: AsyncSession, skill: Skill, review_status: SkillReviewStatus, note: str
+) -> Skill:
+    skill.review_status = review_status
+    skill.review_note = note
+    skill.reviewed_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(skill)
+    return skill
+
+
+async def upsert_imported_skill(
+    session: AsyncSession,
+    *,
+    parsed: dict[str, Any],
+    load_mode: str,
+    source: str,
+    source_ref: str,
+    overwrite: bool,
+) -> tuple[Skill, bool]:
+    """落库一条导入结果；重名时按 overwrite 决定覆盖或跳过。
+
+    覆盖必须把 review_status 重置为 pending（内容变了必须重审）。
+    @returns (skill, created)
+    """
+    name = str(parsed["name"])
+    existing = await get_skill_by_name(session, name)
+    if existing is not None:
+        if not overwrite:
+            return existing, False
+        existing.description = str(parsed["description"])
+        existing.content = str(parsed["content"])
+        existing.frontmatter = dict(parsed.get("frontmatter") or {})
+        existing.files = list(parsed.get("files") or [])
+        existing.load_mode = load_mode
+        existing.size_bytes = int(parsed.get("size_bytes") or 0)
+        existing.file_count = len(parsed.get("files") or [])
+        existing.source = source
+        existing.source_ref = source_ref
+        existing.review_status = SkillReviewStatus.PENDING
+        existing.reviewed_at = None
+        await session.commit()
+        await session.refresh(existing)
+        return existing, False
+    skill = await create_skill(
+        session,
+        name=name,
+        description=str(parsed["description"]),
+        content=str(parsed["content"]),
+        frontmatter=dict(parsed.get("frontmatter") or {}),
+        files=list(parsed.get("files") or []),
+        load_mode=load_mode,
+        size_bytes=int(parsed.get("size_bytes") or 0),
+        source=source,
+        source_ref=source_ref,
+    )
+    return skill, True
+
+
+async def delete_skill_record(session: AsyncSession, skill: Skill) -> None:
+    await session.delete(skill)
+    await session.commit()
+
+
+async def agents_using_skill(session: AsyncSession, skill_id: int) -> list[AgentConfig]:
+    agents = await list_agents(session)
+    return [a for a in agents if skill_id in (a.skill_ids or [])]
+
+
+async def refresh_agents_for_skills(session: AsyncSession, skill_ids: list[int]) -> int:
+    """Skill 内容 / 审核状态 / load_mode / enabled 变更后，重解析引用它的 Agent 快照。"""
+    if not skill_ids:
+        return 0
+    wanted = set(skill_ids)
+    agents = await list_agents(session)
+    changed = 0
+    for agent in agents:
+        if wanted & set(agent.skill_ids or []):
+            agent.skills = await resolve_skills(session, agent.skill_ids)
+            changed += 1
+    if changed:
+        await session.commit()
+    return changed
+
+
+async def detach_skill_from_agents(session: AsyncSession, skill_id: int) -> int:
+    """从所有 Agent 移除对某技能的勾选并重解析快照（删除前调用）。"""
+    agents = await list_agents(session)
+    changed = 0
+    for agent in agents:
+        ids = list(agent.skill_ids or [])
+        if skill_id in ids:
+            agent.skill_ids = [i for i in ids if i != skill_id]
+            agent.skills = await resolve_skills(session, agent.skill_ids)
             changed += 1
     if changed:
         await session.commit()
