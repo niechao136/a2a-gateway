@@ -2,8 +2,10 @@
 
 import json
 from types import SimpleNamespace
+from typing import cast
 
-from a2a_gateway import repository
+from fastapi import Request
+
 from a2a_gateway.a2a_client import Completed, TextChunk
 from a2a_gateway.models import AgentStatus
 from a2a_gateway.routes import a2a_server as a2a_server_mod
@@ -138,6 +140,90 @@ async def test_agent_card_public(anon_client, monkeypatch, make_agent):
     assert card["name"] == "Demo"
     # 回连地址应为对外可达地址 + /a2a/{slug}
     assert card["supportedInterfaces"][0]["url"].endswith("/a2a/demo")
+
+
+def _fake_card_request(headers: dict[str, str], scheme: str = "http") -> Request:
+    """构造仅含 headers / url.scheme 的请求替身（_public_base_url 只读这两处）。"""
+    return cast(
+        Request, SimpleNamespace(headers=headers, url=SimpleNamespace(scheme=scheme))
+    )
+
+
+def test_public_base_url_keeps_host_port():
+    """直连入口：Host 自带端口（:10099）时必须保留，不能丢。"""
+    req = _fake_card_request({"host": "43.156.187.79:10099"})
+    assert a2a_server_mod._public_base_url(req) == "http://43.156.187.79:10099"
+
+
+def test_public_base_url_prefers_forwarded_host_and_proto():
+    """域名反代：X-Forwarded-Host / Proto 优先，https 不能被内层 http 覆盖。"""
+    req = _fake_card_request(
+        {
+            "host": "127.0.0.1:10099",
+            "x-forwarded-host": "chat-niechao.duckdns.org",
+            "x-forwarded-proto": "https",
+        }
+    )
+    assert (
+        a2a_server_mod._public_base_url(req) == "https://chat-niechao.duckdns.org"
+    )
+
+
+def test_public_base_url_appends_forwarded_port():
+    """Host 不带端口时，用 X-Forwarded-Port 补上非默认端口。"""
+    req = _fake_card_request({"host": "43.156.187.79", "x-forwarded-port": "10099"})
+    assert a2a_server_mod._public_base_url(req) == "http://43.156.187.79:10099"
+
+
+def test_public_base_url_skips_default_forwarded_port():
+    """https/443 为默认端口，不应显式拼进地址。"""
+    req = _fake_card_request(
+        {
+            "host": "chat-niechao.duckdns.org",
+            "x-forwarded-proto": "https",
+            "x-forwarded-port": "443",
+        }
+    )
+    assert (
+        a2a_server_mod._public_base_url(req) == "https://chat-niechao.duckdns.org"
+    )
+
+
+def test_public_base_url_takes_first_forwarded_value():
+    """多级代理会把 X-Forwarded-* 追加为逗号列表，取首个值。"""
+    req = _fake_card_request(
+        {
+            "host": "inner:80",
+            "x-forwarded-host": "a.example.com, b.internal",
+            "x-forwarded-proto": "https, http",
+        }
+    )
+    assert a2a_server_mod._public_base_url(req) == "https://a.example.com"
+
+
+def test_public_base_url_keeps_ipv6_port():
+    """IPv6 字面量 [::1]:8000 的端口也要正确保留。"""
+    req = _fake_card_request({"host": "[::1]:8000"})
+    assert a2a_server_mod._public_base_url(req) == "http://[::1]:8000"
+
+
+async def test_agent_card_url_keeps_port(anon_client, monkeypatch, make_agent):
+    """回归：直连入口（Host 带端口）下卡片回连地址必须带 :10099。"""
+
+    async def fake_get(session, slug):
+        return make_agent(slug=slug, status=AgentStatus.PUBLISHED, name="Demo")
+
+    monkeypatch.setattr(a2a_server_mod, "get_agent_by_slug", fake_get)
+
+    resp = await anon_client.get(
+        "/a2a/demo/.well-known/agent-card.json",
+        headers={"Host": "43.156.187.79:10099"},
+    )
+    assert resp.status_code == 200
+    assert (
+        resp.json()["supportedInterfaces"][0]["url"]
+        == "http://43.156.187.79:10099/a2a/demo"
+    )
 
 
 # ---------------------------------------------------------------------------
