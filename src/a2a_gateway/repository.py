@@ -45,7 +45,6 @@ from .schemas import (
     ApiKeyCreate,
     McpServerCreate,
     McpServerUpdate,
-    SkillCreate,
     SkillUpdate,
 )
 from .auth import hash_password
