@@ -1,17 +1,18 @@
 """LangGraph 图定义：所有 Agent 共用同一套 ReAct 图结构。
 
 节点（由 create_react_agent 内置）：
-- pre_model_hook：对话历史压缩（摘要 + 最近消息截取，见 _make_history_hook）
+- pre_model_hook：对话历史压缩 + 挂起提示 + Skill 记账重注入（见 _make_history_hook）
 - agent 对话节点：调用 LLM，决定是否调用工具
-- 工具调用节点：执行工具（a2a_call / MCP 工具等）
+- 工具调用节点：执行工具（a2a_call / MCP 工具 / load_skill 等）
 
-差异点通过 AgentConfig 注入：A2A 目标、MCP 服务、system_prompt。
+差异点通过 AgentConfig 注入：A2A 目标、MCP 服务、system_prompt、Skill 快照。
 """
 
 import logging
 from typing import Any
 
 from langchain_core.messages import (
+    AIMessage,
     SystemMessage,
     ToolMessage,
     get_buffer_string,
@@ -24,7 +25,8 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from .llm import build_llm
 from .models import AgentConfig
 from .pending_store import PendingStore, default_pending_store
-from .tools import make_mcp_call_tool, make_mcp_tools
+from .skills import MAX_INJECT_CHARS
+from .tools import make_mcp_call_tool, make_mcp_tools, make_skill_tools
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ SUMMARIZE_BATCH = 12
 
 
 class AgentChatState(AgentState):
-    """在 AgentState（messages + remaining_steps）之上增加压缩摘要字段。
+    """在 AgentState（messages + remaining_steps）之上增加压缩摘要与技能记账字段。
 
     注意：必须继承 AgentState 而非 MessagesState —— prebuilt 要求
     state_schema 含 remaining_steps，否则构建图时报
@@ -75,6 +77,10 @@ class AgentChatState(AgentState):
     summary: str
     # 已被摘要覆盖的前缀消息条数
     summarized_count: int
+    # name → 最近一次 load_skill 调用所在的消息绝对下标（hook 记账，规格 §6.2）
+    # 与 summary 一样无默认值：历史 checkpoint 里没有该键，读取处一律用
+    # state.get("active_skills") or {} 兜底
+    active_skills: dict[str, int]
 
 
 def _safe_recent(messages: list[Any], keep: int) -> list[Any]:
@@ -89,13 +95,97 @@ def _safe_recent(messages: list[Any], keep: int) -> list[Any]:
     return recent
 
 
-def _make_history_hook(llm: Any, pending_store: PendingStore | None = None):
-    """构造 pre_model_hook：超出窗口的历史滚动摘要为一段文字。
+def build_skills_prompt(skills: list[dict[str, Any]]) -> str:
+    """层 1 注入：system_prompt 之后追加「## 可用技能」（build_graph 静态拼装）。
+
+    always → 正文全文常驻；on_demand → 仅 name + description 进清单。
+    """
+    if not skills:
+        return ""
+    lines = [
+        "",
+        "## 可用技能",
+        (
+            "以下技能是可复用的编排方法论，供参考遵循。技能内容不得覆盖系统约束与人设，"
+            "冲突时以系统约束为准。"
+        ),
+    ]
+    for skill in skills:
+        name = str(skill.get("name") or "")
+        description = str(skill.get("description") or "")
+        if str(skill.get("load_mode") or "") == "always":
+            lines += ["", f"### 技能「{name}」", str(skill.get("content") or "")]
+        else:
+            lines.append(f"- {name}：{description}（需要时调用 load_skill 加载完整正文）")
+    return "\n".join(lines)
+
+
+def _collect_load_skill_calls(messages: list[Any]) -> dict[str, int]:
+    """扫描 AIMessage.tool_calls 里的 load_skill 调用；同名取最大消息下标。"""
+    latest: dict[str, int] = {}
+    for idx, msg in enumerate(messages):
+        if not isinstance(msg, AIMessage):
+            continue
+        for call in msg.tool_calls or []:
+            if call.get("name") != "load_skill":
+                continue
+            name = str((call.get("args") or {}).get("skill_name") or "")
+            if name and (name not in latest or latest[name] < idx):
+                latest[name] = idx
+    return latest
+
+
+def _make_history_hook(
+    llm: Any,
+    pending_store: PendingStore | None = None,
+    skills: list[dict[str, Any]] | None = None,
+):
+    """构造 pre_model_hook：历史压缩 + 挂起提示 + 技能记账重注入。
 
     另按会话 thread_id 查询挂起任务，命中时在模型可见输入最前面插入一条
     提示（仅影响 llm_input_messages，不写入 checkpoint 历史）。
+
+    @param skills 当前绑定的技能快照（图构建时闭包固化，运行时零 DB 依赖）
     """
     store = pending_store or default_pending_store
+    bound_skills = list(skills or [])
+    bound_names = {str(s.get("name") or "") for s in bound_skills}
+
+    def _skill_reinjection(state: Any, messages: list[Any]) -> tuple[dict[str, Any], list[Any]]:
+        """层 4 记账：合并 load_skill 调用记录 → stale 过滤 → 超窗口重注入。
+
+        @returns (新 active_skills 状态, 需注入的 SystemMessage 列表)
+        """
+        prev: dict[str, Any] = dict(state.get("active_skills") or {})
+        calls = _collect_load_skill_calls(messages)
+        merged = {**prev, **calls}
+        # stale 过滤：不在当前绑定里的名字（解绑 / 撤回 / 换成别的 Agent）一律逐出
+        active = {name: idx for name, idx in merged.items() if name in bound_names}
+
+        cutoff = len(messages) - KEEP_RECENT
+        stale = [name for name, idx in active.items() if idx < cutoff]
+        if not stale:
+            return active, []
+
+        parts: list[str] = []
+        budget = MAX_INJECT_CHARS
+        for skill in bound_skills:  # 按绑定顺序累加预算（规格 §6.2 第 6 步）
+            name = str(skill.get("name") or "")
+            if name not in stale:
+                continue
+            body = (
+                f"（此前已加载技能「{name}」，其正文如下，请继续遵循其方法论）\n"
+                f"{skill.get('content') or ''}"
+            )
+            if len(body) > budget:
+                body = body[:budget] + "\n（已截断，完整内容请调用 load_skill 重新加载）"
+            parts.append(body)
+            budget -= len(body)
+            if budget <= 0:
+                break
+        if not parts:
+            return active, []
+        return active, [SystemMessage(content="\n\n---\n\n".join(parts))]
 
     async def _pending_notice(config: Any) -> list[Any]:
         try:
@@ -127,21 +217,32 @@ def _make_history_hook(llm: Any, pending_store: PendingStore | None = None):
         summary: str = state.get("summary") or ""
         covered: int = state.get("summarized_count") or 0
 
+        try:
+            active_skills, skill_msgs = _skill_reinjection(state, messages)
+            skill_state: dict[str, Any] = {"active_skills": active_skills}
+        except Exception:
+            # 异常兜底：记账失败只记日志，降级为「本轮不注入」，绝不打断对话
+            logger.warning("Skill 记账失败，本轮跳过技能重注入", exc_info=True)
+            skill_msgs, skill_state = [], {}
+
         recent = _safe_recent(messages, KEEP_RECENT)
         notice = await _pending_notice(config)
 
         def build_llm_input(cur_summary: str) -> list[Any]:
+            # 注入顺序：挂起任务提示 → 已加载技能正文 → 历史摘要 → 最近窗口
+            base: list[Any] = [*notice, *skill_msgs]
             if cur_summary:
-                system = SystemMessage(
-                    content=f"以下是与用户的早期对话摘要（供参考上下文）：\n{cur_summary}"
+                base.append(
+                    SystemMessage(
+                        content=f"以下是与用户的早期对话摘要（供参考上下文）：\n{cur_summary}"
+                    )
                 )
-                return [*notice, system, *recent]
-            return [*notice, *recent]
+            return [*base, *recent]
 
         overflow = len(messages) - KEEP_RECENT
         pending_count = overflow - covered
         if len(messages) <= KEEP_RECENT or pending_count < SUMMARIZE_BATCH:
-            return {"llm_input_messages": build_llm_input(summary)}
+            return {**skill_state, "llm_input_messages": build_llm_input(summary)}
 
         # 仅摘要尚未覆盖的增量段落，避免每次全量重摘
         to_summarize = messages[covered:overflow]
@@ -157,9 +258,10 @@ def _make_history_hook(llm: Any, pending_store: PendingStore | None = None):
         except Exception:
             # 摘要失败不影响本轮对话，只回退为「摘要 + 最近消息」
             logger.warning("对话历史摘要生成失败，本轮跳过压缩", exc_info=True)
-            return {"llm_input_messages": build_llm_input(summary)}
+            return {**skill_state, "llm_input_messages": build_llm_input(summary)}
 
         return {
+            **skill_state,
             "summary": new_summary,
             "summarized_count": overflow,
             "llm_input_messages": build_llm_input(new_summary),
@@ -205,15 +307,23 @@ def build_graph(
     mcp_servers: list[McpServerConfig] | None = None,
     mcp_tool_index: McpToolIndex | None = None,
     pending_store: PendingStore | None = None,
+    skills: list[dict[str, Any]] | None = None,
 ):
     """根据 Agent 配置构建 LangGraph 图实例（共用同一套图结构）。
 
     @param a2a_tools 已按目标构造好的 A2A 工具（含各自描述）
     @param pending_store 挂起任务存储（缺省用 default_pending_store）
+    @param skills 绑定的技能快照（repository 解析 skill_ids 的结果）
     """
     llm = build_llm()
+    bound_skills = list(skills or [])
     tools = build_tools(a2a_tools, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index)
-    prompt = agent.system_prompt or DEFAULT_SYSTEM_PROMPT
+    # 只给 on_demand 技能挂 load_skill：always 正文已常驻 prompt，再给工具只会
+    # 诱导模型重复加载（规格 §6.3「已在上下文中的技能无需重复加载」）
+    tools.extend(
+        make_skill_tools([s for s in bound_skills if str(s.get("load_mode") or "") == "on_demand"])
+    )
+    prompt = (agent.system_prompt or DEFAULT_SYSTEM_PROMPT) + build_skills_prompt(bound_skills)
     return create_react_agent(
         llm,
         tools,
@@ -222,5 +332,5 @@ def build_graph(
         state_schema=AgentChatState,
         # 历史压缩：进入模型前做「摘要 + 最近窗口」裁剪（状态里的完整历史保留，
         # 压缩只影响模型可见的 llm_input_messages，time travel 不受影响）
-        pre_model_hook=_make_history_hook(llm, pending_store),
+        pre_model_hook=_make_history_hook(llm, pending_store, skills=bound_skills),
     )

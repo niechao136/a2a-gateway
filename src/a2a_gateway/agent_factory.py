@@ -78,6 +78,8 @@ async def get_agent_instance(agent: AgentConfig) -> Any:
     # MCP 服务快照（由 repository 解析 mcp_server_ids 得到），无 DB 依赖
     mcp_servers = list(getattr(agent, "mcp_servers", None) or [])
     mcp_tool_index = await _probe_mcp_tools(mcp_servers)
+    # Skill 快照（由 repository 解析 skill_ids 得到，含正文全文），无 DB 依赖
+    skills = list(getattr(agent, "skills", None) or [])
     checkpointer = await get_checkpointer()
     graph = build_graph(
         agent,
@@ -85,6 +87,7 @@ async def get_agent_instance(agent: AgentConfig) -> Any:
         checkpointer=checkpointer,
         mcp_servers=mcp_servers,
         mcp_tool_index=mcp_tool_index,
+        skills=skills,
     )
     _cache[key] = (wrappers, graph)
     # 清理同 id 但旧 updated_at 的缓存条目
