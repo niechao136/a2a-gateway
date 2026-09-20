@@ -3,6 +3,7 @@
 import base64
 import io
 import zipfile
+import zlib
 
 import httpx
 import pytest
@@ -13,9 +14,11 @@ from a2a_gateway.skill_import import SkillImportError
 SKILL_MD = "---\nname: {name}\ndescription: 测试技能\n---\n正文"
 
 
-def _zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
+def _zip_bytes(
+    entries: list[tuple[str, bytes]], compression: int = zipfile.ZIP_STORED
+) -> bytes:
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
+    with zipfile.ZipFile(buf, "w", compression=compression) as zf:
         for name, blob in entries:
             zf.writestr(name, blob)
     return buf.getvalue()
@@ -29,6 +32,14 @@ def _symlink_zip_bytes() -> bytes:
         info.external_attr = (0o120777 << 16)  # S_IFLNK
         zf.writestr(info, "/etc/passwd")
     return buf.getvalue()
+
+
+def _encrypted_zip_bytes() -> bytes:
+    """zipfile 不能写加密包，故把普通 zip 的「已加密」标志位置 1 复现真实场景。"""
+    data = bytearray(_zip_bytes([("s/SKILL.md", SKILL_MD.format(name="s").encode())]))
+    data[data.find(b"PK\x01\x02") + 8] |= 0x01  # 中心目录 general purpose bit flag
+    data[data.find(b"PK\x03\x04") + 6] |= 0x01  # 本地文件头同名标志位
+    return bytes(data)
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +110,89 @@ def test_parse_base64_zip():
     assert groups[0]["name"] == "s"
 
 
+def test_parse_zip_base64_invalid_rejected():
+    with pytest.raises(SkillImportError, match="base64"):
+        si.parse_zip_base64("not-a-valid-base64!!")
+
+
+def test_parse_zip_base64_tolerates_whitespace():
+    b64 = base64.b64encode(
+        _zip_bytes([("s/SKILL.md", SKILL_MD.format(name="s").encode())])
+    ).decode()
+    wrapped = "\n".join(b64[i : i + 76] for i in range(0, len(b64), 76))
+    assert si.parse_zip_base64(wrapped)[0]["name"] == "s"
+
+
+def test_parse_zip_rejects_oversize_payload():
+    """入口限流：任何调用方直接喂超大 zip 也要被拦。"""
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_zip(b"\x00" * (si.MAX_IMPORT_BYTES + 1))
+
+
+def test_zip_too_many_entries_rejected():
+    entries = [("s/SKILL.md", SKILL_MD.format(name="s").encode())] + [
+        (f"s/f{i}.md", b"x") for i in range(si.MAX_FILES)
+    ]
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_zip(_zip_bytes(entries))
+
+
+def test_zip_total_bytes_rejected():
+    blob = b"\x00" * si.MAX_FILE_BYTES
+    data = _zip_bytes(
+        [("s/SKILL.md", SKILL_MD.format(name="s").encode())]
+        + [(f"s/big{i}.md", blob) for i in range(5)],
+        compression=zipfile.ZIP_DEFLATED,
+    )
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_zip(data)
+
+
+def test_zip_bomb_rejected_before_decompress(monkeypatch):
+    """压缩炸弹：按中心目录声明大小先拦截，超限成员绝不解包。"""
+
+    def forbidden(self, *args, **kwargs):
+        raise AssertionError("超限成员被解包了")
+
+    data = _zip_bytes(
+        [
+            ("s/bomb.md", b"\x00" * (si.MAX_FILE_BYTES + 1)),
+            ("s/SKILL.md", SKILL_MD.format(name="s").encode()),
+        ],
+        compression=zipfile.ZIP_DEFLATED,
+    )
+    monkeypatch.setattr(si.zipfile.ZipFile, "open", forbidden)
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_zip(data)
+
+
+def test_zip_encrypted_rejected():
+    """加密 zip：zipfile.open 抛 RuntimeError，必须转成友好错误而非 500。"""
+    with pytest.raises(SkillImportError, match="无法解析"):
+        si.parse_zip(_encrypted_zip_bytes())
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        RuntimeError("encrypted"),
+        NotImplementedError("compression method"),
+        EOFError("truncated"),
+        zlib.error("bad stream"),
+    ],
+)
+def test_zip_unpack_errors_wrapped(monkeypatch, exc):
+    """解包期各类异常一律收敛为 SkillImportError。"""
+
+    def boom(self, *args, **kwargs):
+        raise exc
+
+    data = _zip_bytes([("s/SKILL.md", SKILL_MD.format(name="s").encode())])
+    monkeypatch.setattr(si.zipfile.ZipFile, "open", boom)
+    with pytest.raises(SkillImportError, match="无法解析"):
+        si.parse_zip(data)
+
+
 # ---------------------------------------------------------------------------
 # 目录（浏览器 webkitdirectory 上传的文件数组）
 # ---------------------------------------------------------------------------
@@ -137,6 +231,55 @@ def test_dir_binary_skipped():
         ]
     )
     assert groups[0]["skipped_binary"] == []
+
+
+def test_dir_real_binary_skipped():
+    """真实二进制（含 NUL）应被跳过并记入 skipped_binary。"""
+    groups = si.parse_dir_files(
+        [
+            {"path": "d/SKILL.md", "content": SKILL_MD.format(name="d")},
+            {"path": "d/logo.png", "content": "\x89PNG\r\n\x1a\n\x00\x01\x02"},
+            {"path": "d/notes.md", "content": "纯文本"},
+        ]
+    )
+    assert [f["path"] for f in groups[0]["files"]] == ["notes.md"]
+    assert groups[0]["skipped_binary"] == ["d/logo.png"]
+
+
+def test_dir_empty_path_rejected():
+    with pytest.raises(SkillImportError, match="path"):
+        si.parse_dir_files(
+            [
+                {"path": "d/SKILL.md", "content": SKILL_MD.format(name="d")},
+                {"path": "", "content": "x"},
+            ]
+        )
+
+
+def test_dir_too_many_entries_rejected():
+    files = [{"path": "d/SKILL.md", "content": SKILL_MD.format(name="d")}] + [
+        {"path": f"d/f{i}.md", "content": "x"} for i in range(si.MAX_FILES)
+    ]
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_dir_files(files)
+
+
+def test_dir_oversize_entry_rejected():
+    files = [
+        {"path": "d/SKILL.md", "content": SKILL_MD.format(name="d")},
+        {"path": "d/big.md", "content": "b" * (si.MAX_FILE_BYTES + 1)},
+    ]
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_dir_files(files)
+
+
+def test_dir_total_bytes_rejected():
+    blob = "b" * si.MAX_FILE_BYTES
+    files = [{"path": "d/SKILL.md", "content": SKILL_MD.format(name="d")}] + [
+        {"path": f"d/big{i}.md", "content": blob} for i in range(5)
+    ]
+    with pytest.raises(SkillImportError, match="上限"):
+        si.parse_dir_files(files)
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +324,19 @@ async def test_fetch_url_rejects_private_ip(monkeypatch):
 async def test_fetch_url_rejects_loopback(monkeypatch):
     monkeypatch.setattr(
         si.socket, "getaddrinfo", lambda *a, **k: [(2, 1, 6, "", ("127.0.0.1", 0))]
+    )
+    with pytest.raises(SkillImportError, match="内网"):
+        await si.fetch_url(
+            "http://localhost/x", transport=_transport([httpx.Response(200, content=b"x")])
+        )
+
+
+async def test_fetch_url_rejects_ipv4_mapped_loopback(monkeypatch):
+    """::ffff:127.0.0.1 等映射地址必须按 IPv4 口径判定（is_loopback 对映射地址恒为 False）。"""
+    monkeypatch.setattr(
+        si.socket,
+        "getaddrinfo",
+        lambda *a, **k: [(10, 1, 6, "", ("::ffff:127.0.0.1", 0, 0, 0))],
     )
     with pytest.raises(SkillImportError, match="内网"):
         await si.fetch_url(

@@ -6,6 +6,10 @@
 
 安全要求（规格 §4.2）：zip slip 拒绝、符号链接拒绝、压缩炸弹限制、
 目录路径规范化、SSRF 逐 IP 校验（DNS 解析后）、响应体 4MB 上限。后端零文件系统访问。
+
+上限口径（复用 skills 常量）：MAX_FILES 在本模块计「来源总条目数」（skills.py 注释的
+「单 skill 附件数上限」是门禁侧口径）；MAX_FILE_BYTES 计单条目解压后字节；
+MAX_SKILL_BYTES 计来源解压后总量；MAX_IMPORT_BYTES 是入口（上传包 / 响应体）硬上限。
 """
 
 import base64
@@ -15,6 +19,7 @@ import posixpath
 import socket
 import stat
 import zipfile
+import zlib
 from pathlib import PurePosixPath
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -29,6 +34,16 @@ from .skills import (
     URL_FETCH_TIMEOUT,
     URL_MAX_REDIRECTS,
     parse_skill_md,
+)
+
+_READ_CHUNK = 65536  # 分块解压的单次读取量（避免整体解压进内存）
+
+_UNPACK_ERRORS = (
+    zipfile.BadZipFile,
+    RuntimeError,  # 加密条目（zipfile 要求口令）
+    NotImplementedError,  # 不支持的压缩算法
+    EOFError,  # 数据流被截断
+    zlib.error,  # 损坏的 deflate 流
 )
 
 
@@ -48,8 +63,13 @@ def is_text_blob(blob: bytes) -> bool:
 
 
 def _assert_safe_rel_path(raw: str) -> str:
-    """规范化相对路径；绝对路径 / 含 .. / 反斜杠一律拒绝（zip slip / 目录穿越）。"""
+    """规范化相对路径；空路径 / 绝对路径 / 含 .. / 反斜杠一律拒绝（zip slip / 目录穿越）。
+
+    空路径必须显式拒绝：否则 normpath("") 会返回 "."，生成名为 "." 的附件。
+    """
     path = raw.replace("\\", "/")
+    if not path.strip():
+        raise SkillImportError("来源文件路径非法：条目缺少 path（路径不能为空）")
     if path.startswith("/"):
         raise SkillImportError(f"来源文件路径非法：{raw}")
     normalized = posixpath.normpath(path)
@@ -95,8 +115,35 @@ def _group_entries(entries: list[tuple[str, str]]) -> list[dict[str, Any]]:
     return results
 
 
+def _read_entry_capped(
+    zf: zipfile.ZipFile, zi: zipfile.ZipInfo, name: str, remaining: int
+) -> bytes:
+    """分块读取成员（不整体解压进内存）；实际读取量超单文件 / 总量上限即抛。
+
+    中心目录里的 file_size 可能被伪造，故声明大小与实际读取量双重校验。
+    """
+    parts: list[bytes] = []
+    read = 0
+    with zf.open(zi) as fp:
+        while True:
+            chunk = fp.read(_READ_CHUNK)
+            if not chunk:
+                break
+            read += len(chunk)
+            if read > MAX_FILE_BYTES:
+                raise SkillImportError(f"单文件超过 {MAX_FILE_BYTES} 字节上限：{name}")
+            if read > remaining:
+                raise SkillImportError(f"解压总量超过 {MAX_SKILL_BYTES} 字节上限")
+            parts.append(chunk)
+    return b"".join(parts)
+
+
 def _zip_entries(data: bytes) -> list[tuple[str, bytes]]:
-    """安全解包：路径校验 + 条目类型校验 + 文件数/单文件/总量限制。"""
+    """安全解包：路径校验 + 条目类型校验 + 文件数/单文件/总量限制。
+
+    限制全部前置到「读之前」：先用中心目录的 file_size 判定，再分块读，
+    避免压缩炸弹先把成员整体解压进内存才触发检查。
+    """
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             infos = zf.infolist()
@@ -109,16 +156,16 @@ def _zip_entries(data: bytes) -> list[tuple[str, bytes]]:
                 _check_zip_entry(zi)
                 if zi.is_dir():
                     continue
-                blob = zf.read(zi)
-                total += len(blob)
-                if total > MAX_SKILL_BYTES:
-                    raise SkillImportError(f"解压总量超过 {MAX_SKILL_BYTES} 字节上限")
-                if len(blob) > MAX_FILE_BYTES:
+                if zi.file_size > MAX_FILE_BYTES:
                     raise SkillImportError(f"单文件超过 {MAX_FILE_BYTES} 字节上限：{name}")
+                if total + zi.file_size > MAX_SKILL_BYTES:
+                    raise SkillImportError(f"解压总量超过 {MAX_SKILL_BYTES} 字节上限")
+                blob = _read_entry_capped(zf, zi, name, MAX_SKILL_BYTES - total)
+                total += len(blob)
                 entries.append((name, blob))
             return entries
-    except zipfile.BadZipFile as exc:
-        raise SkillImportError("zip 文件无法解析") from exc
+    except _UNPACK_ERRORS as exc:
+        raise SkillImportError("zip 文件无法解析（已损坏、加密或压缩算法不支持）") from exc
 
 
 def _split_binary(
@@ -165,36 +212,55 @@ def _build_groups(text_entries: list[tuple[str, str]], skipped: list[str]) -> li
 
 
 def parse_zip(data: bytes) -> list[dict[str, Any]]:
-    """解析 zip：安全过滤 → 按 SKILL.md 分组 → 解析 → 二进制标注。"""
+    """解析 zip：入口限流 → 安全过滤 → 按 SKILL.md 分组 → 解析 → 二进制标注。"""
+    if len(data) > MAX_IMPORT_BYTES:
+        raise SkillImportError(f"zip 超过 {MAX_IMPORT_BYTES} 字节上限")
     raw_entries = _zip_entries(data)
     text_entries, skipped = _split_binary(raw_entries)
     return _build_groups(text_entries, skipped)
 
 
 def parse_zip_base64(zip_b64: str) -> list[dict[str, Any]]:
-    """base64 编码的 zip（前端以 JSON 提交）→ skill 组清单。"""
+    """base64 编码的 zip（前端以 JSON 提交）→ skill 组清单。
+
+    容错：忽略空白；其余非法字符 / 长度一律报「解码失败」（解析入口另有总量限流）。
+    """
     try:
-        data = base64.b64decode(zip_b64, validate=False)
-    except Exception as exc:
+        data = base64.b64decode("".join(zip_b64.split()), validate=True)
+    except ValueError as exc:  # binascii.Error 是 ValueError 子类
         raise SkillImportError("zip base64 解码失败") from exc
-    if len(data) > MAX_IMPORT_BYTES:
-        raise SkillImportError(f"zip 超过 {MAX_IMPORT_BYTES} 字节上限")
     return parse_zip(data)
 
 
 def parse_dir_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """浏览器目录上传（[{path, content}] 文本数组）→ skill 组清单。"""
+    """浏览器目录上传（[{path, content}] 文本数组）→ skill 组清单。
+
+    与 zip 来源同口径限流：总条目数 MAX_FILES / 单条目 MAX_FILE_BYTES / 总量 MAX_SKILL_BYTES。
+    """
+    if len(files) > MAX_FILES:
+        raise SkillImportError(f"文件数超过 {MAX_FILES} 上限")
     entries: list[tuple[str, bytes]] = []
+    total = 0
     for item in files:
         name = _assert_safe_rel_path(str(item.get("path") or ""))
-        entries.append((name, str(item.get("content") or "").encode("utf-8")))
+        blob = str(item.get("content") or "").encode("utf-8")
+        if len(blob) > MAX_FILE_BYTES:
+            raise SkillImportError(f"单文件超过 {MAX_FILE_BYTES} 字节上限：{name}")
+        total += len(blob)
+        if total > MAX_SKILL_BYTES:
+            raise SkillImportError(f"导入总量超过 {MAX_SKILL_BYTES} 字节上限")
+        entries.append((name, blob))
     text_entries, skipped = _split_binary(entries)
     return _build_groups(text_entries, skipped)
 
 
 def _assert_public_host(host: str) -> None:
     """DNS 解析后逐 IP 校验；private / loopback / link-local / reserved /
-    multicast / unspecified 一律拒绝（SSRF 防护，含 DNS 重绑定缓解）。"""
+    multicast / unspecified 一律拒绝（SSRF 防护）。
+
+    已知残留风险：只在「解析期」拦截，校验与 httpx 实际建连之间仍有 DNS 重绑定窗口
+    （规格 §12 列为可接受风险，v1 不处理）。
+    """
     if not host:
         raise SkillImportError("URL 缺少主机名")
     try:
@@ -203,6 +269,9 @@ def _assert_public_host(host: str) -> None:
         raise SkillImportError(f"无法解析主机：{host}") from exc
     for info in infos:
         ip = ipaddress.ip_address(info[4][0])
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+            # ::ffff:127.0.0.1 之类映射地址按 IPv4 口径判定：其 is_loopback 恒为 False
+            ip = ip.ipv4_mapped
         if any(
             (
                 ip.is_private,
@@ -219,7 +288,11 @@ def _assert_public_host(host: str) -> None:
 async def fetch_url(
     url: str, *, transport: httpx.AsyncBaseTransport | None = None
 ) -> bytes:
-    """抓取 URL（raw 单文件或 zip）；每跳重定向重新校验；`transport` 仅供测试注入。"""
+    """抓取 URL（raw 单文件或 zip）；每跳重定向重新校验；`transport` 仅供测试注入。
+
+    SSRF 防护仅做「解析期拦截」：`_assert_public_host` 先解析再校验，随后 httpx 自行建连，
+    两者之间的 DNS 重绑定窗口未消除（规格 §12 列为可接受残留风险，v1 不处理）。
+    """
     if urlparse(url).scheme not in ("http", "https"):
         raise SkillImportError("URL 仅支持 http(s)")
     current = url
