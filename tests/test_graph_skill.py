@@ -219,8 +219,13 @@ async def test_graph_persists_active_skills_in_state(monkeypatch):
     assert (result.get("active_skills") or {}).get("demand-skill") == 3
 
 
-async def test_graph_passes_only_on_demand_to_skill_tools(monkeypatch):
-    """always 技能正文已常驻 prompt，不再给它 load_skill（避免诱导重复加载）。"""
+async def test_graph_passes_all_bound_skills_to_skill_tools(monkeypatch):
+    """全部已绑定技能都要挂进工具：always 附件的可达性依赖 read_skill_file。
+
+    （原「只传 on_demand 子集」的裁决已改判：那样会让 always 技能的附件彻底
+    不可读，且 read_skill_file 会回「该技能已不可用」的误导文案。
+    「不重复加载正文」改由 load_skill 内部按 load_mode 区分实现。）
+    """
     passed: list[list[dict]] = []
 
     def fake_make_skill_tools(skills):
@@ -236,4 +241,4 @@ async def test_graph_passes_only_on_demand_to_skill_tools(monkeypatch):
         pending_store=NoPendingStore(),
         skills=SKILLS,
     )
-    assert [str(s.get("name") or "") for s in passed[0]] == ["demand-skill"]
+    assert [str(s.get("name") or "") for s in passed[0]] == ["always-skill", "demand-skill"]

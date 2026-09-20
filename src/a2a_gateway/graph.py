@@ -318,11 +318,10 @@ def build_graph(
     llm = build_llm()
     bound_skills = list(skills or [])
     tools = build_tools(a2a_tools, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index)
-    # 只给 on_demand 技能挂 load_skill：always 正文已常驻 prompt，再给工具只会
-    # 诱导模型重复加载（规格 §6.3「已在上下文中的技能无需重复加载」）
-    tools.extend(
-        make_skill_tools([s for s in bound_skills if str(s.get("load_mode") or "") == "on_demand"])
-    )
+    # 全部已绑定技能都挂工具：read_skill_file 的 by_name 索引由入参决定，只传
+    # on_demand 子集会让 always 技能的附件彻底不可读。「不重复加载正文」由
+    # load_skill 内部按 load_mode 区分实现（规格 §6.3），不再靠过滤入参。
+    tools.extend(make_skill_tools(bound_skills))
     prompt = (agent.system_prompt or DEFAULT_SYSTEM_PROMPT) + build_skills_prompt(bound_skills)
     return create_react_agent(
         llm,
