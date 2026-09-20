@@ -22,14 +22,22 @@ import {
   AgentCreatePayload,
   ManualMcpServerInput,
   McpServer,
+  Skill,
 } from "@/lib/adminApi";
 import ManualA2ABinding from "@/components/admin/ManualA2ABinding";
 import ManualMcpBinding from "@/components/admin/ManualMcpBinding";
+import { MAX_BINDING_CONTENT_BYTES, estimateResidentBytes, formatBytes } from "@/lib/skillUtils";
 
 /** slug 允许字母、数字、- 和 _，且首尾必须是字母或数字。 */
 const SLUG_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 /** 系统保留 slug（与后端 RESERVED_SLUGS + 路由中的 default 别名一致）。 */
 const RESERVED_SLUGS = ["/", "", "default", "a2a"];
+
+/** 未通过审核的技能：不可勾选，用标签说明原因。 */
+const SKILL_STATUS_LABEL: Record<string, string> = {
+  pending: "待审核",
+  rejected: "已拒绝",
+};
 
 interface AgentFormProps {
   initial?: Agent | null;
@@ -39,6 +47,8 @@ interface AgentFormProps {
   a2aEndpoints?: A2AEndpoint[];
   /** 「MCP 管理」中登记的服务，供勾选启用 */
   mcpServers?: McpServer[];
+  /** 「Skill 管理」中的技能，供勾选绑定（只有 approved 的可以勾选） */
+  skills?: Skill[];
   submitting?: boolean;
   submitLabel?: string;
   onSubmit: (payload: AgentCreatePayload) => void | Promise<void>;
@@ -49,6 +59,7 @@ export default function AgentForm({
   existingSlugs = [],
   a2aEndpoints = [],
   mcpServers = [],
+  skills = [],
   submitting = false,
   submitLabel = "保存",
   onSubmit,
@@ -65,6 +76,10 @@ export default function AgentForm({
   );
   const [selectedMcpIds, setSelectedMcpIds] = useState<number[]>(
     initial?.mcp_server_ids ?? [],
+  );
+  // 技能绑定：只保存注册表 id，正文由后端按快照解析
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>(
+    initial?.skill_ids ?? [],
   );
   // 手动绑定（未在注册表登记）：与勾选并存
   const [manualTargets, setManualTargets] = useState<A2ATargetInput[]>([]);
@@ -128,6 +143,31 @@ export default function AgentForm({
     );
   };
 
+  const toggleSkill = (id: number) => {
+    setSelectedSkillIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  /**
+   * 已绑定、但当前审核未通过的技能（例：在「Skill 管理」里用覆盖导入，审核被重置为 pending）。
+   *
+   * 只处理「能确认存在且非 approved」的 id：技能列表加载失败时 skills 为空，此时不做任何
+   * 剔除，避免把绑定误删。
+   */
+  const blockedSkillIds = selectedSkillIds.filter((id) =>
+    skills.some((s) => s.id === id && s.review_status !== "approved"),
+  );
+  const blockedSkills = skills.filter((s) => blockedSkillIds.includes(s.id));
+  /**
+   * 随本次保存提交的绑定（只含审核通过的技能）。
+   *
+   * 这类技能的复选框按「只有 approved 可勾选」是 disabled 的，用户无法取消勾选；若原样提交，
+   * 后端门禁（validate_skill_bindings 的 review_status 分支）会 400，导致整个表单（连改名）
+   * 都保存不了。因此保存时自动解绑，并在分区内明确提示。
+   */
+  const submittedSkillIds = selectedSkillIds.filter((id) => !blockedSkillIds.includes(id));
+
   const validate = (): boolean => {
     const next: { slug?: string; name?: string; manualA2a?: string } = {};
     if (!name.trim()) next.name = "请填写名称";
@@ -161,6 +201,7 @@ export default function AgentForm({
       description: description.trim(),
       a2a_target_ids: selectedTargetIds,
       mcp_server_ids: selectedMcpIds,
+      skill_ids: submittedSkillIds,
       a2a_targets: targets,
       mcp_servers: mcps,
       system_prompt: systemPrompt.trim() ? systemPrompt : null,
@@ -354,6 +395,98 @@ export default function AgentForm({
           )}
 
           <ManualMcpBinding value={manualMcp} onChange={setManualMcp} />
+        </Box>
+
+        <Divider />
+
+        {/* 技能：从注册表勾选（只有审核通过的可以绑定） */}
+        <Box>
+          <Typography variant="subtitle1" gutterBottom>
+            技能（Skills）
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            勾选后技能以方法论形式注入 Agent 编排。只有「已通过」审核的技能可选；技能在
+            「Skill 管理」中统一维护。
+          </Typography>
+          {/* 预算按「本次保存实际提交的绑定」估算：未通过审核的技能不会提交，也不参与运行时注入 */}
+          {(() => {
+            const residentBytes = estimateResidentBytes(
+              skills.filter((s) => submittedSkillIds.includes(s.id)),
+            );
+            return (
+              <Box sx={{ mt: 0.5 }}>
+                <Typography variant="caption" sx={{ display: "block" }}>
+                  常驻预算预估：{formatBytes(residentBytes)}（UTF-8 字节口径，仅统计 always 技能正文）
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  后端保存校验：绑定技能正文合计 ≤ {formatBytes(MAX_BINDING_CONTENT_BYTES)}
+                  （UTF-8 字节，含按需技能正文）
+                </Typography>
+              </Box>
+            );
+          })()}
+
+          {blockedSkills.length > 0 && (
+            <Alert severity="warning" sx={{ mt: 1.5 }}>
+              {`已绑定但当前未通过审核：${blockedSkills
+                .map((s) => `${s.name}（${SKILL_STATUS_LABEL[s.review_status] ?? "未通过审核"}）`)
+                .join("、")}。本次保存会自动解绑这些技能，审核通过后可在本节再次勾选。`}
+            </Alert>
+          )}
+
+          {skills.length === 0 ? (
+            <Alert
+              severity="info"
+              sx={{ mt: 1.5 }}
+              action={
+                <Button component={Link} href="/admin/skills" size="small">
+                  前往 Skill 管理
+                </Button>
+              }
+            >
+              还没有任何 Skill，先去「Skill 管理」导入
+            </Alert>
+          ) : (
+            <Stack sx={{ mt: 1 }}>
+              {skills.map((skill) => (
+                <FormControlLabel
+                  key={skill.id}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={selectedSkillIds.includes(skill.id)}
+                      onChange={() => toggleSkill(skill.id)}
+                      disabled={skill.review_status !== "approved"}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2">
+                        {skill.name}
+                        {skill.load_mode === "always" && (
+                          <Chip size="small" label="常驻" sx={{ ml: 0.5, height: 18 }} />
+                        )}
+                        {skill.review_status !== "approved" && (
+                          <Chip
+                            size="small"
+                            label={SKILL_STATUS_LABEL[skill.review_status] ?? "未通过审核"}
+                            sx={{ ml: 0.5, height: 18 }}
+                          />
+                        )}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block" }}
+                      >
+                        {skill.description}
+                      </Typography>
+                    </Box>
+                  }
+                />
+              ))}
+            </Stack>
+          )}
         </Box>
 
         <Divider />

@@ -25,6 +25,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
+import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import { adminApi, hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
 import { notifyIdentityChanged } from "@/lib/api";
@@ -34,7 +35,7 @@ import ThemeToggleButton from "@/components/ThemeToggleButton";
 const LOGIN_PATH = "/admin/login";
 const SIDEBAR_WIDTH = 240;
 
-/** 侧边栏导航：Agent / A2A / MCP 三类资源 */
+/** 侧边栏导航：Agent / A2A / MCP / Skill 四类资源 */
 const NAV_ITEMS = [
   {
     label: "Agent 管理",
@@ -55,6 +56,12 @@ const NAV_ITEMS = [
     href: "/admin/mcp",
     icon: <ExtensionOutlinedIcon fontSize="small" />,
     isActive: (pathname: string) => pathname.startsWith("/admin/mcp"),
+  },
+  {
+    label: "Skill 管理",
+    href: "/admin/skills",
+    icon: <AutoStoriesOutlinedIcon fontSize="small" />,
+    isActive: (pathname: string) => pathname.startsWith("/admin/skills"),
   },
 ];
 

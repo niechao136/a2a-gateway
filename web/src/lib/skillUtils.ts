@@ -21,6 +21,24 @@ export function estimateResidentChars(skills: SkillLike[]): number {
     .reduce((sum, s) => sum + (s.content?.length ?? 0), 0);
 }
 
+/**
+ * 常驻技能正文的 UTF-8 字节估算。
+ *
+ * 后端按 `len(content.encode("utf-8"))` 计量，中文正文的 JS 字符数只有字节数的
+ * 约 1/3 —— 凡是跟字节上限（如 MAX_BINDING_CONTENT_BYTES）同屏展示的估算，
+ * 都必须走这个字节口径，否则中文内容会被严重低估。
+ */
+export function estimateResidentBytes(skills: SkillLike[]): number {
+  return skills
+    .filter((s) => s.load_mode === "always")
+    .reduce((sum, s) => sum + utf8ByteLength(s.content ?? ""), 0);
+}
+
+/** 字符串的 UTF-8 字节长度。 */
+function utf8ByteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
 /** 单个 skill 总字节 = 正文 + 附件（后端 size_bytes + files[].size）。 */
 export function totalSkillBytes(skill: SkillLike): number {
   const files = (skill.files ?? []).reduce((sum, f) => sum + (f.size ?? 0), 0);

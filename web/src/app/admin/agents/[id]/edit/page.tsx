@@ -22,7 +22,14 @@ import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import AgentForm from "@/components/admin/AgentForm";
 import AgentApiKeys from "@/components/admin/AgentApiKeys";
 import TestChatDialog from "@/components/admin/TestChatDialog";
-import { A2AEndpoint, Agent, AgentCreatePayload, McpServer, adminApi } from "@/lib/adminApi";
+import {
+  A2AEndpoint,
+  Agent,
+  AgentCreatePayload,
+  McpServer,
+  Skill,
+  adminApi,
+} from "@/lib/adminApi";
 
 interface EditAgentPageProps {
   params: Promise<{ id: string }>;
@@ -37,6 +44,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   // 注册表数据：供 Agent 表单勾选绑定
   const [a2aEndpoints, setA2aEndpoints] = useState<A2AEndpoint[]>([]);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,15 +55,17 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, endpoints, servers] = await Promise.all([
+      const [list, endpoints, servers, skillList] = await Promise.all([
         adminApi.listAgents(),
         adminApi.listA2AEndpoints(),
         adminApi.listMcpServers(),
+        adminApi.listSkills(),
       ]);
       const found = list.find((a) => a.id === agentId) ?? null;
       setAgent(found);
       setA2aEndpoints(endpoints);
       setMcpServers(servers);
+      setSkills(skillList);
       if (!found) setError("Agent 不存在或已被删除");
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
@@ -188,6 +198,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               initial={agent}
               a2aEndpoints={a2aEndpoints}
               mcpServers={mcpServers}
+              skills={skills}
               submitting={submitting}
               submitLabel="保存修改"
               onSubmit={handleSubmit}
