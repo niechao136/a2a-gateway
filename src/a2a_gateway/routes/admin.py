@@ -6,6 +6,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..a2a_client import A2AClientWrapper
@@ -21,7 +22,7 @@ from ..identity import (
     read_identity,
     set_identity_cookie,
 )
-from ..models import AdminUser, AgentStatus
+from ..models import AdminUser, AgentStatus, Skill
 from ..repository import (
     claim_conversations,
     create_agent,
@@ -35,6 +36,7 @@ from ..repository import (
     list_agents,
     set_agent_status,
     update_agent,
+    validate_skill_bindings,
 )
 from ..schemas import (
     AdminLoginRequest,
@@ -57,6 +59,24 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 # - "/" 与 "" 为默认 Agent 保留
 # - "a2a" 为 A2A 对外服务地址前缀（/a2a/{slug}），避免冲突
 RESERVED_SLUGS = {"/", "", "a2a"}
+
+
+async def _validate_skill_bindings(session: AsyncSession, skill_ids: list[int]) -> None:
+    """解析 Agent 勾选的技能并施加门禁；不合法抛 ValueError（由调用方转 4xx）。
+
+    只校验 review_status 与总量；enabled 不拦（宽松语义：保留勾选、运行时静默跳过）。
+    statuses 必须由查出的 records 自己构造，否则缺 id 会被静默放行。
+    """
+    if not skill_ids:
+        return
+    rows = (
+        await session.execute(select(Skill).where(Skill.id.in_(skill_ids)))
+    ).scalars().all()
+    validate_skill_bindings(
+        records=list(rows),
+        statuses={row.id: row.review_status.value for row in rows},
+        requested_ids=skill_ids,
+    )
 
 
 @router.post("/login", response_model=Token)
@@ -126,6 +146,10 @@ async def create_new_agent(
     existing = await get_agent_by_slug(session, data.slug)
     if existing is not None:
         raise HTTPException(409, f"slug '{data.slug}' 已被占用")
+    try:
+        await _validate_skill_bindings(session, data.skill_ids)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     return await create_agent(session, data)
 
 
@@ -139,6 +163,10 @@ async def update_existing_agent(
     agent = await get_agent_by_id(session, agent_id)
     if agent is None:
         raise HTTPException(404, "Agent 不存在")
+    try:
+        await _validate_skill_bindings(session, data.skill_ids or [])
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     updated = await update_agent(session, agent, data)
     await invalidate_agent(agent_id)
     return updated
@@ -169,6 +197,10 @@ async def publish_agent(
     agent = await get_agent_by_id(session, agent_id)
     if agent is None:
         raise HTTPException(404, "Agent 不存在")
+    try:
+        await _validate_skill_bindings(session, agent.skill_ids or [])
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
     await invalidate_agent(agent_id)
     return await set_agent_status(session, agent, AgentStatus.PUBLISHED)
 

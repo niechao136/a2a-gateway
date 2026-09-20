@@ -36,6 +36,7 @@ def make_agent():
             "a2a_target_ids": [1],
             "mcp_server_ids": [],
             "mcp_servers": [],
+            "skill_ids": [],
             "system_prompt": None,
             "status": AgentStatus.DRAFT,
             "created_at": _now(),
