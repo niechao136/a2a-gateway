@@ -40,6 +40,8 @@ export interface Agent {
   /** 绑定快照 = 注册表解析结果 + 手动绑定条目（只读） */
   a2a_targets: A2ATargetInput[];
   mcp_servers: ManualMcpServerInput[];
+  /** 在「Skill 管理」中勾选的技能 id（只有 approved 的技能可选） */
+  skill_ids: number[];
   system_prompt: string | null;
   status: "draft" | "published";
   created_at: string;
@@ -57,6 +59,8 @@ export interface AgentCreatePayload {
   a2a_targets?: A2ATargetInput[];
   /** 手动绑定的 MCP 服务（可与勾选并存） */
   mcp_servers?: ManualMcpServerInput[];
+  /** 从「Skill 管理」注册表勾选的技能 id */
+  skill_ids?: number[];
   system_prompt?: string | null;
 }
 
@@ -165,6 +169,70 @@ export type McpServerUpdatePayload = Partial<McpServerCreatePayload>;
 export interface McpToolInfo {
   name: string;
   description: string;
+}
+
+// ---------------------------------------------------------------------------
+// Skill 注册表（「Skill 管理」维护）
+// ---------------------------------------------------------------------------
+export type SkillLoadMode = "always" | "on_demand";
+export type SkillReviewStatus = "pending" | "approved" | "rejected";
+
+export interface Skill {
+  id: number;
+  name: string;
+  description: string;
+  content: string;
+  frontmatter: Record<string, unknown>;
+  files: { path: string; size: number; content?: string }[];
+  load_mode: SkillLoadMode;
+  size_bytes: number;
+  file_count: number;
+  source: string;
+  source_ref: string;
+  review_status: SkillReviewStatus;
+  review_note: string;
+  reviewed_at: string | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SkillCreatePayload {
+  name: string;
+  description: string;
+  content: string;
+  load_mode?: SkillLoadMode;
+}
+
+export type SkillUpdatePayload = Partial<Omit<SkillCreatePayload, "name">> & {
+  enabled?: boolean;
+};
+
+export interface SkillImportPreviewItem {
+  name: string;
+  description: string;
+  content_bytes: number;
+  file_count: number;
+  total_bytes: number;
+  files: string[];
+  skipped_binary: string[];
+  conflict: boolean;
+  error: string | null;
+}
+
+export interface SkillImportPreview {
+  items: SkillImportPreviewItem[];
+  errors: string[];
+}
+
+export interface SkillImportPayload {
+  source: "text" | "url" | "zip" | "dir";
+  skill_md?: string;
+  url?: string;
+  zip_b64?: string;
+  dir_files?: { path: string; content: string }[];
+  overwrite?: boolean;
+  names?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -420,6 +488,58 @@ export const adminApi = {
     return request<{ ok: boolean; tools: McpToolInfo[]; message: string }>(
       `/api/admin/mcp-servers/${id}/tools`,
     );
+  },
+
+  // ---- Skill 注册表 ----
+  listSkills(): Promise<Skill[]> {
+    return request<Skill[]>("/api/admin/skills");
+  },
+
+  createSkill(payload: SkillCreatePayload): Promise<Skill> {
+    return request<Skill>("/api/admin/skills", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateSkill(id: number, payload: SkillUpdatePayload): Promise<Skill> {
+    return request<Skill>(`/api/admin/skills/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** 删除技能；被 Agent 引用时后端返回 409，可用 force=true 自动解绑。 */
+  deleteSkill(id: number, force = false): Promise<void> {
+    return request<void>(`/api/admin/skills/${id}${force ? "?force=true" : ""}`, {
+      method: "DELETE",
+    });
+  },
+
+  previewSkillImport(payload: SkillImportPayload): Promise<SkillImportPreview> {
+    return request<SkillImportPreview>("/api/admin/skills/import/preview", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  commitSkillImport(
+    payload: SkillImportPayload & { names?: string[] },
+  ): Promise<{ created: number; updated: number; skipped: number; failed: string[] }> {
+    return request("/api/admin/skills/import/commit", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  reviewSkill(
+    id: number,
+    payload: { status: SkillReviewStatus; note?: string },
+  ): Promise<Skill> {
+    return request<Skill>(`/api/admin/skills/${id}/review`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   // ---- API Key 管理（每个 Agent 独立配置的对外 A2A 调用凭据）----
