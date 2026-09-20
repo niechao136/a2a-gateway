@@ -306,8 +306,9 @@ def _preview_item(parsed: dict[str, Any], conflict: bool) -> SkillImportPreviewI
     )
 
 
-def _error_item(message: str) -> SkillImportPreviewItem:
-    return SkillImportPreviewItem(error=message)
+def _error_item(message: str, name: str = "") -> SkillImportPreviewItem:
+    """解析失败条目；带上名字便于前端/落库阶段按名字对账。"""
+    return SkillImportPreviewItem(name=name, error=message)
 
 
 def _source_groups(
@@ -462,18 +463,28 @@ async def delete_skill(
 
 
 async def _build_preview(
-    payload: SkillImportRequest, session: AsyncSession
+    resolved: tuple[list[dict[str, Any]], list[str], str, str],
+    session: AsyncSession,
 ) -> SkillImportPreviewOut:
-    groups, errors, _, _ = await _resolve_groups_async(payload)
+    """组清单 → 预览清单（重名冲突 + 来源级 errors + 是否有解析失败条目）。
+
+    接收 `_resolve_groups_async` 的结果而非 payload：URL 来源只能抓一次，
+    预览与落库必须共用同一次解析（否则同一 URL 抓两遍，且两趟之间内容可能变）。
+    """
+    groups, errors = resolved[0], list(resolved[1])
     items: list[SkillImportPreviewItem] = []
     for group in groups:
+        name = str(group.get("name") or "")
         try:
-            name = str(group.get("name") or "")
             conflict = await repo.get_skill_by_name(session, name) is not None
             items.append(_preview_item(group, conflict))
         except ValueError as exc:
-            items.append(_error_item(str(exc)))
-    return SkillImportPreviewOut(items=items, errors=errors)
+            items.append(_error_item(str(exc), name))
+    return SkillImportPreviewOut(
+        items=items,
+        errors=errors,
+        over_limit=bool(errors or any(i.error for i in items)),
+    )
 
 
 @router.post("/skills/import/preview", response_model=SkillImportPreviewOut)
@@ -483,7 +494,7 @@ async def preview_skill_import(
     _: AdminUser = Depends(get_current_admin),
 ):
     """预览（dry-run，不落库；多 skill 包返回清单供勾选）。"""
-    return await _build_preview(payload, session)
+    return await _build_preview(await _resolve_groups_async(payload), session)
 
 
 @router.post("/skills/import/commit")
@@ -496,15 +507,19 @@ async def commit_skill_import(
 
     @returns {"created", "updated", "skipped", "failed", "items"}
     """
-    preview = await _build_preview(payload, session)
+    # 预览与落库共用同一次解析（URL 只抓一次）；这里不能解包到 `_`（该名字已是认证依赖项）
+    resolved = await _resolve_groups_async(payload)
+    preview = await _build_preview(resolved, session)
+    groups, source, source_ref = resolved[0], resolved[2], resolved[3]
     feasible = {item.name for item in preview.items if item.name and not item.error}
-    wanted = [n for n in (payload.names or sorted(feasible)) if n in feasible]
-    created = updated = skipped = 0
+    requested = payload.names or sorted(feasible)
+    wanted = [n for n in requested if n in feasible]
+    # 名单里指向「解析失败条目 / 预览里没有」的名字计 skipped，不静默丢弃（前端要能对账）
+    skipped = len(requested) - len(wanted)
+    created = updated = 0
     touched_skill_ids: list[int] = []
     touched_agent_ids: set[int] = set()
-    # 这里不能解包到 `_`（该名字已是本函数的认证依赖项），改用显式下标取值
-    resolved = await _resolve_groups_async(payload)
-    groups, source, source_ref = resolved[0], resolved[2], resolved[3]
+    conflicts = {item.name: bool(item.conflict) for item in preview.items}
     by_name = {str(g.get("name") or ""): g for g in groups}
     for name in wanted:
         group = by_name.get(name)
@@ -525,6 +540,10 @@ async def commit_skill_import(
             continue
         if is_new:
             created += 1
+        elif conflicts.get(name) and not payload.overwrite:
+            # 重名 + 不覆盖：repository 是「跳过」（未写库），不能报 updated；
+            # 更不能刷新快照 / 失效图缓存——那会白白打掉引用方已编译的图
+            skipped += 1
         else:
             updated += 1
             # 覆盖会重置 pending：已绑定该技能的 Agent 快照需刷新并失效图缓存
