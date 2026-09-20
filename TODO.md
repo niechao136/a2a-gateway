@@ -10,8 +10,10 @@
 > - ✅ **Phase 6**（容器化 + nginx 统一入口 + 环境变量清单 + Alembic 迁移 + 可选告警 Webhook 已完成；安全组/防火墙清单待补）
 > - ✅ **Phase 7**（后端单元 40 用例 + 前端 vitest 7 用例 + 端到端冒烟脚本，均已实测通过；顺带修复前端 SSE CRLF 解析缺陷）
 > - ✅ **2026-09-18：A2A 恢复轮工具化**（新增 `a2a_resume` 工具把用户补充信息带 `task_id` / `context_id` 转发给挂起的下游任务，结果作为工具输出回到模型上下文；对话前以「模型可见但不入历史」方式注入挂起上下文并引导模型调用该工具；`routes/chat.py` 移除恢复拦截与手工补历史，恢复轮回归正常 graph 流程）—— 后端 **205 用例全绿** + basedpyright standard **0 error**；devops-43 联调已通过：同一会话内模型自主调用 `a2a_resume`，下游 travel-agent 同一 task 恢复（thread `0cecf085`，checkpoint 9 个跨两轮增长）
+> - ✅ **2026-09-20：Agent Skills 绑定（第三类绑定）**（`SKILL.md` 四种来源导入（粘贴 / URL / zip / 浏览器目录）→ 预览 → 落库为 pending → 审核（approved / rejected）门禁：只有 approved 可被 Agent 勾选、可保存、可发布；绑定后混合注入——`always` 正文常驻 system prompt，`on_demand` 只进「可用技能」清单、正文由 `load_skill` 按需加载，附件由 `read_skill_file` 按白名单读取；长对话超 `KEEP_RECENT` 后由 `pre_model_hook` 做状态记账 + stale 过滤 + `MAX_INJECT_CHARS` 预算截断重注入，已撤回 / 已解绑的技能不会随历史滚动「复活」）—— 后端 **342 用例全绿** + basedpyright **0 error** + 前端 vitest **36 用例全绿** + `npm run build` 成功；上限常量集中在 `src/a2a_gateway/skills.py`（**未新增任何环境变量**）；数据层新增 `skills` 表（迁移 `0010_skills`）与 `agent_configs.skill_ids` / `skills` 快照列（快照即全部，运行时零 DB 依赖），前端新增「Skill 管理」页（`/admin/skills`）+ 导入弹窗 + AgentForm 技能分区（含常驻技能预算预估）
 > - ⏳ **下一步**：管理中心表单校验的前端用例（需先把校验逻辑抽为纯函数）、云安全组核对、二期功能（长任务 Task 轮询 / input-required）
 > - ⚠️ **注意**：LLM 使用 Gemini 3 系列（OpenAI 兼容端点）时，函数调用必须回传 `thought_signature`，否则第二轮报 400；已在 `src/a2a_gateway/llm.py` 内置兼容适配层（入站捕获 + 出站回填），对其它 OpenAI 兼容端点透明。
+> - ⚠️ **待真库 / 真机验收（Skill 绑定）**：① `alembic upgrade head` 尚未在真实 PostgreSQL 上执行过，重点核对 `skills.frontmatter` / `skills.files` 与 `agent_configs.skill_ids` / `agent_configs.skills` 四个 JSONB 列的 `server_default` 裸字面量（`"[]"` / `"{}"`）——若报类型不匹配，改为 `sa.text("'[]'::jsonb")`（`0002` / `0004` 已有同款写法）；② 「审核撤回为 rejected → 已发布 Agent 对话时跳过该技能」链路（快照刷新 + 图缓存失效）需真机复核；③ `GET /api/admin/skills` 会把每个技能的附件正文一并下发（单 skill 上限 4MB），真机观察响应体积。
 > - 后端启动：`docker compose up -d` → `uv run python -m a2a_gateway.main`
 > - 前端启动：`cd web && npm run dev` → `http://localhost:3000`
 > - 管理中心：`http://localhost:3000/admin`（账号见 `ADMIN_USERNAME` / `ADMIN_PASSWORD`）
