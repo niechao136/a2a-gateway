@@ -7,6 +7,7 @@
 - AdminUser：管理中心登录账号（JWT 认证）
 - Conversation：对话会话目录（thread_id → 身份归属，支持匿名 → 登录归并）
 - PendingA2ATask：挂起任务（input-required 中断 → 恢复映射）
+- Skill：编排方法论技能注册表（SKILL.md）
 """
 
 from datetime import datetime
@@ -19,6 +20,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -67,6 +69,10 @@ class AgentConfig(Base, BaseMixin):
     mcp_server_ids: Mapped[list[int]] = mapped_column(JSONB, default=list)
     # 由 mcp_server_ids 解析而来的连接快照，供运行时构造 MCP 工具（不对外暴露）
     mcp_servers: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    # 在「Skill 管理」中勾选的技能 id 列表（只有 approved 的技能可被勾选）
+    skill_ids: Mapped[list[int]] = mapped_column(JSONB, default=list)
+    # 由 skill_ids 解析而来的运行时快照（正文全文，供注入与 load_skill 闭包使用）
+    skills: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     status: Mapped[AgentStatus] = mapped_column(
         Enum(
             AgentStatus,
@@ -128,6 +134,48 @@ class McpServer(Base, BaseMixin):
     token: Mapped[str] = mapped_column(String(512), default="")
     auth_type: Mapped[str] = mapped_column(String(32), default="bearer")
     auth_name: Mapped[str] = mapped_column(String(128), default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class SkillReviewStatus(str, PyEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class Skill(Base, BaseMixin):
+    """编排方法论技能注册表（「Skill 管理」维护，Agent 勾选绑定）。
+
+    正文与附件全量入库（快照即全部）：运行时零 DB 依赖，
+    agent_factory / graph.py 直接从闭包读取。
+    """
+
+    __tablename__ = "skills"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text, default="")   # 进 prompt 清单，决定加载率
+    content: Mapped[str] = mapped_column(Text, default="")       # SKILL.md 正文（已剥离 frontmatter）
+    frontmatter: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    # 附件：[{"path": "references/a.md", "size": 123, "content": "..."}]，仅文本
+    files: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    load_mode: Mapped[str] = mapped_column(String(16), default="on_demand")  # always | on_demand
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    file_count: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str] = mapped_column(String(16), default="manual")  # manual|text|url|zip|dir
+    source_ref: Mapped[str] = mapped_column(String(512), default="")
+    review_status: Mapped[SkillReviewStatus] = mapped_column(
+        Enum(
+            SkillReviewStatus,
+            name="skillreviewstatus",
+            # 与 AgentStatus 同坑：必须按「成员值」建 PG 枚举
+            values_callable=lambda enum_cls: [m.value for m in enum_cls],
+        ),
+        default=SkillReviewStatus.PENDING,
+        server_default=SkillReviewStatus.PENDING.value,
+    )
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 

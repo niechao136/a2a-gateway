@@ -1,7 +1,7 @@
 """Pydantic 数据契约（API 请求/响应）。"""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -147,6 +147,96 @@ class McpServerOut(McpServerBase):
 
 
 # ---------------------------------------------------------------------------
+# Skill 注册表（「Skill 管理」维护）
+# ---------------------------------------------------------------------------
+SKILL_LOAD_MODES = ("always", "on_demand")
+SKILL_REVIEW_STATUSES = ("pending", "approved", "rejected")
+
+
+class SkillCreate(BaseModel):
+    name: str = Field(description="技能标识，全局唯一；仅 ASCII 字母数字与 . _ -")
+    description: str = Field(description="技能说明；模型依据它决定是否加载")
+    content: str = Field(default="", description="技能正文（Markdown）")
+    load_mode: Literal["always", "on_demand"] = "on_demand"
+
+
+class SkillUpdate(BaseModel):
+    description: str | None = None
+    content: str | None = None
+    load_mode: Literal["always", "on_demand"] | None = None
+    enabled: bool | None = None
+
+
+class SkillOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str
+    content: str
+    frontmatter: dict[str, Any] = Field(default_factory=dict)
+    files: list[dict[str, Any]] = Field(default_factory=list)
+    load_mode: str = "on_demand"
+    size_bytes: int = 0
+    file_count: int = 0
+    source: str = "manual"
+    source_ref: str = ""
+    review_status: str = "pending"
+    review_note: str = ""
+    reviewed_at: datetime | None = None
+    enabled: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+
+class SkillReviewRequest(BaseModel):
+    status: Literal["approved", "rejected", "pending"]
+    note: str = ""
+
+
+class SkillImportDirFile(BaseModel):
+    path: str = Field(description="浏览器上报的相对路径（posix 风格）")
+    content: str = Field(default="", description="文件文本内容")
+
+
+class SkillImportRequest(BaseModel):
+    """导入预览请求：四种来源互斥，按 source 取对应字段。"""
+
+    source: Literal["text", "url", "zip", "dir"]
+    skill_md: str | None = Field(default=None, description="source=text 时的 SKILL.md 全文")
+    url: str | None = Field(default=None, description="source=url 时的抓取地址（raw 或 zip）")
+    zip_b64: str | None = Field(default=None, description="source=zip 时的 base64 包")
+    dir_files: list[SkillImportDirFile] | None = Field(
+        default=None, description="source=dir 时的文件数组"
+    )
+    overwrite: bool = Field(default=False, description="重名时覆盖（并把审核重置为 pending）")
+
+
+class SkillImportPreviewItem(BaseModel):
+    name: str = ""
+    description: str = ""
+    content_bytes: int = 0
+    file_count: int = 0
+    total_bytes: int = 0
+    files: list[str] = Field(default_factory=list, description="附件相对路径")
+    skipped_binary: list[str] = Field(default_factory=list, description="已跳过的非文本文件")
+    conflict: bool = False
+    error: str | None = Field(default=None, description="该条解析失败原因")
+
+
+class SkillImportPreviewOut(BaseModel):
+    items: list[SkillImportPreviewItem] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list, description="来源级错误（如 URL 不可达）")
+    over_limit: bool = Field(default=False, description="是否存在解析失败条目")
+
+
+class SkillImportCommitRequest(SkillImportRequest):
+    names: list[str] = Field(
+        default_factory=list, description="预览后勾选落库的技能名单；空 = 全部可落库项"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
 class ManualMcpServer(BaseModel):
@@ -192,6 +282,9 @@ class AgentBase(BaseModel):
         default_factory=list,
         description="手动绑定的 MCP 服务（无需在「MCP 管理」注册），可与勾选并存",
     )
+    skill_ids: list[int] = Field(
+        default_factory=list, description="在「Skill 管理」中勾选的技能 id 列表"
+    )
     system_prompt: str | None = None
 
 
@@ -206,6 +299,7 @@ class AgentUpdate(BaseModel):
     mcp_server_ids: list[int] | None = None
     a2a_targets: list[A2ATarget] | None = None
     mcp_servers: list[ManualMcpServer] | None = None
+    skill_ids: list[int] | None = None
     system_prompt: str | None = None
     status: Literal["draft", "published"] | None = None
 
