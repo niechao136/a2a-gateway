@@ -18,42 +18,61 @@ depends_on: Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    skill_status = sa.Enum(
-        "pending", "approved", "rejected", name="skillreviewstatus", create_type=False
+    # 1) 幂等创建枚举类型。
+    #    说明：本环境 SQLAlchemy 2.0.54 下 op.create_table 会忽略枚举列的 create_type=False，
+    #    重复建类型导致 DuplicateObject，故改用原生 DO 块（等效 IF NOT EXISTS 写法）。
+    op.execute(
+        sa.text(
+            "DO $$ BEGIN "
+            "IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n "
+            "ON n.oid = t.typnamespace "
+            "WHERE t.typname = 'skillreviewstatus' AND n.nspname = 'public') "
+            "THEN CREATE TYPE skillreviewstatus AS ENUM ('pending', 'approved', 'rejected'); "
+            "END IF; END $$;"
+        )
     )
-    skill_status.create(op.get_bind(), checkfirst=True)
-    op.create_table(
-        "skills",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("name", sa.String(length=128), nullable=False),
-        sa.Column("description", sa.Text(), nullable=False, server_default=""),
-        sa.Column("content", sa.Text(), nullable=False, server_default=""),
-        sa.Column("frontmatter", JSONB(), nullable=False, server_default="{}"),
-        sa.Column("files", JSONB(), nullable=False, server_default="[]"),
-        sa.Column("load_mode", sa.String(length=16), nullable=False, server_default="on_demand"),
-        sa.Column("size_bytes", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("file_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("source", sa.String(length=16), nullable=False, server_default="manual"),
-        sa.Column("source_ref", sa.String(length=512), nullable=False, server_default=""),
-        sa.Column("review_status", skill_status, nullable=False, server_default="pending"),
-        sa.Column("review_note", sa.Text(), nullable=False, server_default=""),
-        sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("name", name="uq_skills_name"),
+    # 2) 用原生 SQL 建表（IF NOT EXISTS），绕开 SQLAlchemy 枚举列的自动建类型行为。
+    op.execute(
+        sa.text(
+            """
+            CREATE TABLE IF NOT EXISTS skills (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(128) NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                content TEXT NOT NULL DEFAULT '',
+                frontmatter JSONB NOT NULL DEFAULT '{}'::jsonb,
+                files JSONB NOT NULL DEFAULT '[]'::jsonb,
+                load_mode VARCHAR(16) NOT NULL DEFAULT 'on_demand',
+                size_bytes INTEGER NOT NULL DEFAULT 0,
+                file_count INTEGER NOT NULL DEFAULT 0,
+                source VARCHAR(16) NOT NULL DEFAULT 'manual',
+                source_ref VARCHAR(512) NOT NULL DEFAULT '',
+                review_status skillreviewstatus NOT NULL DEFAULT 'pending',
+                review_note TEXT NOT NULL DEFAULT '',
+                reviewed_at TIMESTAMP WITH TIME ZONE,
+                enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+                CONSTRAINT uq_skills_name UNIQUE (name)
+            );
+            """
+        )
     )
-    op.create_index(op.f("ix_skills_name"), "skills", ["name"], unique=True)
-    op.add_column(
-        "agent_configs", sa.Column("skill_ids", JSONB(), nullable=False, server_default="[]")
+    op.execute(
+        sa.text("CREATE UNIQUE INDEX IF NOT EXISTS ix_skills_name ON skills (name);")
     )
-    op.add_column(
-        "agent_configs", sa.Column("skills", JSONB(), nullable=False, server_default="[]")
+    # 用 ALTER COLUMN IF NOT EXISTS 保证幂等（避免重复加列报错）
+    op.execute(
+        sa.text(
+            "ALTER TABLE agent_configs ADD COLUMN IF NOT EXISTS "
+            "skill_ids JSONB NOT NULL DEFAULT '[]'::jsonb;"
+        )
+    )
+    op.execute(
+        sa.text(
+            "ALTER TABLE agent_configs ADD COLUMN IF NOT EXISTS "
+            "skills JSONB NOT NULL DEFAULT '[]'::jsonb;"
+        )
     )
 
 
