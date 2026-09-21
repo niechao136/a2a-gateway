@@ -77,7 +77,9 @@ async def test_run_success_and_files_passthrough(sandbox_on, monkeypatch):
 
     monkeypatch.setattr(sandbox_client, "run_script", fake_run)
     tool = make_script_exec_tools([SKILL])[0]
-    out = await tool.coroutine("gen-skill", "scripts/gen.py", ["--n", "1"], "")
+    out = await tool.ainvoke(
+        {"skill_name": "gen-skill", "script_path": "scripts/gen.py", "argv": ["--n", "1"], "stdin": ""}
+    )
     assert "exit_code: 0" in out and "1\n" in out
     # 文件组装：技能包全部附件原样透传（script=b64 / text=utf-8）
     assert captured["entry"] == "scripts/gen.py"
@@ -93,13 +95,15 @@ async def test_run_wrong_path_lists_available(sandbox_on, monkeypatch):
 
     monkeypatch.setattr(sandbox_client, "run_script", fake_run)
     tool = make_script_exec_tools([SKILL])[0]
-    out = await tool.coroutine("gen-skill", "scripts/missing.py", [], "")
+    out = await tool.ainvoke(
+        {"skill_name": "gen-skill", "script_path": "scripts/missing.py"}
+    )
     assert "脚本不存在或不可执行" in out and "scripts/gen.py" in out
 
 
 async def test_run_unknown_skill_lists_catalog(sandbox_on):
     tool = make_script_exec_tools([SKILL])[0]
-    out = await tool.coroutine("no-such", "scripts/gen.py", [], "")
+    out = await tool.ainvoke({"skill_name": "no-such", "script_path": "scripts/gen.py"})
     assert "未找到该技能" in out and "gen-skill" in out
 
 
@@ -112,7 +116,8 @@ async def test_run_sandbox_errors_converge_to_text(sandbox_on, monkeypatch):
 
     monkeypatch.setattr(sandbox_client, "run_script", fake_timeout)
     tool = make_script_exec_tools([SKILL])[0]
-    assert "超时" in await tool.coroutine("gen-skill", "scripts/gen.py", [], "")
+    args = {"skill_name": "gen-skill", "script_path": "scripts/gen.py"}
+    assert "超时" in await tool.ainvoke(args)
 
     monkeypatch.setattr(sandbox_client, "run_script", fake_unavailable)
-    assert "不可达" in await tool.coroutine("gen-skill", "scripts/gen.py", [], "")
+    assert "不可达" in await tool.ainvoke(args)
