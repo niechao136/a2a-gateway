@@ -18,3 +18,6 @@ postgres_data/
 
 # OS
 .DS_Store
+
+# 测试：scripts/build_skill_test_packages.py 生成的 skill 测试包
+examples/skills-dist/
