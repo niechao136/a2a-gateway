@@ -56,3 +56,12 @@ export function formatBytes(bytes: number): string {
 export function isSkillMdFileName(name: string): boolean {
   return /\.(md|markdown)$/i.test(name);
 }
+
+/** Uint8Array → 纯 base64（分片拼接，避免超大文件一次性构造超长字符串）。 */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return btoa(binary);
+}

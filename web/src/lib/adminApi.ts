@@ -224,6 +224,23 @@ export type SkillUpdatePayload = Partial<Omit<SkillCreatePayload, "name">> & {
   files?: SkillFilePayload[];
 };
 
+export interface SkillScriptRunPayload {
+  path: string;
+  argv?: string[];
+  stdin?: string;
+  timeout_s?: number;
+}
+
+export interface SkillScriptRunResult {
+  exit_code: number | null;
+  stdout: string;
+  stderr: string;
+  truncated: boolean;
+  timeout: boolean;
+  duration_ms: number;
+  error?: string | null;
+}
+
 export interface SkillImportPreviewItem {
   name: string;
   description: string;
@@ -554,6 +571,13 @@ export const adminApi = {
     payload: { status: SkillReviewStatus; note?: string },
   ): Promise<Skill> {
     return request<Skill>(`/api/admin/skills/${id}/review`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  runSkillScript(id: number, payload: SkillScriptRunPayload): Promise<SkillScriptRunResult> {
+    return request<SkillScriptRunResult>(`/api/admin/skills/${id}/scripts/run`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
