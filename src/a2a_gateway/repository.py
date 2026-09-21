@@ -476,6 +476,8 @@ def skill_snapshot(skill: Skill) -> dict[str, Any]:
         "content": skill.content,
         "load_mode": skill.load_mode,
         "files": list(skill.files or []),
+        # Phase C：run_skill_script 工具按此决定是否对模型可用
+        "allow_scripts": bool(skill.allow_scripts),
         # 纵深防御：正常路径 resolve 已过滤，恒为 approved；防绕过路径多一道闸
         "review_status": review.value if isinstance(review, SkillReviewStatus) else str(review),
     }

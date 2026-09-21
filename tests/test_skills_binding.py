@@ -22,6 +22,7 @@ def _snapshot(**kw):
         "load_mode": "on_demand",
         "files": [{"path": "x.md", "size": 12, "content": "附件内容"}],
         "review_status": "approved",
+        "allow_scripts": False,
     }
     base.update(kw)
     return base
@@ -41,6 +42,7 @@ class _FakeSkill:
     load_mode: str
     files: list[dict[str, Any]]
     review_status: str
+    allow_scripts: bool
 
     def __init__(self, **kw: Any):
         for key, value in _snapshot().items():
@@ -56,7 +58,7 @@ def _as_skill(fake: _FakeSkill) -> Skill:
 
 def test_skill_snapshot_shape():
     snap = skill_snapshot(_as_skill(_FakeSkill()))
-    # 键集恰为这七个：多一个会泄内部字段，少一个运行时会拿不到
+    # 键集恰为这八个：多一个会泄内部字段，少一个运行时会拿不到
     assert set(snap) == {
         "id",
         "name",
@@ -65,9 +67,16 @@ def test_skill_snapshot_shape():
         "load_mode",
         "files",
         "review_status",
+        "allow_scripts",
     }
     assert snap["review_status"] == "approved"
     assert snap["files"][0]["path"] == "x.md"
+    assert snap["allow_scripts"] is False
+
+
+def test_skill_snapshot_carries_allow_scripts():
+    snap = skill_snapshot(_as_skill(_FakeSkill(allow_scripts=True)))
+    assert snap["allow_scripts"] is True
 
 
 def test_binding_content_bytes_excludes_files():
@@ -159,6 +168,7 @@ class _SkillRow:
             "review_note": "",
             "reviewed_at": None,
             "enabled": True,
+            "allow_scripts": False,
         }
         base.update(kw)
         for key, value in base.items():
