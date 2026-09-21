@@ -18,7 +18,11 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { ApiError, Skill, SkillReviewStatus, adminApi } from "@/lib/adminApi";
+import SkillDetailDialog from "@/components/admin/SkillDetailDialog";
+import SkillEditDialog from "@/components/admin/SkillEditDialog";
 import SkillImportDialog from "@/components/admin/SkillImportDialog";
 import { formatBytes } from "@/lib/skillUtils";
 
@@ -36,6 +40,8 @@ export default function SkillsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [detailSkill, setDetailSkill] = useState<Skill | null>(null);
+  const [editSkill, setEditSkill] = useState<Skill | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -180,6 +186,21 @@ export default function SkillsPage() {
                   </TableCell>
                   <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                     {busyId === skill.id && <CircularProgress size={16} sx={{ mr: 1 }} />}
+                    <Button
+                      size="small"
+                      startIcon={<VisibilityIcon />}
+                      onClick={() => setDetailSkill(skill)}
+                    >
+                      详情
+                    </Button>
+                    <Button
+                      size="small"
+                      startIcon={<EditIcon />}
+                      onClick={() => setEditSkill(skill)}
+                      disabled={busyId === skill.id}
+                    >
+                      编辑
+                    </Button>
                     {skill.review_status !== "approved" && (
                       <Button
                         size="small"
@@ -221,6 +242,20 @@ export default function SkillsPage() {
           open
           onClose={() => setImportOpen(false)}
           onImported={() => void load()}
+        />
+      )}
+      {detailSkill && (
+        <SkillDetailDialog skill={detailSkill} open onClose={() => setDetailSkill(null)} />
+      )}
+      {editSkill && (
+        <SkillEditDialog
+          skill={editSkill}
+          open
+          onClose={() => setEditSkill(null)}
+          onSaved={() => {
+            setToast("已保存（内容变更时审核状态已重置为 pending）");
+            void load();
+          }}
         />
       )}
 
