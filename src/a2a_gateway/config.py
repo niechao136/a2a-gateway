@@ -107,6 +107,10 @@ class Settings(BaseSettings):
     alert_webhook_url: str = Field(default="", alias="ALERT_WEBHOOK_URL")
     alert_webhook_token: str = Field(default="", alias="ALERT_WEBHOOK_TOKEN")
 
+    # 沙箱执行器（Skill 捆绑脚本）：为空 = 功能关闭（不挂载 run_skill_script 工具）
+    sandbox_url: str = Field(default="", alias="SANDBOX_URL")
+    sandbox_token: str = Field(default="", alias="SANDBOX_TOKEN")
+
     @model_validator(mode="after")
     def _fill_db_urls(self) -> "Settings":
         """未显式提供完整连接串时，用组件式配置拼接。"""
