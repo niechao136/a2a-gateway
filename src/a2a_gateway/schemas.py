@@ -206,6 +206,27 @@ class SkillReviewRequest(BaseModel):
     note: str = ""
 
 
+class SkillScriptRunRequest(BaseModel):
+    """管理端脚本试跑请求（审核辅助；不校验 review_status / allow_scripts）。"""
+
+    path: str = Field(description="脚本相对路径（必须是该技能的脚本附件）")
+    argv: list[str] = Field(default_factory=list)
+    stdin: str = ""
+    timeout_s: int = Field(default=30, ge=1, le=120)
+
+
+class SkillScriptRunOut(BaseModel):
+    """沙箱 RunResult 透传（字段与沙箱协议一致）。"""
+
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    truncated: bool = False
+    timeout: bool = False
+    duration_ms: int = 0
+    error: str | None = None
+
+
 class SkillImportDirFile(BaseModel):
     path: str = Field(description="浏览器上报的相对路径（posix 风格）")
     content: str = Field(default="", description="文件文本内容")

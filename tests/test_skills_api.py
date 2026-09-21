@@ -7,6 +7,7 @@ import zipfile
 from datetime import datetime, timezone
 
 from a2a_gateway.routes import registry as registry_mod
+from a2a_gateway.sandbox_client import SandboxTimeout
 
 _NOW = datetime.now(timezone.utc)
 
@@ -227,6 +228,76 @@ async def test_update_skill_allow_scripts_only_does_not_touch_files(auth_client,
     assert resp.status_code == 200
     assert captured["files"] is None
     assert resp.json()["allow_scripts"] is True
+
+
+async def test_script_run_requires_auth(anon_client):
+    assert (
+        await anon_client.post("/api/admin/skills/1/scripts/run", json={"path": "scripts/gen.py"})
+    ).status_code == 401
+
+
+async def test_script_run_404(auth_client, monkeypatch):
+    async def fake_get(session, skill_id):
+        return None
+
+    monkeypatch.setattr(registry_mod.repo, "get_skill", fake_get)
+    resp = await auth_client.post(
+        "/api/admin/skills/9/scripts/run", json={"path": "scripts/gen.py"}
+    )
+    assert resp.status_code == 404
+
+
+async def test_script_run_rejects_non_script_path(auth_client, monkeypatch):
+    async def fake_get(session, skill_id):
+        return _skill(files=[{"path": "refs/a.md", "size": 4, "content": "文本"}])
+
+    monkeypatch.setattr(registry_mod.repo, "get_skill", fake_get)
+    resp = await auth_client.post("/api/admin/skills/1/scripts/run", json={"path": "refs/a.md"})
+    assert resp.status_code == 400
+
+
+async def test_script_run_success_passthrough(auth_client, monkeypatch):
+    async def fake_get(session, skill_id):
+        return _skill(files=SCRIPTED_SKILL_FILES)
+
+    captured = {}
+
+    async def fake_run(**kwargs):
+        captured.update(kwargs)
+        return {
+            "exit_code": 0,
+            "stdout": "1\n",
+            "stderr": "",
+            "truncated": False,
+            "timeout": False,
+            "duration_ms": 4,
+        }
+
+    monkeypatch.setattr(registry_mod.repo, "get_skill", fake_get)
+    monkeypatch.setattr(registry_mod, "run_skill_script", fake_run)
+    resp = await auth_client.post(
+        "/api/admin/skills/1/scripts/run",
+        json={"path": "scripts/gen.py", "argv": ["--n", "1"], "stdin": "x", "timeout_s": 60},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["stdout"] == "1\n"
+    assert captured["entry"] == "scripts/gen.py"
+    assert captured["timeout_s"] == 60
+    assert {f["path"] for f in captured["files"]} == {"scripts/gen.py", "refs/a.md"}
+
+
+async def test_script_run_sandbox_error_502(auth_client, monkeypatch):
+    async def fake_get(session, skill_id):
+        return _skill(files=SCRIPTED_SKILL_FILES)
+
+    async def fake_run(**kwargs):
+        raise SandboxTimeout("脚本执行超时")
+
+    monkeypatch.setattr(registry_mod.repo, "get_skill", fake_get)
+    monkeypatch.setattr(registry_mod, "run_skill_script", fake_run)
+    resp = await auth_client.post("/api/admin/skills/1/scripts/run", json={"path": "scripts/gen.py"})
+    assert resp.status_code == 502
+    assert "超时" in resp.json()["detail"]
 
 
 async def test_import_preview_from_text(auth_client, monkeypatch):

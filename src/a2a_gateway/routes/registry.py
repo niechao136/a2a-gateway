@@ -20,6 +20,8 @@ from ..database import get_session
 from ..deps import get_current_admin
 from ..mcp_client import connection_from_snapshot, list_tools, test_connection
 from ..models import AdminUser, SkillReviewStatus
+from ..sandbox_client import SandboxError
+from ..sandbox_client import run_script as run_skill_script
 from ..schemas import (
     A2AEndpointCreate,
     A2AEndpointOut,
@@ -35,6 +37,8 @@ from ..schemas import (
     SkillImportRequest,
     SkillOut,
     SkillReviewRequest,
+    SkillScriptRunOut,
+    SkillScriptRunRequest,
     SkillUpdate,
     validate_auth,
     validate_mcp_transport,
@@ -597,3 +601,38 @@ async def review_skill(
     for agent in affected:
         await invalidate_agent(agent.id)
     return updated
+
+
+@router.post("/skills/{skill_id}/scripts/run", response_model=SkillScriptRunOut)
+async def run_skill_script_endpoint(
+    skill_id: int,
+    data: SkillScriptRunRequest,
+    session: AsyncSession = Depends(get_session),
+    _: AdminUser = Depends(get_current_admin),
+):
+    """管理端手动试跑（规格 §7）：pending 也允许，辅助「先跑一下再审核」。"""
+    skill = await repo.get_skill(session, skill_id)
+    if skill is None:
+        raise HTTPException(404, "Skill 不存在")
+    entry = next(
+        (
+            str(f.get("path") or "")
+            for f in (skill.files or [])
+            if str(f.get("path") or "") == data.path
+            and str(f.get("entry_type") or "") == "script"
+        ),
+        None,
+    )
+    if entry is None:
+        raise HTTPException(400, "脚本不存在：path 必须指向该技能的脚本附件")
+    try:
+        return await run_skill_script(
+            files=list(skill.files or []),
+            entry=entry,
+            argv=data.argv,
+            stdin=data.stdin,
+            timeout_s=data.timeout_s,
+        )
+    except SandboxError as exc:
+        # 沙箱不可用/超时/拒绝：管理端如实透出（区别于 Agent 工具的降级文案）
+        raise HTTPException(502, str(exc))
