@@ -391,3 +391,75 @@ async def test_fetch_url_rejects_oversize_body(monkeypatch):
             "http://example.com/x",
             transport=_transport([httpx.Response(200, content=b"x" * (si.MAX_IMPORT_BYTES + 1))]),
         )
+
+
+# ---------------------------------------------------------------------------
+# 脚本附件入库（entry_type=script，base64 编码；规格 §5）
+# ---------------------------------------------------------------------------
+def test_zip_ingests_scripts():
+    data = _zip_bytes(
+        [
+            ("s/SKILL.md", SKILL_MD.format(name="s").encode()),
+            ("s/scripts/gen.py", b"print('hi')\n"),
+            ("s/references/a.md", "文本".encode()),
+        ]
+    )
+    groups = si.parse_zip(data)
+    entries = {f["path"]: f for f in groups[0]["files"]}
+    script = entries["scripts/gen.py"]
+    assert script["entry_type"] == "script"
+    assert script["encoding"] == "base64"
+    assert base64.b64decode(script["content"]) == b"print('hi')\n"
+    assert script["size"] == len(b"print('hi')\n")
+    assert entries["references/a.md"]["entry_type"] == "text"
+    assert entries["references/a.md"]["encoding"] == "utf-8"
+    assert groups[0]["skipped_binary"] == []
+
+
+def test_zip_skips_oversized_script(monkeypatch):
+    monkeypatch.setattr(si, "MAX_SCRIPT_BYTES", 4)
+    data = _zip_bytes(
+        [
+            ("s/SKILL.md", SKILL_MD.format(name="s").encode()),
+            ("s/scripts/big.py", b"print(123456)\n"),
+        ]
+    )
+    groups = si.parse_zip(data)
+    # 超限脚本不降级为文本附件，直接标注跳过
+    assert groups[0]["files"] == []
+    assert groups[0]["skipped_binary"] == ["s/scripts/big.py"]
+
+
+def test_zip_non_script_binary_still_skipped():
+    png = b"\x89PNG\r\n\x1a\n\x00\x00"
+    data = _zip_bytes(
+        [
+            ("s/SKILL.md", SKILL_MD.format(name="s").encode()),
+            ("s/assets/logo.png", png),
+        ]
+    )
+    groups = si.parse_zip(data)
+    assert groups[0]["files"] == []
+    assert groups[0]["skipped_binary"] == ["s/assets/logo.png"]
+
+
+def test_zip_script_suffix_case_insensitive():
+    data = _zip_bytes(
+        [
+            ("s/SKILL.md", SKILL_MD.format(name="s").encode()),
+            ("s/run.PY", b"print(1)\n"),
+        ]
+    )
+    groups = si.parse_zip(data)
+    assert groups[0]["files"][0]["entry_type"] == "script"
+
+
+def test_dir_files_ingests_scripts():
+    groups = si.parse_dir_files(
+        [
+            {"path": "s/SKILL.md", "content": SKILL_MD.format(name="s")},
+            {"path": "s/scripts/gen.py", "content": "print('hi')\n"},
+        ]
+    )
+    assert groups[0]["files"][0]["entry_type"] == "script"
+    assert groups[0]["files"][0]["encoding"] == "base64"

@@ -30,9 +30,11 @@ from .skills import (
     MAX_FILE_BYTES,
     MAX_FILES,
     MAX_IMPORT_BYTES,
+    MAX_SCRIPT_BYTES,
     MAX_SKILL_BYTES,
     URL_FETCH_TIMEOUT,
     URL_MAX_REDIRECTS,
+    is_script_path,
     parse_skill_md,
 )
 
@@ -107,6 +109,8 @@ def _group_entries(entries: list[tuple[str, str]]) -> list[dict[str, Any]]:
                 "path": _assert_safe_rel_path(name[len(prefix) :]),
                 "size": len(text.encode("utf-8")),
                 "content": text,
+                "entry_type": "text",
+                "encoding": "utf-8",
             }
             for name, text in entries
             if name.startswith(prefix) and name != f"{prefix}SKILL.md"
@@ -168,18 +172,28 @@ def _zip_entries(data: bytes) -> list[tuple[str, bytes]]:
         raise SkillImportError("zip 文件无法解析（已损坏、加密或压缩算法不支持）") from exc
 
 
-def _split_binary(
+def _split_entries(
     entries: list[tuple[str, bytes]],
-) -> tuple[list[tuple[str, str]], list[str]]:
-    """拆分为 (文本条目, 被跳过的二进制文件名)；解码失败不抛错，只标注后跳过。"""
+) -> tuple[list[tuple[str, str]], list[tuple[str, bytes]], list[str]]:
+    """拆分为 (文本条目, 脚本条目, 被跳过的文件名)。
+
+    脚本判定先于文本判定（后缀命中即脚本，超限直接跳过、不降级为文本附件）；
+    其余二进制仍跳过并标注（规格 §5）。
+    """
     text_entries: list[tuple[str, str]] = []
+    script_entries: list[tuple[str, bytes]] = []
     skipped: list[str] = []
     for name, blob in entries:
-        if is_text_blob(blob):
+        if is_script_path(name):
+            if len(blob) <= MAX_SCRIPT_BYTES:
+                script_entries.append((name, blob))
+            else:
+                skipped.append(name)
+        elif is_text_blob(blob):
             text_entries.append((name, blob.decode("utf-8")))
         else:
             skipped.append(name)
-    return text_entries, skipped
+    return text_entries, script_entries, skipped
 
 
 def _ordered_roots(text_entries: list[tuple[str, str]]) -> list[str]:
@@ -204,10 +218,43 @@ def _assign_skipped(groups: list[dict[str, Any]], roots: list[str], skipped: lis
             groups[best]["skipped_binary"].append(name)
 
 
-def _build_groups(text_entries: list[tuple[str, str]], skipped: list[str]) -> list[dict[str, Any]]:
-    """分组 → 解析 → 标注跳过的二进制附件。"""
+def _attach_scripts(
+    groups: list[dict[str, Any]], roots: list[str], scripts: list[tuple[str, bytes]]
+) -> None:
+    """把脚本条目按「最长前缀 skill 根目录」归到对应组（base64 入库）。
+
+    无归属条目与 _assign_skipped 同口径：静默丢弃。
+    """
+    for name, blob in scripts:
+        best, best_len = -1, -1
+        for idx, root in enumerate(roots):
+            prefix = f"{root}/" if root else ""
+            if name.startswith(prefix) and len(root) > best_len:
+                best, best_len = idx, len(root)
+        if best < 0:
+            continue
+        prefix = f"{roots[best]}/" if roots[best] else ""
+        groups[best]["files"].append(
+            {
+                "path": _assert_safe_rel_path(name[len(prefix) :]),
+                "size": len(blob),
+                "content": base64.b64encode(blob).decode("ascii"),
+                "entry_type": "script",
+                "encoding": "base64",
+            }
+        )
+
+
+def _build_groups(
+    text_entries: list[tuple[str, str]],
+    script_entries: list[tuple[str, bytes]],
+    skipped: list[str],
+) -> list[dict[str, Any]]:
+    """分组 → 解析 → 脚本归组 → 标注跳过的二进制附件。"""
     groups = _group_entries(text_entries)
-    _assign_skipped(groups, _ordered_roots(text_entries), skipped)
+    roots = _ordered_roots(text_entries)
+    _attach_scripts(groups, roots, script_entries)
+    _assign_skipped(groups, roots, skipped)
     return groups
 
 
@@ -216,8 +263,8 @@ def parse_zip(data: bytes) -> list[dict[str, Any]]:
     if len(data) > MAX_IMPORT_BYTES:
         raise SkillImportError(f"zip 超过 {MAX_IMPORT_BYTES} 字节上限")
     raw_entries = _zip_entries(data)
-    text_entries, skipped = _split_binary(raw_entries)
-    return _build_groups(text_entries, skipped)
+    text_entries, script_entries, skipped = _split_entries(raw_entries)
+    return _build_groups(text_entries, script_entries, skipped)
 
 
 def parse_zip_base64(zip_b64: str) -> list[dict[str, Any]]:
@@ -250,8 +297,8 @@ def parse_dir_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if total > MAX_SKILL_BYTES:
             raise SkillImportError(f"导入总量超过 {MAX_SKILL_BYTES} 字节上限")
         entries.append((name, blob))
-    text_entries, skipped = _split_binary(entries)
-    return _build_groups(text_entries, skipped)
+    text_entries, script_entries, skipped = _split_entries(entries)
+    return _build_groups(text_entries, script_entries, skipped)
 
 
 def _assert_public_host(host: str) -> None:
