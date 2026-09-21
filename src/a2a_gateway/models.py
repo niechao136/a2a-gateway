@@ -24,6 +24,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -157,13 +158,16 @@ class Skill(Base, BaseMixin):
     description: Mapped[str] = mapped_column(Text, default="")   # 进 prompt 清单，决定加载率
     content: Mapped[str] = mapped_column(Text, default="")       # SKILL.md 正文（已剥离 frontmatter）
     frontmatter: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
-    # 附件：[{"path": "references/a.md", "size": 123, "content": "..."}]，仅文本
+    # 附件：[{"path": "references/a.md", "size": 123, "content": "...", "entry_type": "text"|"script", "encoding": "utf-8"|"base64"}]
+    # 存量数据缺 entry_type/encoding → 读取处兜底视为 text/utf-8
     files: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     load_mode: Mapped[str] = mapped_column(String(16), default="on_demand")  # always | on_demand
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     file_count: Mapped[int] = mapped_column(Integer, default=0)
     source: Mapped[str] = mapped_column(String(16), default="manual")  # manual|text|url|zip|dir
     source_ref: Mapped[str] = mapped_column(String(512), default="")
+    # 是否允许在沙箱中执行捆绑脚本（Phase B 沙箱上线后生效；审核时决定，变更不重置审核）
+    allow_scripts: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     review_status: Mapped[SkillReviewStatus] = mapped_column(
         Enum(
             SkillReviewStatus,

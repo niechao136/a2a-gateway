@@ -3,7 +3,14 @@
 import pytest
 from pydantic import ValidationError
 
+from a2a_gateway.models import Skill
 from a2a_gateway.schemas import AgentCreate, SkillCreate, SkillReviewRequest
+
+
+def test_skill_model_has_allow_scripts_column():
+    col = Skill.__table__.c["allow_scripts"]
+    assert col.default.arg is False          # python 端默认
+    assert col.server_default is not None    # DB 端默认（迁移侧 FALSE）
 
 
 def test_skill_create_rejects_bad_load_mode():
