@@ -185,6 +185,31 @@ async def test_import_preview_from_zip(auth_client, monkeypatch):
     assert resp.json()["items"][0]["name"] == "demo-skill"
 
 
+async def test_import_preview_surfaces_scripts(auth_client, monkeypatch):
+    async def fake_by_name(session, name):
+        return None
+
+    monkeypatch.setattr(registry_mod.repo, "get_skill_by_name", fake_by_name)
+    resp = await auth_client.post(
+        "/api/admin/skills/import/preview",
+        json={
+            "source": "zip",
+            "zip_b64": _zip_b64(
+                {
+                    "demo-skill/SKILL.md": SKILL_MD,
+                    "demo-skill/scripts/gen.py": "print('hi')",
+                    "demo-skill/notes.md": "文本",
+                }
+            ),
+        },
+    )
+    assert resp.status_code == 200
+    item = resp.json()["items"][0]
+    assert item["scripts"] == ["scripts/gen.py"]
+    assert item["files"] == ["notes.md"]
+    assert item["file_count"] == 2
+
+
 async def test_import_preview_from_dir(auth_client, monkeypatch):
     async def fake_by_name(session, name):
         return None

@@ -218,7 +218,8 @@ class SkillImportPreviewItem(BaseModel):
     content_bytes: int = 0
     file_count: int = 0
     total_bytes: int = 0
-    files: list[str] = Field(default_factory=list, description="附件相对路径")
+    files: list[str] = Field(default_factory=list, description="文本附件相对路径")
+    scripts: list[str] = Field(default_factory=list, description="脚本附件相对路径（Phase B 起可沙箱执行）")
     skipped_binary: list[str] = Field(default_factory=list, description="已跳过的非文本文件")
     conflict: bool = False
     error: str | None = Field(default=None, description="该条解析失败原因")

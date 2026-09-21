@@ -291,16 +291,27 @@ async def get_mcp_server_tools(
 # （例如 zip 内 SKILL.md 不合法 → 抛 SkillParseError），故一律按 ValueError 收口，
 # 只捕获单一类型会让另一类逃逸成 500。
 def _preview_item(parsed: dict[str, Any], conflict: bool) -> SkillImportPreviewItem:
-    files = [str(f.get("path") or "") for f in (parsed.get("files") or [])]
+    entries = list(parsed.get("files") or [])
+    files = [
+        str(f.get("path") or "")
+        for f in entries
+        if str(f.get("entry_type") or "text") == "text"
+    ]
+    scripts = [
+        str(f.get("path") or "")
+        for f in entries
+        if str(f.get("entry_type") or "") == "script"
+    ]
     content_bytes = int(parsed.get("size_bytes") or 0)
-    attachments = sum(int(f.get("size") or 0) for f in (parsed.get("files") or []))
+    attachments = sum(int(f.get("size") or 0) for f in entries)
     return SkillImportPreviewItem(
         name=str(parsed.get("name") or ""),
         description=str(parsed.get("description") or ""),
         content_bytes=content_bytes,
-        file_count=len(files),
+        file_count=len(files) + len(scripts),
         total_bytes=content_bytes + attachments,
         files=files,
+        scripts=scripts,
         skipped_binary=[str(p) for p in (parsed.get("skipped_binary") or [])],
         conflict=conflict,
     )
