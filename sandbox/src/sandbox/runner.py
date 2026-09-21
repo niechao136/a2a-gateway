@@ -106,6 +106,38 @@ async def execute(req: RunRequest) -> RunResult:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    """每连接一请求：读至 EOF（调用方写完须 write_eof）→ 执行 → 回 JSON → 关闭。"""
+    result_json: str
+    try:
+        raw = await asyncio.wait_for(reader.read(), timeout=300)
+        req = RunRequest.model_validate_json(raw)
+        result_json = (await execute(req)).model_dump_json()
+    except Exception as exc:
+        result_json = RunResult(error=f"请求处理失败：{type(exc).__name__}").model_dump_json()
+    try:
+        writer.write(result_json.encode("utf-8"))
+        await writer.drain()
+    finally:
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:
+            pass
+
+
+async def serve(socket_path: str = "/ipc/sandbox.sock") -> None:
+    """unix socket server；socket 由本进程创建（volume 首挂时已具备写权限）。"""
+    parent = os.path.dirname(socket_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    if os.path.exists(socket_path):
+        os.unlink(socket_path)
+    server = await asyncio.start_unix_server(handle_client, path=socket_path)
+    print(f"sandbox-runner listening on {socket_path}", flush=True)
+    async with server:
+        await server.serve_forever()
+
+
 if __name__ == "__main__":
-    # socket server 在任务 B3 实现；此入口先占位以防误启动
-    raise SystemExit("runner socket server 将在任务 B3 提供（sandbox.runner:serve）")
+    asyncio.run(serve())

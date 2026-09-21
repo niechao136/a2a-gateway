@@ -96,3 +96,34 @@ async def test_execute_rejects_bad_entry():
 
     result = await execute(RunRequest(files=[RunFile(path="a.exe", content="x")], entry="a.exe"))
     assert result.error and "不支持" in result.error
+
+
+@pytest.mark.skipif(not IS_POSIX, reason="unix socket + 进程组仅 POSIX")
+async def test_socket_roundtrip(socket_path, monkeypatch):
+    monkeypatch.setitem(SUFFIX_INTERPRETER, ".py", [sys.executable])
+    import asyncio
+    import os
+
+    from sandbox.protocol import RunResult
+    from sandbox.runner import serve
+
+    server_task = asyncio.create_task(serve(socket_path))
+    try:
+        for _ in range(50):  # 等 socket 就绪
+            if os.path.exists(socket_path):
+                break
+            await asyncio.sleep(0.02)
+        reader, writer = await asyncio.open_unix_connection(socket_path)
+        req = RunRequest(
+            files=[RunFile(path="main.py", content="print('roundtrip')")],
+            entry="main.py",
+        )
+        writer.write(req.model_dump_json().encode())
+        await writer.drain()
+        writer.write_eof()
+        raw = await asyncio.wait_for(reader.read(), timeout=10)
+        result = RunResult.model_validate_json(raw)
+        assert "roundtrip" in result.stdout
+        writer.close()
+    finally:
+        server_task.cancel()
