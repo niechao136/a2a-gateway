@@ -68,11 +68,61 @@ services:
       ONNX_HUB_API_KEY: ${ONNX_HUB_API_KEY:-}
       ONNX_HUB_ASR_MODEL: ${ONNX_HUB_ASR_MODEL:-zipformer-streaming-bilingual-zh-en}
       ONNX_HUB_TTS_MODEL: ${ONNX_HUB_TTS_MODEL:-vits-zh-aishell3}
+      # 沙箱执行器（Skill 捆绑脚本）：SANDBOX_URL 留空字符串可显式关闭
+      SANDBOX_URL: ${SANDBOX_URL:-http://sandbox-gate:8100}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-dev-only-sandbox-token}
     # 让容器可通过 host.docker.internal 访问宿主机服务（Linux 需要此映射，Docker Desktop 自带）
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sandbox-gate:
+        condition: service_healthy
     expose:
       - "8000"
+
+  # ===== 沙箱执行器：gate（前门，有网络）+ runner（执行，无网络）=====
+  # 单镜像双角色；gate 经共享 volume 上的 unix socket 转发执行请求（规格 §3.1）
+  sandbox-gate:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+    image: a2a-gateway-sandbox:latest
+    container_name: a2a-gateway-sandbox-gate
+    restart: unless-stopped
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-dev-only-sandbox-token}
+    volumes:
+      - sandbox_ipc:/ipc
+    expose:
+      - "8100"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    security_opt:
+      - no-new-privileges:true
+
+  sandbox-runner:
+    image: a2a-gateway-sandbox:latest
+    container_name: a2a-gateway-sandbox-runner
+    restart: unless-stopped
+    command: ["python", "-m", "sandbox.runner"]
+    # 核心隔离：无网络 + 只读 rootfs + 去 capability + 资源上限 + 非 root（规格 §9.1）
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    mem_limit: 256m
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    volumes:
+      - sandbox_ipc:/ipc
+    security_opt:
+      - no-new-privileges:true
 
   frontend:
     build:
@@ -105,3 +155,7 @@ services:
       - "${GATEWAY_PORT:-10099}:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  # 沙箱 gate ↔ runner 的 IPC 载体（仅放 unix socket 文件，不落业务数据）
+  sandbox_ipc:
