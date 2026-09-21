@@ -5,6 +5,8 @@ import pytest
 from a2a_gateway.skills import (
     MAX_CONTENT_BYTES,
     MAX_DESCRIPTION_LEN,
+    SCRIPT_SUFFIXES,
+    is_script_path,
     parse_skill_md,
     validate_skill_fields,
 )
@@ -80,3 +82,16 @@ def test_validate_skill_fields_rejects_bad_name():
 
 def test_validate_skill_fields_accepts_ok():
     validate_skill_fields(name="ok.name-1", description="d", content="c")
+
+
+def test_is_script_path():
+    assert is_script_path("scripts/gen.py")
+    assert is_script_path("run.SH")  # 大小写不敏感
+    assert is_script_path("a/b/tool.JS")
+    assert not is_script_path("references/a.md")
+    assert not is_script_path("noext")
+    assert not is_script_path("")
+
+
+def test_script_constants():
+    assert SCRIPT_SUFFIXES == {".py", ".sh", ".js"}

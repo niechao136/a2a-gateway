@@ -21,6 +21,12 @@ URL_FETCH_TIMEOUT = 10.0            # URL 抓取超时（秒）
 URL_MAX_REDIRECTS = 3               # URL 重定向上限
 MAX_IMPORT_BYTES = 4194304          # 单次导入响应体/上传包总量上限
 
+SCRIPT_SUFFIXES = {".py", ".sh", ".js"}  # 脚本白名单后缀（沙箱运行时：python3/bash/node）
+MAX_SCRIPT_BYTES = 262144                # 单脚本原始字节上限（256KB）
+MAX_SCRIPT_OUTPUT_BYTES = 32768          # 脚本 stdout/stderr 截断（沙箱服务同口径）
+SCRIPT_TIMEOUT_DEFAULT_S = 30            # 沙箱执行默认超时
+SCRIPT_TIMEOUT_MAX_S = 120               # 沙箱执行超时上限
+
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$")
 
 
@@ -104,3 +110,11 @@ def validate_skill_fields(*, name: str, description: str, content: str) -> None:
     _check_name(name)
     _check_description(description)
     _check_content(content)
+
+
+def is_script_path(path: str) -> bool:
+    """按后缀判定脚本附件（大小写不敏感；无后缀 / 空路径恒为 False）。"""
+    dot = path.rfind(".")
+    if dot < 0:
+        return False
+    return path[dot:].lower() in SCRIPT_SUFFIXES
