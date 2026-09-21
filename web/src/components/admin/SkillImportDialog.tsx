@@ -24,7 +24,7 @@ import {
   SkillImportPreviewItem,
   adminApi,
 } from "@/lib/adminApi";
-import { formatBytes } from "@/lib/skillUtils";
+import { formatBytes, isSkillMdFileName } from "@/lib/skillUtils";
 
 interface Props {
   open: boolean;
@@ -210,16 +210,37 @@ export default function SkillImportDialog({ open, onClose, onImported }: Props) 
         </Tabs>
 
         {tab === 0 && (
-          <TextField
-            label="SKILL.md 全文"
-            multiline
-            minRows={8}
-            fullWidth
-            margin="normal"
-            value={skillMd}
-            onChange={(e) => setSkillMd(e.target.value)}
-            placeholder={"---\nname: my-skill\ndescription: 说明\n---\n正文"}
-          />
+          <>
+            <Button variant="outlined" component="label" sx={{ mt: 2 }} disabled={busy}>
+              从本地选择 SKILL.md
+              <input
+                type="file"
+                accept=".md,.markdown"
+                hidden
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = ""; // 允许重复选择同一文件
+                  if (!file) return;
+                  if (!isSkillMdFileName(file.name)) {
+                    setError("请选择 .md / .markdown 文件");
+                    return;
+                  }
+                  setError("");
+                  setSkillMd(await file.text());
+                }}
+              />
+            </Button>
+            <TextField
+              label="SKILL.md 全文"
+              multiline
+              minRows={8}
+              fullWidth
+              margin="normal"
+              value={skillMd}
+              onChange={(e) => setSkillMd(e.target.value)}
+              placeholder={"---\nname: my-skill\ndescription: 说明\n---\n正文（选择文件后可继续修改）"}
+            />
+          </>
         )}
         {tab === 1 && (
           <TextField

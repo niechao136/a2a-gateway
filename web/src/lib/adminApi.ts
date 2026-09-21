@@ -183,7 +183,13 @@ export interface Skill {
   description: string;
   content: string;
   frontmatter: Record<string, unknown>;
-  files: { path: string; size: number; content?: string }[];
+  files: {
+    path: string;
+    size: number;
+    content?: string;
+    entry_type?: "text" | "script";
+    encoding?: "utf-8" | "base64";
+  }[];
   load_mode: SkillLoadMode;
   size_bytes: number;
   file_count: number;
@@ -193,6 +199,7 @@ export interface Skill {
   review_note: string;
   reviewed_at: string | null;
   enabled: boolean;
+  allow_scripts: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -204,8 +211,17 @@ export interface SkillCreatePayload {
   load_mode?: SkillLoadMode;
 }
 
+export interface SkillFilePayload {
+  path: string;
+  content: string;
+  entry_type?: "text" | "script";
+  encoding?: "utf-8" | "base64";
+}
+
 export type SkillUpdatePayload = Partial<Omit<SkillCreatePayload, "name">> & {
   enabled?: boolean;
+  allow_scripts?: boolean;
+  files?: SkillFilePayload[];
 };
 
 export interface SkillImportPreviewItem {
@@ -215,6 +231,7 @@ export interface SkillImportPreviewItem {
   file_count: number;
   total_bytes: number;
   files: string[];
+  scripts: string[];
   skipped_binary: string[];
   conflict: boolean;
   error: string | null;

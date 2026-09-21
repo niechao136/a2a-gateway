@@ -51,3 +51,8 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** 粘贴 tab 的「从本地选择 SKILL.md」：判定所选文件名是否为 Markdown 文件。 */
+export function isSkillMdFileName(name: string): boolean {
+  return /\.(md|markdown)$/i.test(name);
+}
