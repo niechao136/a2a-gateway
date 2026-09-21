@@ -20,7 +20,7 @@ def _skill(**kw):
         "frontmatter": {}, "files": [], "load_mode": "on_demand",
         "size_bytes": 6, "file_count": 0, "source": "text", "source_ref": "",
         "review_status": "pending", "review_note": "", "reviewed_at": None,
-        "enabled": True, "created_at": _NOW, "updated_at": _NOW,
+        "enabled": True, "allow_scripts": False, "created_at": _NOW, "updated_at": _NOW,
     }
     base.update(kw)
     return types.SimpleNamespace(**base)
@@ -125,7 +125,7 @@ async def test_update_skill_refreshes_snapshot_and_invalidates_graph(auth_client
     async def fake_using(session, skill_id):
         return [_agent()]
 
-    async def fake_update(session, skill, data):
+    async def fake_update(session, skill, data, files=None):
         return _skill(description=data.description or skill.description)
 
     async def fake_refresh(session, ids):
@@ -145,6 +145,88 @@ async def test_update_skill_refreshes_snapshot_and_invalidates_graph(auth_client
     assert resp.json()["description"] == "新说明"
     assert refresh_calls == [[1]]
     assert invalidated == [7]
+
+
+SCRIPT_B64 = base64.b64encode(b"print('hi')\n").decode()
+SCRIPTED_SKILL_FILES = [
+    {"path": "scripts/gen.py", "size": 11, "content": "cHJpbnQoMSk=", "entry_type": "script", "encoding": "base64"},
+    {"path": "refs/a.md", "size": 4, "content": "文本", "entry_type": "text", "encoding": "utf-8"},
+]
+
+
+def _patch_update_chain(monkeypatch, captured: dict):
+    async def fake_get(session, skill_id):
+        return _skill(review_status="approved", reviewed_at=_NOW)
+
+    async def fake_using(session, skill_id):
+        return []
+
+    async def fake_update(session, skill, data, files=None):
+        captured["data"] = data
+        captured["files"] = files
+        # 替身需透传 allow_scripts，否则响应断言无法验证 SkillOut 的字段透出
+        return _skill(
+            review_status="pending",
+            allow_scripts=bool(data.allow_scripts) if data.allow_scripts is not None else False,
+        )
+
+    async def fake_refresh(session, ids):
+        return 0
+
+    monkeypatch.setattr(registry_mod.repo, "get_skill", fake_get)
+    monkeypatch.setattr(registry_mod.repo, "agents_using_skill", fake_using)
+    monkeypatch.setattr(registry_mod.repo, "update_skill", fake_update)
+    monkeypatch.setattr(registry_mod.repo, "refresh_agents_for_skills", fake_refresh)
+
+
+async def test_update_skill_replaces_files_and_resets_review(auth_client, monkeypatch):
+    captured: dict = {}
+    _patch_update_chain(monkeypatch, captured)
+    resp = await auth_client.put(
+        "/api/admin/skills/1",
+        json={
+            "files": [
+                {"path": "scripts/gen.py", "content": SCRIPT_B64, "entry_type": "script", "encoding": "base64"},
+                {"path": "refs/a.md", "content": "文本"},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    files = captured["files"]
+    assert [f["path"] for f in files] == ["scripts/gen.py", "refs/a.md"]
+    assert files[0]["entry_type"] == "script"
+    assert files[0]["size"] == len(b"print('hi')\n")
+    assert files[1]["entry_type"] == "text"
+    assert files[1]["encoding"] == "utf-8"
+
+
+async def test_update_skill_rejects_unsafe_path(auth_client, monkeypatch):
+    captured: dict = {}
+    _patch_update_chain(monkeypatch, captured)
+    resp = await auth_client.put(
+        "/api/admin/skills/1",
+        json={"files": [{"path": "../escape.md", "content": "x"}]},
+    )
+    assert resp.status_code == 400
+
+
+async def test_update_skill_rejects_script_without_whitelist_suffix(auth_client, monkeypatch):
+    captured: dict = {}
+    _patch_update_chain(monkeypatch, captured)
+    resp = await auth_client.put(
+        "/api/admin/skills/1",
+        json={"files": [{"path": "bin/run.exe", "content": SCRIPT_B64, "entry_type": "script", "encoding": "base64"}]},
+    )
+    assert resp.status_code == 400
+
+
+async def test_update_skill_allow_scripts_only_does_not_touch_files(auth_client, monkeypatch):
+    captured: dict = {}
+    _patch_update_chain(monkeypatch, captured)
+    resp = await auth_client.put("/api/admin/skills/1", json={"allow_scripts": True})
+    assert resp.status_code == 200
+    assert captured["files"] is None
+    assert resp.json()["allow_scripts"] is True
 
 
 async def test_import_preview_from_text(auth_client, monkeypatch):

@@ -436,16 +436,20 @@ async def update_skill(
     skill = await repo.get_skill(session, skill_id)
     if skill is None:
         raise HTTPException(404, "Skill 不存在")
+    normalized_files: list[dict[str, Any]] | None = None
     try:
         validate_skill_fields(
             name=skill.name,
             description=data.description if data.description is not None else skill.description,
             content=data.content if data.content is not None else skill.content,
         )
+        if data.files is not None:
+            normalized_files = si.normalize_file_entries([f.model_dump() for f in data.files])
     except ValueError as exc:
+        # SkillParseError / SkillImportError 均为 ValueError 子类，统一收敛为 400
         raise HTTPException(400, str(exc))
     affected = await repo.agents_using_skill(session, skill_id)
-    updated = await repo.update_skill(session, skill, data)
+    updated = await repo.update_skill(session, skill, data, files=normalized_files)
     await repo.refresh_agents_for_skills(session, [skill_id])
     for agent in affected:
         await invalidate_agent(agent.id)

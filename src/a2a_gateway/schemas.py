@@ -160,11 +160,22 @@ class SkillCreate(BaseModel):
     load_mode: Literal["always", "on_demand"] = "on_demand"
 
 
+class SkillFileIn(BaseModel):
+    """编辑提交的附件条目（全量替换语义）。"""
+
+    path: str = Field(description="技能包内相对路径（posix 风格）")
+    content: str = Field(default="", description="文本原文，或 base64（脚本）")
+    entry_type: Literal["text", "script"] = "text"
+    encoding: Literal["utf-8", "base64"] = "utf-8"
+
+
 class SkillUpdate(BaseModel):
     description: str | None = None
     content: str | None = None
     load_mode: Literal["always", "on_demand"] | None = None
     enabled: bool | None = None
+    allow_scripts: bool | None = Field(default=None, description="是否允许沙箱执行捆绑脚本")
+    files: list[SkillFileIn] | None = Field(default=None, description="None=不改；列表=全量替换")
 
 
 class SkillOut(BaseModel):
@@ -185,6 +196,7 @@ class SkillOut(BaseModel):
     review_note: str = ""
     reviewed_at: datetime | None = None
     enabled: bool = True
+    allow_scripts: bool = False
     created_at: datetime
     updated_at: datetime
 

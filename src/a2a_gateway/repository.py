@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings
 from .identity import IDENTITY_KIND_USER, IDENTITY_KIND_VISITOR, Identity
+from .skill_import import files_differ
 from .models import (
     A2AEndpoint,
     AdminUser,
@@ -581,8 +582,13 @@ async def create_skill(
     return skill
 
 
-async def update_skill(session: AsyncSession, skill: Skill, data: "SkillUpdate") -> Skill:
-    """编辑技能：description / content 变更即重置审核为 pending（内容变了必须重审）。"""
+async def update_skill(
+    session: AsyncSession,
+    skill: Skill,
+    data: "SkillUpdate",
+    files: list[dict[str, Any]] | None = None,
+) -> Skill:
+    """编辑技能：description / content / 附件变更即重置审核为 pending（内容变了必须重审）。"""
     content_changed = False
     if data.description is not None and data.description != skill.description:
         skill.description = data.description
@@ -594,6 +600,12 @@ async def update_skill(session: AsyncSession, skill: Skill, data: "SkillUpdate")
         skill.load_mode = data.load_mode
     if data.enabled is not None:
         skill.enabled = data.enabled
+    if data.allow_scripts is not None:
+        skill.allow_scripts = data.allow_scripts
+    if files is not None and files_differ(skill.files or [], files):
+        skill.files = files
+        skill.file_count = len(files)
+        content_changed = True
     if content_changed:
         skill.review_status = SkillReviewStatus.PENDING
         skill.reviewed_at = None

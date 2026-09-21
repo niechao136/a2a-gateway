@@ -13,6 +13,7 @@ MAX_SKILL_BYTES 计来源解压后总量；MAX_IMPORT_BYTES 是入口（上传�
 """
 
 import base64
+import binascii
 import io
 import ipaddress
 import posixpath
@@ -32,6 +33,7 @@ from .skills import (
     MAX_IMPORT_BYTES,
     MAX_SCRIPT_BYTES,
     MAX_SKILL_BYTES,
+    SCRIPT_SUFFIXES,
     URL_FETCH_TIMEOUT,
     URL_MAX_REDIRECTS,
     is_script_path,
@@ -365,3 +367,87 @@ async def fetch_url(
             raise SkillImportError("响应体超过 4MB 上限")
         return resp.content
     raise SkillImportError(f"重定向超过 {URL_MAX_REDIRECTS} 跳上限")
+
+
+# ---------------------------------------------------------------------------
+# 编辑提交的附件全量校验（与导入同口径；规格 §6.1）
+# ---------------------------------------------------------------------------
+def normalize_file_entries(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """编辑提交的附件全量规范化与校验。
+
+    - path 安全校验与导入同口径（zip slip / 目录穿越拒绝）
+    - entry_type 与后缀一致性：script 必须命中白名单后缀且 encoding=base64
+    - 单脚本 ≤ MAX_SCRIPT_BYTES（按解码后原始字节）；附件总量 ≤ MAX_SKILL_BYTES；条目数 ≤ MAX_FILES
+    不合法抛 SkillImportError；@returns 规范化条目。
+    """
+    if len(files) > MAX_FILES:
+        raise SkillImportError(f"附件数超过 {MAX_FILES} 上限")
+    normalized: list[dict[str, Any]] = []
+    total = 0
+    for item in files:
+        path = _assert_safe_rel_path(str(item.get("path") or ""))
+        entry_type = str(item.get("entry_type") or "text")
+        encoding = str(item.get("encoding") or "utf-8")
+        if entry_type == "script":
+            if not is_script_path(path):
+                raise SkillImportError(
+                    f"脚本附件后缀必须属于 {sorted(SCRIPT_SUFFIXES)}：{path}"
+                )
+            if encoding != "base64":
+                raise SkillImportError(f"脚本附件编码必须为 base64：{path}")
+            try:
+                blob = base64.b64decode(str(item.get("content") or ""), validate=True)
+            except (ValueError, binascii.Error) as exc:
+                raise SkillImportError(f"脚本附件 base64 解码失败：{path}") from exc
+            if len(blob) > MAX_SCRIPT_BYTES:
+                raise SkillImportError(f"脚本超过 {MAX_SCRIPT_BYTES} 字节上限：{path}")
+            total += len(blob)
+            normalized.append(
+                {
+                    "path": path,
+                    "size": len(blob),
+                    "content": str(item.get("content") or ""),
+                    "entry_type": "script",
+                    "encoding": "base64",
+                }
+            )
+        elif entry_type == "text":
+            if encoding != "utf-8":
+                raise SkillImportError(f"文本附件编码必须为 utf-8：{path}")
+            text = str(item.get("content") or "")
+            size = len(text.encode("utf-8"))
+            if size > MAX_FILE_BYTES:
+                raise SkillImportError(f"单文件超过 {MAX_FILE_BYTES} 字节上限：{path}")
+            total += size
+            normalized.append(
+                {
+                    "path": path,
+                    "size": size,
+                    "content": text,
+                    "entry_type": "text",
+                    "encoding": "utf-8",
+                }
+            )
+        else:
+            raise SkillImportError(f"未知附件类型：{entry_type}")
+    if total > MAX_SKILL_BYTES:
+        raise SkillImportError(f"附件总量超过 {MAX_SKILL_BYTES} 字节上限")
+    return normalized
+
+
+def files_differ(existing: list[dict[str, Any]], incoming: list[dict[str, Any]]) -> bool:
+    """规范化后比较附件是否变更；存量缺 entry_type/encoding 视为 text/utf-8。"""
+
+    def norm(entries: list[dict[str, Any]]) -> list[tuple[str, int, str, str, str]]:
+        return sorted(
+            (
+                str(e.get("path") or ""),
+                int(e.get("size") or 0),
+                str(e.get("content") or ""),
+                str(e.get("entry_type") or "text"),
+                str(e.get("encoding") or "utf-8"),
+            )
+            for e in entries
+        )
+
+    return norm(existing) != norm(incoming)
