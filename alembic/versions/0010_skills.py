@@ -18,7 +18,9 @@ depends_on: Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    skill_status = sa.Enum("pending", "approved", "rejected", name="skillreviewstatus")
+    skill_status = sa.Enum(
+        "pending", "approved", "rejected", name="skillreviewstatus", create_type=False
+    )
     skill_status.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "skills",
