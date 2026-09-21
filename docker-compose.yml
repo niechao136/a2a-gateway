@@ -41,6 +41,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      sandbox-gate:
+        condition: service_healthy
     environment:
       # 数据库：容器内通过服务名 postgres 访问，连接串由应用按以下组件自动拼接
       POSTGRES_USER: ${POSTGRES_USER:-a2a}
@@ -74,11 +76,6 @@ services:
     # 让容器可通过 host.docker.internal 访问宿主机服务（Linux 需要此映射，Docker Desktop 自带）
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      sandbox-gate:
-        condition: service_healthy
     expose:
       - "8000"
 
