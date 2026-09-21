@@ -19,6 +19,7 @@ from .mcp_client import call_tool as mcp_invoke
 from .mcp_client import connection_from_snapshot, format_tools_for_prompt
 from .notifier import notify_alert
 from .pending_store import PendingStore, default_pending_store
+from . import sandbox_client
 from .schemas import A2ATarget
 
 
@@ -407,6 +408,15 @@ def _skill_catalog(skills: list[dict[str, Any]]) -> str:
     return "\n".join(rows) or "（当前没有可用技能）"
 
 
+class RunSkillScriptArgs(BaseModel):
+    """run_skill_script 参数。"""
+
+    skill_name: str = Field(description="技能名（取自可用技能清单）")
+    script_path: str = Field(description="脚本相对路径（取自该技能附件清单中的脚本条目）")
+    argv: list[str] = Field(default_factory=list, description="传给脚本的命令行参数")
+    stdin: str = Field(default="", description="可选：通过标准输入传给脚本的文本")
+
+
 def make_skill_tools(skills: list[dict[str, Any]]) -> list[StructuredTool]:
     """构造技能工具（`load_skill` 加载正文 / `read_skill_file` 读附件）。
 
@@ -492,4 +502,102 @@ def make_skill_tools(skills: list[dict[str, Any]]) -> list[StructuredTool]:
             ),
             args_schema=ReadSkillFileArgs,
         ),
+    ]
+
+
+def _script_catalog(skills: list[dict[str, Any]]) -> str:
+    """可执行脚本清单（name → 脚本路径），供工具描述与错误提示共用。"""
+    lines: list[str] = []
+    for s in skills:
+        scripts = [
+            str(f.get("path") or "")
+            for f in (s.get("files") or [])
+            if str(f.get("entry_type") or "") == "script"
+        ]
+        if scripts:
+            lines.append(f"- {s.get('name')}: " + ", ".join(scripts))
+    return "\n".join(lines) or "（无可执行脚本）"
+
+
+def make_script_exec_tools(skills: list[dict[str, Any]]) -> list[StructuredTool]:
+    """构造 `run_skill_script` 工具（规格 §8.1）。
+
+    挂载门禁（图构建时闭包判定，运行时零 DB 依赖）：
+    - 沙箱已配置（SANDBOX_URL 非空），否则返回 []（工具整体不出现）
+    - 仅 allow_scripts 技能参与；approved+enabled 由 resolve_skills 保证，快照兜底
+    - 工具描述静态列出可执行脚本清单，避免模型捏造路径
+    执行错误一律收敛为工具文本输出，绝不打断对话。
+    """
+    if not sandbox_client.sandbox_enabled():
+        return []
+    runnable = [s for s in skills if s.get("allow_scripts")]
+    if not runnable:
+        return []
+    by_name = {str(s.get("name") or ""): s for s in runnable}
+    catalog = _script_catalog(runnable)
+
+    async def _run(
+        skill_name: str, script_path: str, argv: list[str] | None = None, stdin: str = ""
+    ) -> str:
+        skill = by_name.get(skill_name)
+        if skill is None:
+            return (
+                "未找到该技能或该技能未开放脚本执行。可执行脚本的技能清单：\n"
+                f"{catalog}"
+            )
+        entry = next(
+            (
+                str(f.get("path") or "")
+                for f in (skill.get("files") or [])
+                if str(f.get("path") or "") == script_path
+                and str(f.get("entry_type") or "") == "script"
+            ),
+            None,
+        )
+        if entry is None:
+            return (
+                f"脚本不存在或不可执行：{script_path}\n"
+                f"该技能可用脚本：\n{_script_catalog([skill])}"
+            )
+        try:
+            # 经模块属性调用（而非 from-import 直连）：测试可 monkeypatch 替身
+            result = await sandbox_client.run_script(
+                files=list(skill.get("files") or []),
+                entry=entry,
+                argv=list(argv or []),
+                stdin=stdin,
+            )
+        except sandbox_client.SandboxError as exc:
+            return f"脚本执行失败：{exc}"
+        parts = [
+            f"exit_code: {result.get('exit_code')}",
+            f"duration_ms: {result.get('duration_ms')}",
+        ]
+        if result.get("timeout"):
+            parts.append("（执行超时，进程已被强制终止）")
+        if result.get("truncated"):
+            parts.append("（输出已截断）")
+        if result.get("error"):
+            parts.append(f"执行器错误：{result['error']}")
+        parts += ["--- stdout ---", str(result.get("stdout") or "") or "（空）"]
+        if result.get("stderr"):
+            parts += ["--- stderr ---", str(result["stderr"])]
+        return "\n".join(parts)
+
+    def _run_sync(*args: Any) -> str:
+        raise RuntimeError("run_skill_script 仅支持异步调用")
+
+    return [
+        StructuredTool.from_function(
+            coroutine=_run,
+            func=_run_sync,
+            name="run_skill_script",
+            description=(
+                "在隔离沙箱中执行已绑定技能捆绑的脚本（无网络、无凭据，仅标准库可用）。"
+                "skill_name 与 script_path 必须取自下述清单：\n"
+                f"{catalog}\n"
+                "argv 为命令行参数；stdin 为可选标准输入；输出含 exit_code 与 stdout/stderr。"
+            ),
+            args_schema=RunSkillScriptArgs,
+        )
     ]

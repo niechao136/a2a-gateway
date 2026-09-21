@@ -26,7 +26,7 @@ from .llm import build_llm
 from .models import AgentConfig
 from .pending_store import PendingStore, default_pending_store
 from .skills import MAX_INJECT_CHARS
-from .tools import make_mcp_call_tool, make_mcp_tools, make_skill_tools
+from .tools import make_mcp_call_tool, make_mcp_tools, make_script_exec_tools, make_skill_tools
 
 logger = logging.getLogger(__name__)
 
@@ -322,6 +322,8 @@ def build_graph(
     # on_demand 子集会让 always 技能的附件彻底不可读。「不重复加载正文」由
     # load_skill 内部按 load_mode 区分实现（规格 §6.3），不再靠过滤入参。
     tools.extend(make_skill_tools(bound_skills))
+    # 脚本执行工具：仅 allow_scripts 技能 + 沙箱已配置时挂载（规格 §8）
+    tools.extend(make_script_exec_tools(bound_skills))
     prompt = (agent.system_prompt or DEFAULT_SYSTEM_PROMPT) + build_skills_prompt(bound_skills)
     return create_react_agent(
         llm,
