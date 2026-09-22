@@ -3630,6 +3630,45 @@ git commit -m "fix: 连接器全量验证修复（按 basedpyright/ruff/pytest �
 2. **占位符扫描**：无「待定/TODO/类似任务 N」；所有代码步骤含完整代码。
 3. **类型一致性**：`ConnectorRef`（任务 7 定义，任务 8/9 使用）；`InboundMessage` 字段（任务 3 定义，4/5/6/9 使用）；`register_webhook(credentials, connector_id) -> tuple[dict, str]`（任务 4 定义，任务 8 使用）；`agent_name_map` / `connector_last_active_map`（任务 8 定义并使用）；路由模块内 monkeypatch 目标名与 import 名一致（`get_connector`、`create_connector`、`update_connector`、`delete_connector`、`get_agent_by_id`、`get_adapter`、`enqueue_message`、`register_webhook`、`list_recent_connector_conversations`、`get_connector_by_name`）。
 
+---
+
+## 执行记录（实现阶段）
+
+| 任务 | 提交 | 说明 |
+|---|---|---|
+| 1-7 | `1ac9388` → `e07aa25` | 按计划执行，无偏差 |
+| 8-9 | `4e18d17` | 合并为一次提交（`routes/connectors.py` 同时含管理端与 webhook 两个 router，难以拆分） |
+| 10-11 | `86b8788` | 前端类型/API + 管理页 + 导航 |
+| 12 | 验证 | 见下 |
+
+**实现阶段对计划的修正（均为执行中发现的问题）**
+
+1. 计划中任务 8/9 的测试写成了同步函数，与实际不符：项目 `tests/conftest.py` 的 `anon_client` / `auth_client` 是 async fixture，`pyproject.toml` 配置 `asyncio_mode = "auto"`。已全部改为 `async def test_...` + `await client.xxx`。
+2. `test_update_keeps_blank_credentials` 原断言与实现不匹配（提交 `secret_token` 新值时必然产生变更）：改为全部字段留空的场景断言「无 credentials 变更」。
+3. `test_webhook_feishu_verify_failure_401` / `feishu_challenge` 原计划复用 stub 适配器，无法验证真实验签：改为独立 `feishu_connector` fixture，走真实 `FeishuAdapter`。
+4. `update` 路由原计划用 `agent_name_map` 批量取名（仅一个 Agent，多一次聚合查询）：改为 `get_agent_by_id` 直接取名。
+5. 前端列表页原计划只有表格：按项目既有移动端适配规范补充 `useIsMobile` 卡片布局（与 `admin/a2a/page.tsx` 一致）。
+6. 列表页 `useEffect` 内改为异步 IIFE 调用加载函数，以通过 `react-hooks/set-state-in-effect`（既有页面存在同类基线告警，新文件保持干净）。
+7. 凭据输入框使用 `type="password"` + `slotProps={{ input: { readOnly: true } }}`（对齐 MUI v9 与项目既有写法）。
+8. 补充 `.env.example` 的 `PUBLIC_BASE_URL` 配置项。
+
+**验证结果**
+
+- `uv run pytest -q`：446 passed（含历史用例，零回归）
+- `uv run basedpyright`：0 errors, 0 warnings
+- `uv run ruff check src tests`：173 条，全部为项目既有基线（B008 `Depends` 91 条、BLE001、UP017、I001 等），新增代码未引入新规则类别
+- `npx tsc --noEmit`（web）：新增文件无错误；仅剩既有 `src/app/layout.tsx:16 LayoutProps`（Next 生成类型缺失）
+- `npx eslint`（新增/修改前端文件）：0 error
+- `npx vitest run`（web）：当前环境工具链将其识别为 watch 服务并接管输出，未能取得结果；改动仅新增类型与 API 方法，未触碰被测纯函数（`decodeJwtPayload` / `isJwtExpired` 等）
+
+**验收清单（对照规格 §11）**
+
+1. `tests/test_connectors_api.py` 覆盖 CRUD / 脱敏 / webhook / 推送 —— 23 passed
+2. 会话映射 `thread_id` 确定性生成 —— `tests/test_connector_support.py::test_thread_id_stable` 等
+3. Telegram 自动注册 —— `register_webhook` + `_maybe_register_telegram`（含 `setup_warning` 回传）
+4. 推送接口三种路径 —— 指定 chat_id / 最近活跃 / 无会话 404 均有测试
+5. 后端测试与类型检查全绿
+
 
 
 
