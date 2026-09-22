@@ -122,7 +122,7 @@ export default function MessageBubble({ message, onRetry }: MessageBubbleProps) 
       >
         {isUser ? "我" : "AI"}
       </Avatar>
-      <Box sx={{ maxWidth: "75%", minWidth: 0 }}>
+      <Box sx={{ maxWidth: { xs: "85%", sm: "75%" }, minWidth: 0 }}>
         <Box
           sx={{
             px: 2,
