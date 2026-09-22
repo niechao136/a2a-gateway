@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   IconButton,
   MenuItem,
   Stack,
@@ -28,6 +27,8 @@ import {
   McpTransport,
   MCP_TRANSPORT_LABELS,
 } from "@/lib/adminApi";
+import DialogTitleBar from "./DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface ManualMcpBindingProps {
   value: ManualMcpServerInput[];
@@ -156,6 +157,7 @@ function envToText(env: Record<string, string> | undefined): string {
 }
 
 function ManualMcpDialog({ initial, existingNames, onClose, onSave }: ManualMcpDialogProps) {
+  const isMobile = useIsMobile();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [transport, setTransport] = useState<McpTransport>(
@@ -216,8 +218,8 @@ function ManualMcpDialog({ initial, existingNames, onClose, onSave }: ManualMcpD
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{initial ? "编辑手动绑定的 MCP 服务" : "手动绑定 MCP 服务"}</DialogTitle>
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+      <DialogTitleBar title={initial ? "编辑手动绑定的 MCP 服务" : "手动绑定 MCP 服务"} onClose={onClose} />
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <TextField

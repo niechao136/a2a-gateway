@@ -6,7 +6,6 @@ import {
   Chip,
   Dialog,
   DialogContent,
-  DialogTitle,
   Divider,
   Typography,
 } from "@mui/material";
@@ -15,6 +14,8 @@ import remarkGfm from "remark-gfm";
 import { Skill } from "@/lib/adminApi";
 import { formatBytes } from "@/lib/skillUtils";
 import ScriptRunPanel from "./ScriptRunPanel";
+import DialogTitleBar from "./DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface Props {
   skill: Skill;
@@ -24,17 +25,23 @@ interface Props {
 
 /** Skill 详情弹窗（规格 §10.2）：摘要 + Markdown 正文 + 附件表 + 试跑面板。 */
 export default function SkillDetailDialog({ skill, open, onClose }: Props) {
+  const isMobile = useIsMobile();
   const [previewPath, setPreviewPath] = useState<string | null>(null);
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>
-        {skill.name}
-        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-          {skill.load_mode === "always" ? "常驻" : "按需"} · {formatBytes(skill.size_bytes)} ·{" "}
-          {skill.file_count} 附件 · 来源 {skill.source}
-        </Typography>
-      </DialogTitle>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
+      <DialogTitleBar
+        title={
+          <>
+            {skill.name}
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              {skill.load_mode === "always" ? "常驻" : "按需"} · {formatBytes(skill.size_bytes)} ·{" "}
+              {skill.file_count} 附件 · 来源 {skill.source}
+            </Typography>
+          </>
+        }
+        onClose={onClose}
+      />
       <DialogContent dividers>
         <Typography variant="body2" sx={{ mb: 1 }}>
           {skill.description}

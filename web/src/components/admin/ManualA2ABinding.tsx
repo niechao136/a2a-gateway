@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   IconButton,
   MenuItem,
   Stack,
@@ -26,6 +25,8 @@ import {
   AuthType,
   A2ATargetInput,
 } from "@/lib/adminApi";
+import DialogTitleBar from "./DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface ManualA2ABindingProps {
   value: A2ATargetInput[];
@@ -145,6 +146,7 @@ interface ManualA2ADialogProps {
 }
 
 function ManualA2ADialog({ initial, existingUrls, onClose, onSave }: ManualA2ADialogProps) {
+  const isMobile = useIsMobile();
   const [url, setUrl] = useState(initial?.url ?? "");
   const [token, setToken] = useState(initial?.token ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -181,8 +183,8 @@ function ManualA2ADialog({ initial, existingUrls, onClose, onSave }: ManualA2ADi
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{initial ? "编辑手动绑定的 A2A 目标" : "手动绑定 A2A 目标"}</DialogTitle>
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+      <DialogTitleBar title={initial ? "编辑手动绑定的 A2A 目标" : "手动绑定 A2A 目标"} onClose={onClose} />
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <TextField

@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   MenuItem,
   TextField,
@@ -20,6 +19,8 @@ import {
 import { ApiError, Skill, SkillFilePayload, SkillLoadMode, adminApi } from "@/lib/adminApi";
 import { attachmentFromBytes, validateAttachment, validateSkillEditForm } from "@/lib/skillForm";
 import { base64ToUtf8, formatBytes, utf8ToBase64 } from "@/lib/skillUtils";
+import DialogTitleBar from "./DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface Props {
   skill: Skill;
@@ -42,6 +43,7 @@ function attachmentDisplayText(f: SkillFilePayload): string {
 
 /** Skill 编辑弹窗（规格 §10.2）：三字段 + allow_scripts + content + 附件全量管理。 */
 export default function SkillEditDialog({ skill, open, onClose, onSaved }: Props) {
+  const isMobile = useIsMobile();
   const [description, setDescription] = useState(skill.description);
   const [loadMode, setLoadMode] = useState<SkillLoadMode>(
     skill.load_mode === "always" ? "always" : "on_demand",
@@ -140,8 +142,8 @@ export default function SkillEditDialog({ skill, open, onClose, onSaved }: Props
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>编辑 Skill：{skill.name}</DialogTitle>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
+      <DialogTitleBar title={`编辑 Skill：${skill.name}`} onClose={onClose} />
       <DialogContent>
         <TextField
           label="description（模型据此决定是否加载）"

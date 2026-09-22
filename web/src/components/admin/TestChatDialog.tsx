@@ -17,6 +17,7 @@ import ChatInput from "@/components/ChatInput";
 import { ChatMessage, SSEEvent, streamChatUrl } from "@/lib/api";
 import { adminAuthHeaders, adminTestChatUrl } from "@/lib/adminApi";
 import { generateId } from "@/lib/conversations";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface TestChatDialogProps {
   open: boolean;
@@ -35,6 +36,7 @@ export default function TestChatDialog({
   agentName,
   onClose,
 }: TestChatDialogProps) {
+  const isMobile = useIsMobile();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +123,7 @@ export default function TestChatDialog({
   );
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Typography variant="h6" sx={{ flex: 1, fontSize: 18 }} noWrap>
           测试对话 · {agentName}
@@ -132,7 +134,13 @@ export default function TestChatDialog({
       </DialogTitle>
       <DialogContent
         dividers
-        sx={{ p: 0, display: "flex", flexDirection: "column", height: "65vh", bgcolor: "background.default" }}
+        sx={{
+          p: 0,
+          display: "flex",
+          flexDirection: "column",
+          bgcolor: "background.default",
+          ...(isMobile ? { minHeight: 0, flex: 1 } : { height: "65vh" }),
+        }}
       >
         <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", px: 2, py: 2 }}>
           {messages.length === 0 ? (

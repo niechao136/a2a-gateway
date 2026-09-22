@@ -9,7 +9,6 @@ import {
   CircularProgress,
   Dialog,
   DialogContent,
-  DialogTitle,
   IconButton,
   Paper,
   Snackbar,
@@ -37,6 +36,8 @@ import {
   adminApi,
 } from "@/lib/adminApi";
 import McpServerDialog from "@/components/admin/McpServerDialog";
+import DialogTitleBar from "@/components/admin/DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 const MonoText = styled(Typography)({
   fontFamily: "monospace",
@@ -54,6 +55,7 @@ function connectionText(server: McpServer): string {
 
 /** MCP 服务注册表管理页：集中登记可复用的 MCP 服务。 */
 export default function McpAdminPage() {
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<McpServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -301,8 +303,12 @@ export default function McpAdminPage() {
         onClose={() => setToolsTarget(null)}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
-        <DialogTitle>可用工具 · {toolsTarget?.name ?? ""}</DialogTitle>
+        <DialogTitleBar
+          title={`可用工具 · ${toolsTarget?.name ?? ""}`}
+          onClose={() => setToolsTarget(null)}
+        />
         <DialogContent dividers>
           {toolsTarget && toolsTarget.tools.length > 0 ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>

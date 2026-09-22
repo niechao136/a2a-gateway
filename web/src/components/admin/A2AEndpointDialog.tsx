@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -27,6 +26,8 @@ import {
   AuthType,
   adminApi,
 } from "@/lib/adminApi";
+import DialogTitleBar from "./DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface A2AEndpointDialogProps {
   /** 传入则为编辑，否则为新建 */
@@ -48,6 +49,7 @@ export default function A2AEndpointDialog({
   onClose,
   onSaved,
 }: A2AEndpointDialogProps) {
+  const isMobile = useIsMobile();
   const isEdit = !!initial;
 
   const [name, setName] = useState(initial?.name ?? "");
@@ -114,8 +116,8 @@ export default function A2AEndpointDialog({
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? "编辑 A2A 目标" : "新建 A2A 目标"}</DialogTitle>
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+      <DialogTitleBar title={isEdit ? "编辑 A2A 目标" : "新建 A2A 目标"} onClose={onClose} />
       <DialogContent dividers>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           <TextField

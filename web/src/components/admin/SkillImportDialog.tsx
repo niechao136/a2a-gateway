@@ -10,7 +10,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Tab,
   Tabs,
@@ -25,6 +24,8 @@ import {
   adminApi,
 } from "@/lib/adminApi";
 import { formatBytes, isSkillMdFileName } from "@/lib/skillUtils";
+import DialogTitleBar from "./DialogTitleBar";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface Props {
   open: boolean;
@@ -63,6 +64,7 @@ async function toBase64(file: File): Promise<string> {
 
 /** Skill 导入弹窗：粘贴 / URL / zip / 本地目录四种来源，预览后勾选落库。 */
 export default function SkillImportDialog({ open, onClose, onImported }: Props) {
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState(0);
   const [skillMd, setSkillMd] = useState("");
   const [url, setUrl] = useState("");
@@ -190,8 +192,8 @@ export default function SkillImportDialog({ open, onClose, onImported }: Props) 
   );
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>导入 Skill</DialogTitle>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
+      <DialogTitleBar title="导入 Skill" onClose={onClose} />
       <DialogContent>
         <Tabs
           value={tab}
