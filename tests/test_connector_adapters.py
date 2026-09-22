@@ -254,3 +254,166 @@ def test_slack_signature_format():
     basestring = "v0:1:payload"
     digest = hmac.new(SLACK_SECRET.encode(), basestring.encode(), hashlib.sha256).hexdigest()
     assert slack_signature(SLACK_SECRET, "1", "payload") == f"v0={digest}"
+
+
+# ---------------------------------------------------------------------------
+# 飞书适配器
+# ---------------------------------------------------------------------------
+import base64
+
+from a2a_gateway.connectors.feishu import FeishuAdapter, encrypt_feishu_payload
+
+FEISHU = FeishuAdapter()
+FEISHU_CREDS = {"app_id": "cli_a", "app_secret": "s", "verification_token": "vt", "encrypt_key": ""}
+
+
+def _feishu_event(token: str = "vt", encrypt_key: str = "") -> bytes:
+    payload = {
+        "header": {
+            "event_id": "EvF1",
+            "token": token,
+            "event_type": "im.message.receive_v1",
+        },
+        "event": {
+            "sender": {"sender_id": {"open_id": "ou_u1", "user_id": "u1"}},
+            "message": {
+                "chat_id": "oc_c1",
+                "chat_type": "p2p",
+                "message_id": "om_1",
+                "content": json.dumps({"text": "你好飞书"}),
+                "mentions": [],
+            },
+        },
+    }
+    body = json.dumps(payload).encode()
+    if encrypt_key:
+        # 真实飞书加密体是 {"encrypt": "<base64>"} 信封
+        return json.dumps({"encrypt": encrypt_feishu_payload(encrypt_key, payload)}).encode()
+    return body
+
+
+async def test_feishu_url_verification_challenge():
+    body = json.dumps(
+        {"header": {"token": "vt"}, "type": "url_verification", "challenge": "cf_1"}
+    ).encode()
+    result = await FEISHU.build_challenge(body, {}, FEISHU_CREDS)
+    assert result == {"challenge": "cf_1"}
+
+
+async def test_feishu_challenge_rejects_bad_token():
+    body = json.dumps(
+        {"header": {"token": "bad"}, "type": "url_verification", "challenge": "cf_1"}
+    ).encode()
+    with pytest.raises(VerifyError):
+        await FEISHU.build_challenge(body, {}, FEISHU_CREDS)
+
+
+async def test_feishu_challenge_with_encryption():
+    blob = encrypt_feishu_payload(
+        "mykey",
+        {"header": {"token": "vt"}, "type": "url_verification", "challenge": "cf_2"},
+    )
+    body = json.dumps({"encrypt": blob}).encode()
+    creds = {**FEISHU_CREDS, "encrypt_key": "mykey"}
+    result = await FEISHU.build_challenge(body, {}, creds)
+    assert result == {"challenge": "cf_2"}
+
+
+async def test_feishu_private_message_parsed():
+    msgs = await FEISHU.verify_and_parse(_feishu_event(), {}, FEISHU_CREDS)
+    assert len(msgs) == 1
+    m = msgs[0]
+    assert (m.platform, m.chat_id, m.chat_type) == ("feishu", "oc_c1", "private")
+    assert m.text == "你好飞书"
+    assert m.event_id == "EvF1"
+
+
+async def test_feishu_encrypted_message_parsed():
+    creds = {**FEISHU_CREDS, "encrypt_key": "mykey"}
+    msgs = await FEISHU.verify_and_parse(_feishu_event(encrypt_key="mykey"), {}, creds)
+    assert len(msgs) == 1
+    assert msgs[0].text == "你好飞书"
+
+
+async def test_feishu_verify_rejects_bad_token():
+    with pytest.raises(VerifyError):
+        await FEISHU.verify_and_parse(_feishu_event(token="bad"), {}, FEISHU_CREDS)
+
+
+async def test_feishu_group_without_bot_mention_ignored(monkeypatch):
+    async def fake_bot_open_id(credentials):
+        return "ou_bot"
+
+    monkeypatch.setattr(FEISHU, "_bot_open_id", fake_bot_open_id)
+    event = {
+        "header": {"event_id": "EvF2", "token": "vt", "event_type": "im.message.receive_v1"},
+        "event": {
+            "sender": {"sender_id": {"open_id": "ou_u1", "user_id": "u1"}},
+            "message": {
+                "chat_id": "oc_g1",
+                "chat_type": "group",
+                "message_id": "om_2",
+                "content": json.dumps({"text": "@_user_1 大家好"}),
+                "mentions": [{"key": "@_user_1", "id": {"open_id": "ou_other"}, "name": "张三"}],
+            },
+        },
+    }
+    assert await FEISHU.verify_and_parse(json.dumps(event).encode(), {}, FEISHU_CREDS) == []
+
+
+async def test_feishu_group_with_bot_mention_parsed(monkeypatch):
+    async def fake_bot_open_id(credentials):
+        return "ou_bot"
+
+    monkeypatch.setattr(FEISHU, "_bot_open_id", fake_bot_open_id)
+    event = {
+        "header": {"event_id": "EvF3", "token": "vt", "event_type": "im.message.receive_v1"},
+        "event": {
+            "sender": {"sender_id": {"open_id": "ou_u1", "user_id": "u1"}},
+            "message": {
+                "chat_id": "oc_g2",
+                "chat_type": "group",
+                "message_id": "om_3",
+                "content": json.dumps({"text": "@_user_1 帮我订机票"}),
+                "mentions": [{"key": "@_user_1", "id": {"open_id": "ou_bot"}, "name": "助手"}],
+            },
+        },
+    }
+    msgs = await FEISHU.verify_and_parse(json.dumps(event).encode(), {}, FEISHU_CREDS)
+    assert len(msgs) == 1
+    assert msgs[0].chat_type == "group"
+    # mention 占位符替换为可读名字
+    assert msgs[0].text == "@助手 帮我订机票"
+
+
+def test_encrypt_feishu_payload_roundtrip():
+    from a2a_gateway.connectors.feishu import decrypt_feishu_payload
+
+    key = "k" * 8
+    payload = {"type": "url_verification", "challenge": "c"}
+    blob = encrypt_feishu_payload(key, payload)
+    assert decrypt_feishu_payload(key, blob) == payload
+
+
+def test_encrypt_feishu_payload_uses_random_iv():
+    key = "k" * 8
+    payload = {"a": 1}
+    b1 = encrypt_feishu_payload(key, payload)
+    b2 = encrypt_feishu_payload(key, payload)
+    assert base64.b64decode(b1)[:16] != base64.b64decode(b2)[:16]  # IV 随机
+
+
+# ---------------------------------------------------------------------------
+# 注册表
+# ---------------------------------------------------------------------------
+from a2a_gateway.connectors.registry import get_adapter
+
+
+def test_registry_returns_all_platforms():
+    for platform in ("feishu", "telegram", "slack"):
+        assert get_adapter(platform).platform == platform
+
+
+def test_registry_unknown_platform():
+    with pytest.raises(KeyError):
+        get_adapter("discord")
