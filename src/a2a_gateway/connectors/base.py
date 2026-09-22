@@ -26,6 +26,11 @@ class InboundMessage:
     event_id: str  # 平台事件/消息 id，管线去重键
 
 
+def normalize_headers(headers: Mapping[str, str]) -> dict[str, str]:
+    """HTTP 头归一化（小写键）：平台签名头查找不依赖调用方传入的 Mapping 类型。"""
+    return {k.lower(): v for k, v in headers.items()}
+
+
 def chunk_text(text: str, limit: int) -> list[str]:
     """按字符上限切分文本；优先在换行处断开，超长无换行则硬切。"""
     text = text.strip()
