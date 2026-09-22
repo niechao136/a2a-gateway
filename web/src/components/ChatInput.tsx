@@ -6,6 +6,7 @@ import SendIcon from "@mui/icons-material/Send";
 import MicIcon from "@mui/icons-material/Mic";
 import StopCircleIcon from "@mui/icons-material/StopCircle";
 import { AsrRecorder } from "@/lib/speech";
+import { useIsMobile } from "@/lib/breakpoints";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -13,6 +14,7 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ onSend, disabled }: ChatInputProps) {
+  const isMobile = useIsMobile();
   const [value, setValue] = useState("");
   const [recording, setRecording] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
@@ -34,6 +36,8 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // 移动端软键盘「换行」只换行，发送仅通过发送按钮；桌面保持 Enter 发送
+    if (isMobile) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -132,7 +136,9 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           placeholder={
             recording
               ? "正在聆听，请说话...（再次点击麦克风结束）"
-              : "输入消息...（Enter 发送，Shift+Enter 换行）"
+              : isMobile
+                ? "输入消息，点击右侧按钮发送"
+                : "输入消息...（Enter 发送，Shift+Enter 换行）"
           }
           variant="outlined"
           size="small"
