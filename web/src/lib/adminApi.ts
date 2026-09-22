@@ -371,6 +371,54 @@ export function hasValidAdminToken(): boolean {
   return readAdminAuth().loggedIn;
 }
 
+// ---- 聊天连接器（飞书 / Telegram / Slack 机器人接入）----
+
+export type ConnectorPlatform = "feishu" | "telegram" | "slack";
+
+export interface Connector {
+  id: number;
+  name: string;
+  description: string;
+  platform: ConnectorPlatform;
+  agent_id: number;
+  agent_name: string;
+  enabled: boolean;
+  /** 后端用 PUBLIC_BASE_URL 拼好的完整回调地址（未配置时为相对路径） */
+  webhook_url: string;
+  /** 凭据脱敏视图：已配置字段为 "••••"，空字段为 ""（不含明文） */
+  credentials_masked: Record<string, string>;
+  /** Telegram 自动注册失败等提示（不阻断保存） */
+  setup_warning: string;
+  last_active_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConnectorCreatePayload {
+  name: string;
+  platform: ConnectorPlatform;
+  description?: string;
+  agent_id: number;
+  enabled?: boolean;
+  credentials: Record<string, string>;
+}
+
+export interface ConnectorUpdatePayload {
+  name?: string;
+  description?: string;
+  agent_id?: number;
+  enabled?: boolean;
+  /** 留空字段 = 不修改（后端按原值合并） */
+  credentials?: Record<string, string>;
+}
+
+export interface ConnectorConversation {
+  chat_id: string;
+  chat_type: string;
+  last_user_ref: Record<string, unknown>;
+  last_active_at: string;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getAdminToken();
   const resp = await fetch(`${API_BASE}${path}`, {
@@ -578,6 +626,43 @@ export const adminApi = {
 
   runSkillScript(id: number, payload: SkillScriptRunPayload): Promise<SkillScriptRunResult> {
     return request<SkillScriptRunResult>(`/api/admin/skills/${id}/scripts/run`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // ---- 聊天连接器 ----
+  listConnectors(): Promise<Connector[]> {
+    return request<Connector[]>("/api/admin/connectors");
+  },
+
+  createConnector(payload: ConnectorCreatePayload): Promise<Connector> {
+    return request<Connector>("/api/admin/connectors", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateConnector(id: number, payload: ConnectorUpdatePayload): Promise<Connector> {
+    return request<Connector>(`/api/admin/connectors/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteConnector(id: number): Promise<void> {
+    return request<void>(`/api/admin/connectors/${id}`, { method: "DELETE" });
+  },
+
+  listConnectorConversations(id: number): Promise<ConnectorConversation[]> {
+    return request<ConnectorConversation[]>(`/api/admin/connectors/${id}/conversations`);
+  },
+
+  sendConnectorMessage(
+    id: number,
+    payload: { chat_id?: string | null; text: string },
+  ): Promise<{ chat_id: string; ok: boolean }> {
+    return request<{ chat_id: string; ok: boolean }>(`/api/admin/connectors/${id}/send`, {
       method: "POST",
       body: JSON.stringify(payload),
     });

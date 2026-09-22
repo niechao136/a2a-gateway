@@ -26,6 +26,7 @@ import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
+import CableOutlinedIcon from "@mui/icons-material/CableOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import { adminApi, hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
 import { notifyIdentityChanged } from "@/lib/api";
@@ -62,6 +63,12 @@ const NAV_ITEMS = [
     href: "/admin/skills",
     icon: <AutoStoriesOutlinedIcon fontSize="small" />,
     isActive: (pathname: string) => pathname.startsWith("/admin/skills"),
+  },
+  {
+    label: "连接器管理",
+    href: "/admin/connectors",
+    icon: <CableOutlinedIcon fontSize="small" />,
+    isActive: (pathname: string) => pathname.startsWith("/admin/connectors"),
   },
 ];
 
