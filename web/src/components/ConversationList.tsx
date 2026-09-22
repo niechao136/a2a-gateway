@@ -92,8 +92,12 @@ export default function ConversationList({
                     borderRadius: 1,
                     mb: 0.5,
                     pr: 0.5,
-                    "& .conv-delete": { opacity: 0 },
-                    "&:hover .conv-delete": { opacity: 1 },
+                    // 触屏无 hover：删除按钮常显；有鼠标的设备维持 hover 显隐
+                    "& .conv-delete": { opacity: 1 },
+                    "@media (hover: hover)": {
+                      "& .conv-delete": { opacity: 0 },
+                      "&:hover .conv-delete": { opacity: 1 },
+                    },
                   }}
                 >
                   <ListItemText
