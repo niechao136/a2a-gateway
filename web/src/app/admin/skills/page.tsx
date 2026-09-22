@@ -25,6 +25,7 @@ import SkillDetailDialog from "@/components/admin/SkillDetailDialog";
 import SkillEditDialog from "@/components/admin/SkillEditDialog";
 import SkillImportDialog from "@/components/admin/SkillImportDialog";
 import { formatBytes } from "@/lib/skillUtils";
+import { useIsMobile, useIsTablet } from "@/lib/breakpoints";
 
 const STATUS_CHIP: Record<SkillReviewStatus, { label: string; color: "warning" | "success" | "error" }> = {
   pending: { label: "待审核", color: "warning" },
@@ -39,6 +40,9 @@ export default function SkillsPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+
+  const isMobile = useIsMobile();
+  const showOptionalCols = !useIsTablet(); // 平板档隐藏「加载模式」「来源」
   const [importOpen, setImportOpen] = useState(false);
   const [detailSkill, setDetailSkill] = useState<Skill | null>(null);
   const [editSkill, setEditSkill] = useState<Skill | null>(null);
@@ -108,7 +112,7 @@ export default function SkillsPage() {
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, mb: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, flexWrap: "wrap", mb: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h6">Skill 管理</Typography>
           <Typography variant="caption" color="text.secondary">
@@ -126,15 +130,103 @@ export default function SkillsPage() {
         </Alert>
       )}
 
+      {isMobile && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : skills.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+              还没有导入任何 Skill，点击右上角「导入 Skill」添加
+            </Typography>
+          ) : (
+            skills.map((skill) => (
+              <Paper key={skill.id} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body1" sx={{ flex: 1, minWidth: 0, fontWeight: 600 }} noWrap>
+                    {skill.name}
+                  </Typography>
+                  <Chip size="small" {...STATUS_CHIP[skill.review_status]} />
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                  {skill.load_mode === "always" ? "常驻" : "按需"} · {formatBytes(skill.size_bytes)} /{" "}
+                  {skill.file_count} 附件 · {skill.source}
+                </Typography>
+                {skill.description && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 0.5,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {skill.description}
+                  </Typography>
+                )}
+                {!skill.enabled && <Chip size="small" label="已停用" sx={{ mt: 1 }} />}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    gap: 0.5,
+                    mt: 1.5,
+                    minHeight: 44,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {busyId === skill.id && <CircularProgress size={16} sx={{ mr: 0.5 }} />}
+                  <Button size="small" startIcon={<VisibilityIcon />} onClick={() => setDetailSkill(skill)}>
+                    详情
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon />}
+                    onClick={() => setEditSkill(skill)}
+                    disabled={busyId === skill.id}
+                  >
+                    编辑
+                  </Button>
+                  {skill.review_status !== "approved" && (
+                    <Button size="small" onClick={() => void review(skill, "approved")} disabled={busyId === skill.id}>
+                      通过
+                    </Button>
+                  )}
+                  {skill.review_status !== "rejected" && (
+                    <Button
+                      size="small"
+                      color="warning"
+                      onClick={() => void review(skill, "rejected")}
+                      disabled={busyId === skill.id}
+                    >
+                      拒绝
+                    </Button>
+                  )}
+                  <Button size="small" color="error" onClick={() => void remove(skill)} disabled={busyId === skill.id}>
+                    删除
+                  </Button>
+                </Box>
+              </Paper>
+            ))
+          )}
+        </Box>
+      )}
+
+      {!isMobile && (
       <TableContainer component={Paper} variant="outlined">
         <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell>名称</TableCell>
               <TableCell>说明</TableCell>
-              <TableCell>加载模式</TableCell>
+              {showOptionalCols && <TableCell>加载模式</TableCell>}
               <TableCell>大小</TableCell>
-              <TableCell>来源</TableCell>
+              {showOptionalCols && <TableCell>来源</TableCell>}
               <TableCell>状态</TableCell>
               <TableCell align="right">操作</TableCell>
             </TableRow>
@@ -142,13 +234,17 @@ export default function SkillsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={showOptionalCols ? 7 : 5} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : skills.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                <TableCell
+                  colSpan={showOptionalCols ? 7 : 5}
+                  align="center"
+                  sx={{ py: 4, color: "text.secondary" }}
+                >
                   还没有导入任何 Skill，点击右上角「导入 Skill」添加
                 </TableCell>
               </TableRow>
@@ -166,21 +262,25 @@ export default function SkillsPage() {
                       {skill.description}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">
-                      {skill.load_mode === "always" ? "常驻" : "按需"}
-                    </Typography>
-                  </TableCell>
+                  {showOptionalCols && (
+                    <TableCell>
+                      <Typography variant="caption" color="text.secondary">
+                        {skill.load_mode === "always" ? "常驻" : "按需"}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Typography variant="caption" color="text.secondary">
                       {formatBytes(skill.size_bytes)} / {skill.file_count} 附件
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">
-                      {skill.source}
-                    </Typography>
-                  </TableCell>
+                  {showOptionalCols && (
+                    <TableCell>
+                      <Typography variant="caption" color="text.secondary">
+                        {skill.source}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Chip size="small" {...STATUS_CHIP[skill.review_status]} />
                   </TableCell>
@@ -235,6 +335,7 @@ export default function SkillsPage() {
           </TableBody>
         </Table>
       </TableContainer>
+      )}
 
       {/* 仅在打开时挂载，弹窗每次打开都是干净的初始态 */}
       {importOpen && (
