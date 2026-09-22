@@ -148,3 +148,109 @@ def test_mentioned_bot_matches_case_insensitive():
     msg = {"text": "@MyBot hi", "entities": entities}
     assert _mentioned_bot(msg, "mybot") is True
     assert _mentioned_bot(msg, "other") is False
+
+
+# ---------------------------------------------------------------------------
+# Slack 适配器
+# ---------------------------------------------------------------------------
+from a2a_gateway.connectors.slack import SlackAdapter, slack_signature
+
+SLACK = SlackAdapter()
+SLACK_SECRET = "shhh"
+SLACK_CREDS = {"bot_token": "xoxb-test", "signing_secret": "shhh"}
+SLACK_BODY = {
+    "event_id": "Ev007",
+    "type": "event_callback",
+    "event": {
+        "type": "message",
+        "channel_type": "im",
+        "channel": "D123",
+        "user": "U7",
+        "text": "帮我总结",
+        "bot_id": None,
+    },
+}
+
+
+def _slack_headers(body: bytes, secret: str = SLACK_SECRET, ts: int | None = None) -> dict:
+    timestamp = ts or int(time.time())
+    basestring = f"v0:{timestamp}:{body.decode()}"
+    digest = hmac.new(secret.encode(), basestring.encode(), hashlib.sha256).hexdigest()
+    return {"X-Slack-Request-Timestamp": str(timestamp), "X-Slack-Signature": f"v0={digest}"}
+
+
+def _slack_bytes(payload: dict) -> bytes:
+    return json.dumps(payload).encode()
+
+
+async def test_slack_url_verification_challenge():
+    body = _slack_bytes({"type": "url_verification", "challenge": "xyz"})
+    result = await SLACK.build_challenge(body, _slack_headers(body), SLACK_CREDS)
+    assert result == {"challenge": "xyz"}
+
+
+async def test_slack_challenge_rejects_bad_signature():
+    body = _slack_bytes({"type": "url_verification", "challenge": "xyz"})
+    with pytest.raises(VerifyError):
+        await SLACK.build_challenge(body, _slack_headers(body, secret="bad"), SLACK_CREDS)
+
+
+async def test_slack_challenge_rejects_stale_timestamp():
+    body = _slack_bytes({"type": "url_verification", "challenge": "xyz"})
+    stale_ts = int(time.time()) - 600
+    with pytest.raises(VerifyError):
+        await SLACK.build_challenge(body, _slack_headers(body, ts=stale_ts), SLACK_CREDS)
+
+
+async def test_slack_im_message_parsed():
+    body = _slack_bytes(SLACK_BODY)
+    msgs = await SLACK.verify_and_parse(body, _slack_headers(body), SLACK_CREDS)
+    assert len(msgs) == 1
+    m = msgs[0]
+    assert (m.platform, m.chat_id, m.chat_type) == ("slack", "D123", "private")
+    assert m.text == "帮我总结"
+    assert m.event_id == "Ev007"
+
+
+async def test_slack_app_mention_parsed_as_group():
+    body = _slack_bytes(
+        {
+            "event_id": "Ev008",
+            "type": "event_callback",
+            "event": {
+                "type": "app_mention",
+                "channel": "C456",
+                "user": "U7",
+                "text": "<@U0> 帮我总结",
+                "bot_id": None,
+            },
+        }
+    )
+    msgs = await SLACK.verify_and_parse(body, _slack_headers(body), SLACK_CREDS)
+    assert len(msgs) == 1
+    assert msgs[0].chat_type == "group"
+    assert msgs[0].chat_id == "C456"
+
+
+async def test_slack_bot_message_ignored():
+    payload = {**SLACK_BODY, "event": {**SLACK_BODY["event"], "bot_id": "B999"}}
+    body = _slack_bytes(payload)
+    assert await SLACK.verify_and_parse(body, _slack_headers(body), SLACK_CREDS) == []
+
+
+async def test_slack_message_without_text_ignored():
+    payload = {**SLACK_BODY, "event": {**SLACK_BODY["event"], "text": ""}}
+    body = _slack_bytes(payload)
+    assert await SLACK.verify_and_parse(body, _slack_headers(body), SLACK_CREDS) == []
+
+
+async def test_slack_verify_rejects_bad_signature():
+    body = _slack_bytes(SLACK_BODY)
+    with pytest.raises(VerifyError):
+        await SLACK.verify_and_parse(body, _slack_headers(body, secret="bad"), SLACK_CREDS)
+
+
+def test_slack_signature_format():
+    basestring = "v0:1:payload"
+    digest = hmac.new(SLACK_SECRET.encode(), basestring.encode(), hashlib.sha256).hexdigest()
+    assert slack_signature(SLACK_SECRET, "1", "payload") == f"v0={digest}"
