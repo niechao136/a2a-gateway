@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, alias="APP_PORT")
     frontend_origin: str = Field(default="http://localhost:3000", alias="FRONTEND_ORIGIN")
 
+    # 公网基址（聊天连接器）：用于展示 webhook 完整 URL 与 Telegram 自动注册；留空则只展示相对路径
+    public_base_url: str = Field(default="", alias="PUBLIC_BASE_URL")
+
     # 挂起任务（input-required）：超过该秒数未恢复的挂起在读取时视为失效并清理
     pending_a2a_ttl_seconds: int = Field(default=86400, alias="PENDING_A2A_TTL_SECONDS")
 

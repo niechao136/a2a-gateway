@@ -40,6 +40,12 @@ class AgentStatus(str, PyEnum):
     PUBLISHED = "published"
 
 
+class ConnectorPlatform(str, PyEnum):
+    FEISHU = "feishu"
+    TELEGRAM = "telegram"
+    SLACK = "slack"
+
+
 class BaseMixin:
     """公共时间戳字段。"""
 
@@ -264,3 +270,56 @@ class PendingA2ATask(Base, BaseMixin):
     task_id: Mapped[str] = mapped_column(String(128))
     context_id: Mapped[str] = mapped_column(String(128), default="")
     question: Mapped[str] = mapped_column(Text, default="")
+
+
+class ChatConnector(Base, BaseMixin):
+    """聊天连接器注册表（「连接器管理」维护）。
+
+    一个连接器 = 一个聊天平台机器人实例，1:1 绑定一个 Agent：
+    平台消息 → 适配器归一化 → 绑定 Agent 处理 → 适配器回发。
+    credentials 按 platform 存放不同结构（schemas.py 按平台校验），接口返回时脱敏。
+    """
+
+    __tablename__ = "chat_connectors"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    platform: Mapped[ConnectorPlatform] = mapped_column(
+        Enum(
+            ConnectorPlatform,
+            name="connectorplatform",
+            # 与 AgentStatus 同坑：必须按「成员值」建 PG 枚举
+            values_callable=lambda enum_cls: [m.value for m in enum_cls],
+        )
+    )
+    credentials: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    agent_id: Mapped[int] = mapped_column(
+        ForeignKey("agent_configs.id", ondelete="CASCADE"), index=True
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ConnectorConversation(Base, BaseMixin):
+    """连接器会话映射：平台会话 (connector_id, chat_id) ↔ LangGraph thread_id。
+
+    消息本体仍由 Checkpointer 按 thread_id 存放；本表只维护目录映射与
+    最近发言人/活跃时间（群聊 @ 场景拼上下文、主动推送定位目标用）。
+    """
+
+    __tablename__ = "chat_connector_conversations"
+    __table_args__ = (
+        UniqueConstraint("connector_id", "chat_id", name="uq_connector_conversations_chat"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    connector_id: Mapped[int] = mapped_column(
+        ForeignKey("chat_connectors.id", ondelete="CASCADE"), index=True
+    )
+    chat_id: Mapped[str] = mapped_column(String(128))
+    chat_type: Mapped[str] = mapped_column(String(16), default="private")  # private / group
+    thread_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    last_user_ref: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    last_active_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True, server_default=func.now()
+    )
