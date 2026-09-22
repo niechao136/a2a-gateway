@@ -455,3 +455,126 @@ class ConversationImportRequest(BaseModel):
 
 class ConversationImportOut(BaseModel):
     imported: int
+
+
+# ---------------------------------------------------------------------------
+# 聊天连接器（「连接器管理」维护）
+# ---------------------------------------------------------------------------
+CONNECTOR_PLATFORMS = ("feishu", "telegram", "slack")
+
+
+class FeishuCredentials(BaseModel):
+    """飞书开放平台「企业自建应用」凭据。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    app_id: str = ""
+    app_secret: str = ""
+    verification_token: str = ""
+    encrypt_key: str = ""  # 未启用事件加密则留空
+
+
+class TelegramCredentials(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bot_token: str = ""
+    secret_token: str = ""  # webhook 验证密钥；创建时留空由后端自动生成
+    bot_username: str = ""  # 启用时经 getMe 自动补全，群聊 @ 过滤用
+
+
+class SlackCredentials(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bot_token: str = ""  # xoxb- 开头
+    signing_secret: str = ""
+
+
+_CREDENTIAL_MODELS: dict[str, type[BaseModel]] = {
+    "feishu": FeishuCredentials,
+    "telegram": TelegramCredentials,
+    "slack": SlackCredentials,
+}
+
+
+def validate_connector_credentials(
+    platform: str, credentials: dict[str, Any] | None
+) -> dict[str, Any]:
+    """按平台校验凭据结构；平台未知或字段非法抛 ValueError/ValidationError（路由转 400）。"""
+    model = _CREDENTIAL_MODELS.get(platform)
+    if model is None:
+        raise ValueError(f"platform 仅支持 {CONNECTOR_PLATFORMS}")
+    return model(**(credentials or {})).model_dump()
+
+
+def merge_connector_credentials(
+    platform: str, old: dict[str, Any] | None, new: dict[str, Any] | None
+) -> dict[str, Any]:
+    """更新合并：新值为空的字段保留原值（凭据回显脱敏，留空 = 不修改）。"""
+    model = _CREDENTIAL_MODELS[platform]
+    cleaned = {k: v for k, v in (new or {}).items() if v}
+    merged = {**(old or {}), **cleaned}
+    return model(**merged).model_dump()
+
+
+def mask_connector_credentials(platform: str, credentials: dict[str, Any] | None) -> dict[str, str]:
+    """凭据脱敏视图：已配置字段 → "••••"，空字段 → ""（仅提示配置状态，不含明文）。"""
+    data = validate_connector_credentials(platform, credentials)
+    return {k: ("••••" if v else "") for k, v in data.items()}
+
+
+class ConnectorBase(BaseModel):
+    name: str = Field(description="显示名称，全局唯一")
+    platform: Literal["feishu", "telegram", "slack"]
+    description: str = ""
+    agent_id: int = Field(description="绑定的 Agent id")
+    enabled: bool = True
+    credentials: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _check_credentials(self) -> "ConnectorBase":
+        self.credentials = validate_connector_credentials(self.platform, self.credentials)
+        return self
+
+
+class ConnectorCreate(ConnectorBase):
+    pass
+
+
+class ConnectorUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    agent_id: int | None = None
+    enabled: bool | None = None
+    credentials: dict[str, Any] | None = None
+
+
+class ConnectorOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str
+    platform: str
+    agent_id: int
+    agent_name: str = ""
+    enabled: bool
+    webhook_url: str = ""
+    credentials_masked: dict[str, str] = {}
+    setup_warning: str = ""  # Telegram 自动注册失败等原因的提示（不阻断保存）
+    last_active_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConnectorConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    chat_id: str
+    chat_type: str
+    last_user_ref: dict[str, Any] = {}
+    last_active_at: datetime
+
+
+class ConnectorSendRequest(BaseModel):
+    chat_id: str | None = Field(default=None, description="留空推送最近活跃会话")
+    text: str = Field(min_length=1, description="消息文本")

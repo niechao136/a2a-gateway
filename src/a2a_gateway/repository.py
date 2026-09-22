@@ -19,6 +19,8 @@ import secrets
 
 from datetime import datetime, timezone
 
+import hashlib
+
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +34,9 @@ from .models import (
     AgentConfig,
     AgentStatus,
     ApiKey,
+    ChatConnector,
+    ConnectorConversation,
+    ConnectorPlatform,
     Conversation,
     McpServer,
     PendingA2ATask,
@@ -44,6 +49,7 @@ from .schemas import (
     AgentCreate,
     AgentUpdate,
     ApiKeyCreate,
+    ConnectorCreate,
     McpServerCreate,
     McpServerUpdate,
     SkillUpdate,
@@ -1154,3 +1160,120 @@ async def delete_pending_a2a_task(session: AsyncSession, thread_id: str) -> bool
     await session.delete(row)
     await session.commit()
     return True
+
+
+# ---------------------------------------------------------------------------
+# 聊天连接器（连接器管理 + webhook 链路共用）
+# ---------------------------------------------------------------------------
+def build_connector_thread_id(connector_id: int, platform: str, chat_id: str) -> str:
+    """平台会话 → LangGraph thread_id 的确定性映射（同会话永远同 thread）。"""
+    base = f"conn-{connector_id}-{platform}-{chat_id}"
+    if len(base) <= 128:
+        return base
+    digest = hashlib.sha256(chat_id.encode("utf-8")).hexdigest()[:24]
+    return f"conn-{connector_id}-{platform}-{digest}"
+
+
+async def list_connectors(session: AsyncSession) -> list[ChatConnector]:
+    rows = await session.execute(select(ChatConnector).order_by(ChatConnector.id))
+    return list(rows.scalars().all())
+
+
+async def get_connector(session: AsyncSession, connector_id: int) -> ChatConnector | None:
+    return await session.get(ChatConnector, connector_id)
+
+
+async def get_connector_by_name(session: AsyncSession, name: str) -> ChatConnector | None:
+    row = await session.execute(select(ChatConnector).where(ChatConnector.name == name))
+    return row.scalars().first()
+
+
+async def create_connector(
+    session: AsyncSession, data: ConnectorCreate, credentials: dict[str, Any]
+) -> ChatConnector:
+    connector = ChatConnector(
+        name=data.name.strip(),
+        description=data.description or "",
+        platform=ConnectorPlatform(data.platform),
+        credentials=credentials,
+        agent_id=data.agent_id,
+        enabled=data.enabled,
+    )
+    session.add(connector)
+    await session.commit()
+    await session.refresh(connector)
+    return connector
+
+
+async def update_connector(
+    session: AsyncSession, connector: ChatConnector, changes: dict[str, Any]
+) -> ChatConnector:
+    for field, value in changes.items():
+        setattr(connector, field, value)
+    await session.commit()
+    await session.refresh(connector)
+    return connector
+
+
+async def delete_connector(session: AsyncSession, connector: ChatConnector) -> None:
+    await session.delete(connector)
+    await session.commit()
+
+
+async def get_connector_conversation(
+    session: AsyncSession, connector_id: int, chat_id: str
+) -> ConnectorConversation | None:
+    row = await session.execute(
+        select(ConnectorConversation).where(
+            ConnectorConversation.connector_id == connector_id,
+            ConnectorConversation.chat_id == chat_id,
+        )
+    )
+    return row.scalars().first()
+
+
+async def upsert_connector_conversation(
+    session: AsyncSession,
+    connector_id: int,
+    platform: str,
+    chat_id: str,
+    chat_type: str,
+    user_id: str,
+    user_name: str,
+) -> ConnectorConversation:
+    """获取或创建会话映射，并刷新最近发言人/活跃时间（幂等）。"""
+    thread_id = build_connector_thread_id(connector_id, platform, chat_id)
+    stmt = pg_insert(ConnectorConversation).values(
+        connector_id=connector_id,
+        chat_id=chat_id,
+        chat_type=chat_type,
+        thread_id=thread_id,
+        last_user_ref={"user_id": user_id, "display_name": user_name},
+        last_active_at=func.now(),
+    )
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_connector_conversations_chat",
+        set_={
+            "chat_type": stmt.excluded.chat_type,
+            "last_user_ref": stmt.excluded.last_user_ref,
+            "last_active_at": stmt.excluded.last_active_at,
+        },
+    )
+    await session.execute(stmt)
+    await session.commit()
+    conversation = await get_connector_conversation(session, connector_id, chat_id)
+    if conversation is None:  # pragma: no cover - upsert 后必然存在
+        raise RuntimeError(f"会话映射创建失败 connector={connector_id} chat={chat_id}")
+    return conversation
+
+
+async def list_recent_connector_conversations(
+    session: AsyncSession, connector_id: int, limit: int = 20
+) -> list[ConnectorConversation]:
+    rows = await session.execute(
+        select(ConnectorConversation)
+        .where(ConnectorConversation.connector_id == connector_id)
+        .order_by(ConnectorConversation.last_active_at.desc())
+        .limit(limit)
+    )
+    return list(rows.scalars().all())
