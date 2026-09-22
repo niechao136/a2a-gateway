@@ -29,6 +29,7 @@ import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
 import { Agent, a2aPathForAgent, adminApi } from "@/lib/adminApi";
 import TestChatDialog from "@/components/admin/TestChatDialog";
+import { useIsMobile, useIsTablet } from "@/lib/breakpoints";
 
 export default function AdminAgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -37,6 +38,9 @@ export default function AdminAgentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [testAgent, setTestAgent] = useState<Agent | null>(null);
+
+  const isMobile = useIsMobile();
+  const showOptionalCols = !useIsTablet(); // 平板档隐藏「A2A 目标」「更新时间」两列
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,7 +93,7 @@ export default function AdminAgentsPage() {
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 2 }}>
         <Typography variant="h6" sx={{ flex: 1 }}>
           Agent 管理
         </Typography>
@@ -104,6 +108,126 @@ export default function AdminAgentsPage() {
         </Alert>
       )}
 
+      {isMobile && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : agents.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+              暂无 Agent，点击右上角「新建 Agent」开始
+            </Typography>
+          ) : (
+            agents.map((agent) => {
+              const isDefault = agent.slug === "/";
+              const busy = busyId === agent.id;
+              return (
+                <Paper key={agent.id} variant="outlined" sx={{ p: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="body1" sx={{ flex: 1, minWidth: 0, fontWeight: 600 }} noWrap>
+                      {agent.name}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={agent.status === "published" ? "已发布" : "草稿"}
+                      color={agent.status === "published" ? "success" : "default"}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                    {isDefault ? "/（默认）" : `/${agent.slug}`}
+                    {agent.updated_at ? ` · ${new Date(agent.updated_at).toLocaleString()}` : ""}
+                  </Typography>
+                  {agent.description && (
+                    <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+                      {agent.description}
+                    </Typography>
+                  )}
+                  {agent.status === "published" && (
+                    <Typography
+                      variant="caption"
+                      sx={{ display: "block", mt: 0.5, fontFamily: "monospace", wordBreak: "break-all" }}
+                    >
+                      {a2aPathForAgent(agent)}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                    A2A 目标：{targetSummary(agent)}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      alignItems: "center",
+                      gap: 0.5,
+                      mt: 1.5,
+                      minHeight: 44,
+                    }}
+                  >
+                    {busy && <CircularProgress size={16} sx={{ mr: 0.5 }} />}
+                    <Tooltip title="编辑">
+                      <IconButton
+                        size="small"
+                        component={Link}
+                        href={`/admin/agents/${agent.id}/edit`}
+                        disabled={busy}
+                      >
+                        <EditOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={agent.status === "published" ? "前往对话" : "草稿未发布，发布后可对话"}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          component={Link}
+                          href={isDefault ? "/" : `/${agent.slug}`}
+                          disabled={busy || agent.status !== "published"}
+                        >
+                          <ChatOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={agent.status === "published" ? "下线" : "发布"}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleTogglePublish(agent)}
+                          disabled={busy || (isDefault && agent.status === "published")}
+                        >
+                          {agent.status === "published" ? (
+                            <UnpublishedIcon fontSize="small" />
+                          ) : (
+                            <PublishIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="测试对话">
+                      <IconButton size="small" onClick={() => setTestAgent(agent)} disabled={busy}>
+                        <ForumOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={isDefault ? "默认 Agent 不可删除" : "删除"}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(agent)}
+                          disabled={busy || isDefault}
+                        >
+                          <DeleteOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                </Paper>
+              );
+            })
+          )}
+        </Box>
+      )}
+
+      {!isMobile && (
       <TableContainer component={Paper} variant="outlined">
         <Table size="small">
           <TableHead>
@@ -112,21 +236,25 @@ export default function AdminAgentsPage() {
               <TableCell>路由</TableCell>
               <TableCell>A2A 地址</TableCell>
               <TableCell>状态</TableCell>
-              <TableCell>A2A 目标</TableCell>
-              <TableCell>更新时间</TableCell>
+              {showOptionalCols && <TableCell>A2A 目标</TableCell>}
+              {showOptionalCols && <TableCell>更新时间</TableCell>}
               <TableCell align="right">操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={showOptionalCols ? 7 : 5} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : agents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                <TableCell
+                  colSpan={showOptionalCols ? 7 : 5}
+                  align="center"
+                  sx={{ py: 4, color: "text.secondary" }}
+                >
                   暂无 Agent，点击右上角「新建 Agent」开始
                 </TableCell>
               </TableRow>
@@ -172,16 +300,20 @@ export default function AdminAgentsPage() {
                         color={agent.status === "published" ? "success" : "default"}
                       />
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" color="text.secondary">
-                        {targetSummary(agent)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" color="text.secondary">
-                        {agent.updated_at ? new Date(agent.updated_at).toLocaleString() : "-"}
-                      </Typography>
-                    </TableCell>
+                    {showOptionalCols && (
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">
+                          {targetSummary(agent)}
+                        </Typography>
+                      </TableCell>
+                    )}
+                    {showOptionalCols && (
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">
+                          {agent.updated_at ? new Date(agent.updated_at).toLocaleString() : "-"}
+                        </Typography>
+                      </TableCell>
+                    )}
                     <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       {busy && <CircularProgress size={16} sx={{ mr: 1 }} />}
                       <Tooltip title="编辑">
@@ -252,6 +384,7 @@ export default function AdminAgentsPage() {
           </TableBody>
         </Table>
       </TableContainer>
+      )}
 
       <TestChatDialog
         open={!!testAgent}
