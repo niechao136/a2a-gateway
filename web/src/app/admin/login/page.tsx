@@ -55,6 +55,7 @@ export default function AdminLoginPage() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
+        "@supports (min-height: 100dvh)": { minHeight: "100dvh" },
         bgcolor: "background.default",
         px: 2,
       }}

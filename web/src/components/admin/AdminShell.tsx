@@ -112,7 +112,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   if (!ready || !authed) {
     return (
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          "@supports (height: 100dvh)": { height: "100dvh" },
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -169,7 +177,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden", bgcolor: "background.default" }}>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100vh",
+        "@supports (height: 100dvh)": { height: "100dvh" },
+        overflow: "hidden",
+        bgcolor: "background.default",
+      }}
+    >
       {/* 桌面端常驻侧边栏（固定不随内容滚动） */}
       {isDesktop && (
         <Box
@@ -181,6 +197,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             borderRight: 1,
             borderColor: "divider",
             height: "100vh",
+            "@supports (height: 100dvh)": { height: "100dvh" },
             overflowY: "auto",
             overflowX: "hidden",
             scrollbarGutter: "stable",
@@ -201,7 +218,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </Drawer>
       )}
 
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          height: "100vh",
+          "@supports (height: 100dvh)": { height: "100dvh" },
+          overflow: "hidden",
+        }}
+      >
         <AppBar
           position="static"
           color="default"

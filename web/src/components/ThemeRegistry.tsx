@@ -71,6 +71,18 @@ export default function ThemeRegistry({ children }: { children: ReactNode }) {
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif",
         },
+        components: {
+          MuiIconButton: {
+            styleOverrides: {
+              // 触屏指针设备上小尺寸图标按钮达到 44px 触控目标（桌面样式零变化）
+              sizeSmall: {
+                "@media (hover: none) and (pointer: coarse)": {
+                  padding: 12,
+                },
+              },
+            },
+          },
+        },
       }),
     [mode]
   );

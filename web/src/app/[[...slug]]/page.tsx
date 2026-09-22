@@ -96,7 +96,15 @@ export default function Page({ params }: PageProps) {
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          "@supports (height: 100dvh)": { height: "100dvh" },
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -111,6 +119,7 @@ export default function Page({ params }: PageProps) {
           alignItems: "center",
           justifyContent: "center",
           height: "100vh",
+          "@supports (height: 100dvh)": { height: "100dvh" },
           gap: 2,
         }}
       >

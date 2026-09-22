@@ -335,7 +335,14 @@ export default function ChatPage({
   );
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default" }}>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100vh",
+        "@supports (height: 100dvh)": { height: "100dvh" },
+        bgcolor: "background.default",
+      }}
+    >
       {/* 桌面端常驻侧边栏 */}
       {isDesktop && (
         <Box
