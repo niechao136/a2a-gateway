@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 
 import hashlib
 
-from sqlalchemy import CursorResult, select, update
+from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1277,3 +1277,30 @@ async def list_recent_connector_conversations(
         .limit(limit)
     )
     return list(rows.scalars().all())
+
+
+async def agent_name_map(session: AsyncSession, agent_ids: list[int]) -> dict[int, str]:
+    """批量取 Agent 名称（连接器列表展示绑定关系用）。"""
+    if not agent_ids:
+        return {}
+    rows = await session.execute(
+        select(AgentConfig.id, AgentConfig.name).where(AgentConfig.id.in_(agent_ids))
+    )
+    return {aid: name for aid, name in rows.all()}
+
+
+async def connector_last_active_map(
+    session: AsyncSession, connector_ids: list[int]
+) -> dict[int, datetime | None]:
+    """各连接器最近活跃时间（聚合会话映射表）。"""
+    if not connector_ids:
+        return {}
+    rows = await session.execute(
+        select(
+            ConnectorConversation.connector_id,
+            func.max(ConnectorConversation.last_active_at),
+        )
+        .where(ConnectorConversation.connector_id.in_(connector_ids))
+        .group_by(ConnectorConversation.connector_id)
+    )
+    return {cid: ts for cid, ts in rows.all()}
