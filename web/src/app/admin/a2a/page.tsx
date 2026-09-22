@@ -25,6 +25,7 @@ import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import BoltIcon from "@mui/icons-material/Bolt";
 import { A2AEndpoint, AUTH_TYPE_LABELS, ApiError, adminApi } from "@/lib/adminApi";
 import A2AEndpointDialog from "@/components/admin/A2AEndpointDialog";
+import { useIsMobile, useIsTablet } from "@/lib/breakpoints";
 
 /** A2A 目标注册表管理页：集中登记可复用的 A2A 服务。 */
 export default function A2AAdminPage() {
@@ -33,6 +34,8 @@ export default function A2AAdminPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const showUpdatedAt = !useIsTablet(); // 平板档仅隐藏「更新时间」列
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<A2AEndpoint | null>(null);
 
@@ -107,7 +110,7 @@ export default function A2AAdminPage() {
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, mb: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, flexWrap: "wrap", mb: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h6">A2A 管理</Typography>
           <Typography variant="caption" color="text.secondary">
@@ -125,6 +128,83 @@ export default function A2AAdminPage() {
         </Alert>
       )}
 
+      {isMobile && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : items.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+              暂无 A2A 目标，点击右上角「新建目标」添加
+            </Typography>
+          ) : (
+            items.map((item) => (
+              <Paper key={item.id} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body1" sx={{ flex: 1, minWidth: 0, fontWeight: 600 }} noWrap>
+                    {item.name}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={item.enabled ? "启用" : "停用"}
+                    color={item.enabled ? "success" : "default"}
+                  />
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                  {AUTH_TYPE_LABELS[item.auth_type] ?? item.auth_type}
+                  {item.updated_at ? ` · ${new Date(item.updated_at).toLocaleString()}` : ""}
+                </Typography>
+                {item.description && (
+                  <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+                    {item.description}
+                  </Typography>
+                )}
+                <Typography
+                  variant="caption"
+                  sx={{ display: "block", mt: 0.5, fontFamily: "monospace", wordBreak: "break-all" }}
+                >
+                  {item.url}
+                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    gap: 0.5,
+                    mt: 1.5,
+                    minHeight: 44,
+                  }}
+                >
+                  {busyId === item.id && <CircularProgress size={16} sx={{ mr: 0.5 }} />}
+                  <Tooltip title="测试连接">
+                    <IconButton size="small" onClick={() => handleTest(item)} disabled={busyId === item.id}>
+                      <BoltIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="编辑">
+                    <IconButton size="small" onClick={() => openEdit(item)} disabled={busyId === item.id}>
+                      <EditOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="删除">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(item)}
+                      disabled={busyId === item.id}
+                    >
+                      <DeleteOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Paper>
+            ))
+          )}
+        </Box>
+      )}
+
+      {!isMobile && (
       <TableContainer component={Paper} variant="outlined">
         <Table size="small">
           <TableHead>
@@ -133,20 +213,24 @@ export default function A2AAdminPage() {
               <TableCell>服务地址</TableCell>
               <TableCell>鉴权</TableCell>
               <TableCell>状态</TableCell>
-              <TableCell>更新时间</TableCell>
+              {showUpdatedAt && <TableCell>更新时间</TableCell>}
               <TableCell align="right">操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={showUpdatedAt ? 6 : 5} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                <TableCell
+                  colSpan={showUpdatedAt ? 6 : 5}
+                  align="center"
+                  sx={{ py: 4, color: "text.secondary" }}
+                >
                   暂无 A2A 目标，点击右上角「新建目标」添加
                 </TableCell>
               </TableRow>
@@ -183,11 +267,13 @@ export default function A2AAdminPage() {
                       color={item.enabled ? "success" : "default"}
                     />
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">
-                      {item.updated_at ? new Date(item.updated_at).toLocaleString() : "-"}
-                    </Typography>
-                  </TableCell>
+                  {showUpdatedAt && (
+                    <TableCell>
+                      <Typography variant="caption" color="text.secondary">
+                        {item.updated_at ? new Date(item.updated_at).toLocaleString() : "-"}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                     {busyId === item.id && <CircularProgress size={16} sx={{ mr: 1 }} />}
                     <Tooltip title="测试连接">
@@ -225,6 +311,7 @@ export default function A2AAdminPage() {
           </TableBody>
         </Table>
       </TableContainer>
+      )}
 
       {/* 仅在打开时挂载，弹窗初始值直接由 initial 决定 */}
       {dialogOpen && (
