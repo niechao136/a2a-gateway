@@ -62,7 +62,8 @@ export default function ChatPage({
 }: ChatPageProps) {
   const theme = useTheme();
   const router = useRouter();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  // ≥600px（含平板竖屏）常驻双栏；<600px 走抽屉
+  const isDesktop = useMediaQuery(theme.breakpoints.up("sm"));
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -348,7 +349,7 @@ export default function ChatPage({
         <Box
           component="aside"
           sx={{
-            width: SIDEBAR_WIDTH,
+            width: { sm: 240, md: 288 },
             flexShrink: 0,
             bgcolor: "background.paper",
             borderRight: 1,
