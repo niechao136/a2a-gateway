@@ -65,3 +65,23 @@ export function bytesToBase64(bytes: Uint8Array): string {
   }
   return btoa(binary);
 }
+
+/** 纯 base64 → Uint8Array（与 bytesToBase64 互逆）。 */
+export function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/** base64 → UTF-8 文本（脚本附件编辑时的展示口径）。 */
+export function base64ToUtf8(b64: string): string {
+  return new TextDecoder().decode(base64ToBytes(b64));
+}
+
+/** UTF-8 文本 → base64（脚本附件编辑后的回写口径）。 */
+export function utf8ToBase64(text: string): string {
+  return bytesToBase64(new TextEncoder().encode(text));
+}

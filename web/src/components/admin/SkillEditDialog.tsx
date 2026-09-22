@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { ApiError, Skill, SkillFilePayload, SkillLoadMode, adminApi } from "@/lib/adminApi";
 import { attachmentFromBytes, validateAttachment, validateSkillEditForm } from "@/lib/skillForm";
-import { formatBytes } from "@/lib/skillUtils";
+import { base64ToUtf8, formatBytes, utf8ToBase64 } from "@/lib/skillUtils";
 
 interface Props {
   skill: Skill;
@@ -33,6 +33,11 @@ function payloadBytes(f: SkillFilePayload): number {
   return f.encoding === "base64"
     ? Math.floor((f.content.length * 3) / 4)
     : new TextEncoder().encode(f.content).length;
+}
+
+/** 附件在编辑器中的展示文本：脚本（base64 存储）解码为 UTF-8，文本按原文。 */
+function attachmentDisplayText(f: SkillFilePayload): string {
+  return f.encoding === "base64" ? base64ToUtf8(f.content) : f.content;
 }
 
 /** Skill 编辑弹窗（规格 §10.2）：三字段 + allow_scripts + content + 附件全量管理。 */
@@ -55,6 +60,8 @@ export default function SkillEditDialog({ skill, open, onClose, onSaved }: Props
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** 当前展开内联编辑框的附件路径（null = 全部收起）。 */
+  const [editingPath, setEditingPath] = useState<string | null>(null);
 
   const addFiles = async (fileList: FileList | null) => {
     if (!fileList?.length) return;
@@ -77,10 +84,25 @@ export default function SkillEditDialog({ skill, open, onClose, onSaved }: Props
     setFiles(next);
   };
 
+  /** 编辑单个附件内容：脚本回写时重新编码 base64，文本直接存原文。 */
+  const updateFileContent = (idx: number, text: string) => {
+    setFiles((prev) =>
+      prev.map((f, i) =>
+        i === idx ? { ...f, content: f.encoding === "base64" ? utf8ToBase64(text) : text } : f,
+      ),
+    );
+  };
+
   const save = async () => {
     const errors = validateSkillEditForm({ description });
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
+    // 提交前对附件再做一轮前置校验（内联编辑可能把内容改到超限）
+    const invalid = files.map((f) => validateAttachment(f)).find((m) => m !== null);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     const baseline = skill.files.map((f) => ({
       path: f.path,
       content: f.content ?? "",
@@ -162,30 +184,58 @@ export default function SkillEditDialog({ skill, open, onClose, onSaved }: Props
           onChange={(e) => setContent(e.target.value)}
         />
         <Typography variant="subtitle2" sx={{ mt: 1 }}>
-          附件（全量替换；脚本 .py/.sh/.js ≤ 256KB，文本 ≤ 1MB）
+          附件（内容可编辑；保存时全量替换；脚本 .py/.sh/.js ≤ 256KB，文本 ≤ 1MB）
         </Typography>
-        {files.map((f, idx) => (
-          <Box key={f.path} sx={{ display: "flex", alignItems: "center", gap: 1, py: 0.5 }}>
-            <Chip
-              size="small"
-              color={f.entry_type === "script" ? "warning" : "default"}
-              label={f.entry_type === "script" ? "脚本" : "文本"}
-            />
-            <Typography variant="body2" sx={{ flex: 1 }}>
-              {f.path}
-              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                {formatBytes(payloadBytes(f))}
-              </Typography>
-            </Typography>
-            <Button
-              size="small"
-              color="error"
-              onClick={() => setFiles(files.filter((_, i) => i !== idx))}
-            >
-              移除
-            </Button>
-          </Box>
-        ))}
+        {files.map((f, idx) => {
+          const editing = editingPath === f.path;
+          const message = editing ? validateAttachment(f) : null;
+          return (
+            <Box key={f.path} sx={{ py: 0.5, borderBottom: "1px dashed divider" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Chip
+                  size="small"
+                  color={f.entry_type === "script" ? "warning" : "default"}
+                  label={f.entry_type === "script" ? "脚本" : "文本"}
+                />
+                <Typography variant="body2" sx={{ flex: 1, wordBreak: "break-all" }}>
+                  {f.path}
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ ml: 1 }}
+                  >
+                    {formatBytes(payloadBytes(f))}
+                  </Typography>
+                </Typography>
+                <Button size="small" onClick={() => setEditingPath(editing ? null : f.path)}>
+                  {editing ? "收起" : "编辑"}
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => setFiles(files.filter((_, i) => i !== idx))}
+                >
+                  移除
+                </Button>
+              </Box>
+              {editing && (
+                <TextField
+                  label={`附件内容（${f.entry_type === "script" ? "脚本，保存时按 base64 编码" : "文本"}）`}
+                  fullWidth
+                  multiline
+                  minRows={6}
+                  maxRows={16}
+                  margin="normal"
+                  value={attachmentDisplayText(f)}
+                  onChange={(e) => updateFileContent(idx, e.target.value)}
+                  error={!!message}
+                  helperText={message ?? undefined}
+                />
+              )}
+            </Box>
+          );
+        })}
         <Button variant="outlined" component="label" sx={{ mt: 1 }}>
           添加附件
           <input
