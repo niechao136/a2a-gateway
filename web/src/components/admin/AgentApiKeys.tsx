@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  Paper,
   Stack,
   Table,
   TableBody,
@@ -23,6 +24,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import { ApiError, ApiKey, adminApi } from "@/lib/adminApi";
+import { useIsMobile } from "@/lib/breakpoints";
 
 /** Agent 编辑页内的 API Key 管理：该 Agent 对外 A2A 服务的调用凭据。 */
 export default function AgentApiKeys({ agentId }: { agentId: number }) {
@@ -32,6 +34,8 @@ export default function AgentApiKeys({ agentId }: { agentId: number }) {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -115,7 +119,7 @@ export default function AgentApiKeys({ agentId }: { agentId: number }) {
         </Alert>
       )}
 
-      <Stack direction="row" sx={{ mb: 2 }} spacing={1}>
+      <Stack direction={{ xs: "column", sm: "row" }} sx={{ mb: 2 }} spacing={1}>
         <TextField
           size="small"
           label="新 Key 名称"
@@ -126,7 +130,7 @@ export default function AgentApiKeys({ agentId }: { agentId: number }) {
           onKeyDown={(e) => {
             if (e.key === "Enter") void handleCreate();
           }}
-          sx={{ width: 280 }}
+          sx={{ width: { xs: "100%", sm: 280 } }}
         />
         <Button
           variant="contained"
@@ -139,6 +143,62 @@ export default function AgentApiKeys({ agentId }: { agentId: number }) {
         </Button>
       </Stack>
 
+      {isMobile && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress size={22} />
+            </Box>
+          ) : items.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+              暂无 API Key，保存后会自动生成默认 Key
+            </Typography>
+          ) : (
+            items.map((item) => (
+              <Paper key={item.id} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600 }} noWrap>
+                    {item.name}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={item.is_default ? "默认" : "自定义"}
+                    color={item.is_default ? "primary" : "default"}
+                  />
+                </Box>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: "flex-start", mt: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ fontFamily: "monospace", flex: 1, minWidth: 0, wordBreak: "break-all" }}
+                  >
+                    {item.key}
+                  </Typography>
+                  <IconButton size="small" onClick={() => void copyKey(item.key)} aria-label="复制 Key">
+                    <ContentCopyOutlinedIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Stack>
+                <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", minHeight: 44 }}>
+                  {busyId === item.id && <CircularProgress size={16} sx={{ mr: 0.5 }} />}
+                  <Tooltip title={item.is_default ? "默认 Key 不可删除" : "删除"}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(item)}
+                        disabled={busyId === item.id || item.is_default}
+                      >
+                        <DeleteOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
+              </Paper>
+            ))
+          )}
+        </Box>
+      )}
+
+      {!isMobile && (
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -206,6 +266,7 @@ export default function AgentApiKeys({ agentId }: { agentId: number }) {
           )}
         </TableBody>
       </Table>
+      )}
     </Box>
   );
 }
