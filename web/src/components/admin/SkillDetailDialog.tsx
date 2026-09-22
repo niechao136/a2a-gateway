@@ -49,7 +49,12 @@ export default function SkillDetailDialog({ skill, open, onClose }: Props) {
         <Divider sx={{ my: 1.5 }} />
         <Box
           sx={{
-            "& pre": { bgcolor: "grey.100", p: 1, overflowX: "auto", fontSize: 13 },
+            "& pre": (theme) => ({
+              bgcolor: theme.palette.mode === "dark" ? "grey.900" : "grey.100",
+              p: 1,
+              overflowX: "auto",
+              fontSize: 13,
+            }),
             "& code": { fontSize: 13 },
           }}
         >
@@ -92,13 +97,13 @@ export default function SkillDetailDialog({ skill, open, onClose }: Props) {
               {previewPath === f.path && (
                 <Box
                   sx={{
-                    "& pre": {
-                      bgcolor: "grey.100",
+                    "& pre": (theme) => ({
+                      bgcolor: theme.palette.mode === "dark" ? "grey.900" : "grey.100",
                       p: 1,
                       overflowX: "auto",
                       fontSize: 13,
                       whiteSpace: "pre-wrap",
-                    },
+                    }),
                   }}
                 >
                   <pre>{f.content ?? ""}</pre>

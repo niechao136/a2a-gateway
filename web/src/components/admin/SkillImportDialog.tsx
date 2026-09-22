@@ -253,15 +253,24 @@ export default function SkillImportDialog({ open, onClose, onImported }: Props) 
           />
         )}
         {tab === 2 && (
-          <Button variant="outlined" component="label" sx={{ mt: 2 }} disabled={busy}>
-            选择 zip 文件
-            <input
-              type="file"
-              accept=".zip"
-              hidden
-              onChange={(e) => void handleZip(e.target.files?.[0] ?? null)}
-            />
-          </Button>
+          <>
+            <Button variant="outlined" component="label" sx={{ mt: 2 }} disabled={busy}>
+              选择 zip 文件
+              <input
+                type="file"
+                accept=".zip"
+                hidden
+                onChange={(e) => void handleZip(e.target.files?.[0] ?? null)}
+              />
+            </Button>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mt: 1, wordBreak: "break-word" }}
+            >
+              选择 zip 包后自动解析其中的 SKILL.md 与附件（单文件 ≤ 1 MB，脚本 ≤ 256KB，二进制文件跳过并标注）。
+            </Typography>
+          </>
         )}
         {tab === 3 && (
           <>
@@ -276,7 +285,11 @@ export default function SkillImportDialog({ open, onClose, onImported }: Props) 
                 onChange={(e) => void handleDir(e.target.files)}
               />
             </Button>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mt: 1, wordBreak: "break-word" }}
+            >
               选择目录后自动读取其中的文本文件（二进制与超 1 MB 的文件会被跳过）。
             </Typography>
           </>
