@@ -128,6 +128,8 @@ export default function AgentApiKeys({ agentId }: { agentId: number }) {
           onChange={(e) => setName(e.target.value)}
           disabled={creating}
           onKeyDown={(e) => {
+            // 移动端软键盘「换行」只换行，创建仅通过按钮；桌面保持回车创建
+            if (isMobile) return;
             if (e.key === "Enter") void handleCreate();
           }}
           sx={{ width: { xs: "100%", sm: 280 } }}
