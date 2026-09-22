@@ -3659,7 +3659,7 @@ git commit -m "fix: 连接器全量验证修复（按 basedpyright/ruff/pytest �
 - `uv run ruff check src tests`：173 条，全部为项目既有基线（B008 `Depends` 91 条、BLE001、UP017、I001 等），新增代码未引入新规则类别
 - `npx tsc --noEmit`（web）：新增文件无错误；仅剩既有 `src/app/layout.tsx:16 LayoutProps`（Next 生成类型缺失）
 - `npx eslint`（新增/修改前端文件）：0 error
-- `npx vitest run`（web）：当前环境工具链将其识别为 watch 服务并接管输出，未能取得结果；改动仅新增类型与 API 方法，未触碰被测纯函数（`decodeJwtPayload` / `isJwtExpired` 等）
+- `npx vitest run`（web）：16 suites / 40 tests 全部通过（终端输出被工具识别为 watch 服务并接管，改用 `--reporter=json --outputFile` 落盘读取结果）
 
 **验收清单（对照规格 §11）**
 
