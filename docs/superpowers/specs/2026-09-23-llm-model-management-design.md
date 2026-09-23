@@ -104,7 +104,7 @@
 
 ### 4.3 连通性探针 `src/a2a_gateway/llm_probe.py`
 
-- `async test_llm(provider, base_url, api_key, model, timeout=10.0) -> (ok, message)`，httpx 直调 REST
+- `async probe_llm(provider, base_url, api_key, model, timeout=10.0) -> (ok, message)`，httpx 直调 REST（函数名不用 test_ 前缀，避免被 pytest 误收集）
 - `openai`：`POST {base_url}/chat/completions`，body `{"model", "messages":[{"role":"user","content":"ping"}], "max_tokens":1}`，`Authorization: Bearer`
 - `anthropic`：`POST {base_url|https://api.anthropic.com}/v1/messages`，headers `x-api-key` + `anthropic-version: 2023-06-01`，body `{"model", "max_tokens":1, "messages":[...]}`
 - 成功：`ok=True`，message 附模型回复确认；失败：将超时 / 401 / 403 / 404 / 连接错误映射为中文 message（能区分 key 无效、模型不存在、地址不可达）
