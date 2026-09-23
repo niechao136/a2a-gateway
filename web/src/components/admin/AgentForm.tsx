@@ -566,7 +566,7 @@ export default function AgentForm({
                   type="number"
                   size="small"
                   fullWidth
-                  inputProps={{ step: "0.1", min: 0, max: 2 }}
+                  slotProps={{ htmlInput: { step: "0.1", min: 0, max: 2 } }}
                   value={modelTemperature}
                   onChange={(e) => setModelTemperature(e.target.value)}
                   helperText="留空使用运行时默认"
@@ -576,7 +576,7 @@ export default function AgentForm({
                   type="number"
                   size="small"
                   fullWidth
-                  inputProps={{ min: 1 }}
+                  slotProps={{ htmlInput: { min: 1 } }}
                   value={modelMaxTokens}
                   onChange={(e) => setModelMaxTokens(e.target.value)}
                   helperText="留空使用运行时默认"
