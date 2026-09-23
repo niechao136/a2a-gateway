@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:e76ad7b620d42879fcf2bb88afc75a3a591f956f9598ba8be753e9c2d27ab62b",
+  "claims": [
+    {
+      "id": "claim_1e7c2f272f6b4b7e8210e55d380694fe",
+      "statement": "架构决策为增强模式而非纯转发：LangGraph Agent 自带记忆与工具，A2A 调用 Hermes 等下游只是工具之一；所有 Agent 共享同一后端进程按路由动态加载配置。",
+      "evidence": [
+        {
+          "resource": "repo://TODO.md#L34-L40",
+          "version": "repo-lines-v1:sha256:da14255a4faaa15040dc5639607916ce98bfcf5ecceb4b7410c0e8c53d44f11f:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDU5NTU1MzgzMWI4ZjdiN2I2MjQ3ZDRkODE5MGE2NmI1NGMyYzA2OGU0NGU2MmYwMTIzYTM3M2I5M2Q1MmFjOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDE4NDY0OGU5MWQ5ZjJjMTg5ZGQzYmY1NDg5NGM1NTZjNTM5ZmRkMjcyZGE1NWI3MThhMDMyNWM1MTE5Mzc4NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODNlMGRlZjg3NTUwMGE0Y2RkMmZmMTlmZjg3MThlZjcyMGUxZjdiMTQ5YTE0NGI2YmIxZDdkMjQxNmJmZTM4NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTU3N2E2NTg3ODg5MmQzY2E0MGM1NDZhNjc1YTZmMzNmM2M4M2M0ZTZiYjFiMWUzYWQxZTFhOTYwODMzOTIyZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c69e49a9c4e041af8611fa7dd7744bc0",
+      "statement": "FastAPI 应用在 lifespan 中依次完成迁移（失败回退 create_all）、播种默认 Agent/管理员/API Key，并挂载 chat、admin、registry、a2a_server、speech、connectors 共 7 个路由器与 /health、CORS、全局 500 兜底。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/main.py#L39-L98",
+          "version": "repo-lines-v1:sha256:b3921bedde3a1c2a7236c53d426cc81e0832fe63894715ddb9969de6eab2d8e7:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiY2M0NDVlYmQyMGQ1ZGYyYjlhMWY3M2JjODdmNjQyZWQ1MTcyYmFmNzc3NzAxNzJhNTczNzJhMTQxOGVlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmMGYxNjhiNTcwMGE1MmYyODg4NmFlYjM3YjkwZDM5MzBlMWIxYmEzMjA3N2YyYThjOWQ2MGM0NmQ1ZDFkNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1MzYzZjQxYzIwNDkyMDM0ZTViODkxNTQ5ODhlM2QzYzhlZGI1YWNkNDI4ZTk4MzQ5MDBjOTViMTM1ZTczMmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzZTY0NDc1YTNmMjliMWJmNGMxMWU1NDc1Mzg2YWZmZmZlNDM2ODU2Y2VlZTdkMzIxMTBkZWU4N2JkN2YzYTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2cbe3fd2807b493883fa0928e8dfacf3",
+      "statement": "agent_factory 以 (agent_id, updated_at) 为键缓存图实例与 A2A wrapper 列表，构图只读 agent 快照列（a2a_targets/mcp_servers/skills）并尽力探测 MCP 工具清单；配置变更后旧键自动落空且被清理，另提供 invalidate_agent 显式失效。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L111-L116",
+          "version": "repo-lines-v1:sha256:db01509ea4ef028643166998b9addca973d7d69a51ed6964347cc1236a570aeb:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDViMGUzY2Q1Y2ZhNTZjMGJkNWZkODJjODlkZTEwNzE2Nzc5N2Q0YjIxOTBlN2I1ZmVlMzIyOGU3ZGRiNzBjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTI5N2RhZDNkMDllZmI0YTk1NTQ4NjI5YzcxZmI0ODUzOWQ3M2FlYjNiNThiNTJkOWRiNmUxYjQ2OGFhNTkzMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGU1MDQ1N2U3Y2QzOWZlN2M1MDY2MzJjNTE5MjRhN2Y4YzU4YjJjODdmZmNiODZjYTNmYThiM2NlNzc4Y2RiNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjYxODk0ZDIwMjc4NmFlMGE5NjU3M2I4ZmFiZTMzMjllOGQzODNjN2RkYjc4ODk2Yjg0ZWYyMDdhYjg3ZDllMCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L27-L99",
+          "version": "repo-lines-v1:sha256:007dbff3ce3301ab56ada13ac375edd6dfb2d2b62b85c0f4638067e402f0d27c:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExYWYzN2YyOGJmZWE4NjNlYmMzYWMxODM3MzY3MGJmN2E5OGMxZjA3ZGIzN2IxMDVlMjg4MzFiMTRlOTNlNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0OWUyZTU3YTIxNzE4MzY5M2U0NGZmYzZkNDJmYWJmMWZiYzg5MTM3MjVjMWI0NDQwMTgyMTI1NWFlMjhjMDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFkYmQ0ZDQyOGEwNDg2ZmRkN2MyM2M0ZTM5NDk0M2YwMzE3ZjBjMzBkNzQ2ZmY0OTBmZDhkYzcxMzYwM2I2NzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4YWJlODA0MTFiZDhhMTY3MGZmNmZjZDBlYzUzNTRmYjkwYjc1ZDBjOWQ5NmIwMTliYjNmOTYyZTUxZjQ0YzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0337e087375d4f7da88131e209f87fde",
+      "statement": "共享图由 build_graph 经 create_react_agent 构建：工具集 = 每目标一个 A2A 工具 + 绑定 MCP 工具（探测失败退化为 mcp_call）+ 技能工具 + 条件挂载的沙箱脚本工具，prompt = system_prompt + 技能提示，pre_model_hook 负责历史压缩与挂起/技能再注入。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L273-L337",
+          "version": "repo-lines-v1:sha256:e944ee1ef657462c29cf9ae90479f6de602e41339d4762f796321b503a2f0ca3:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNGY0OWQwNTg3M2NlYzM5Zjk3MDI2NzZmYTg0MGNkMDIwNzQxZGMwMDgwNGNmYTQzMDEyMDk3ZDUzOTU4NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhOTJhMGFkYTBjZTJkMjcxN2IzZWMwYTg4MWI1NzI5N2FiZWIyZGZmZWI1ZTQ4ODFmM2Y2OTQwNGY1ZTIzYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4b739ea78361477c8c526880089faa8e",
+      "statement": "聊天与对外 A2A 两条入口最终汇聚到同一 LangGraph 路径与 checkpointer：聊天走 routes/chat.py 的 SSE 事件映射，A2A 走 routes/a2a_server.py 的 JSON-RPC 与任务帧，二者共享 pending 挂起存储完成 input-required 恢复。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L261-L364",
+          "version": "repo-lines-v1:sha256:67e4c65c31c069a6bcf6746b5e773a0fdcb245c3f13fc91d593e395044f33ff8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJjODM0ZTQ4MjAwYTIwNzg5ZmMyMTk1ZTg3YzRkMWI2YmUzMjIxOWRlMGM4ZTMyZWMzNDYyZTg5NDdkYzczNWQ1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJlYWFkZjU3YTIxMDdlNmZjOGExMzlmNTljY2MyNGNlM2ExOTMyMWQxZmI5YjViOGRjNDMxMzhlZDEzMjk5ODM5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjZjM0NWRkYTM1MDYwOTM1MGFkY2IzYmJiZGNiMWY0ZGJmODkyNDc4N2YwODAwYzYxOGE4MjJjN2E2YjQyZTFiIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzYjQ3ODRjZjZhY2Q5ZDc5MWFhODFiYjg2Y2ViNzMzMmMwYjgwNmQ1Zjg4MWRjZjAyMmQ1MzAzZjBkOGY1MjRlIn0"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L78-L116",
+          "version": "repo-lines-v1:sha256:6efe2364e795872d58d1fc0a0a2074b7ae8343e44a2a19ef7560dd7b97bcdd04:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2OGY0ZmU1MjA0MjdkYTI1MzVmMzc3Y2Y1MjU2OTA5Y2YyNjgyMTNjY2Y3YzJjNTAxNjFiMjVjOWJkODg0NWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlMjIxNGJlMGQ5ZjE2M2RjOTIwMmY5ODA5OGFmNjRlOGNlMjk0YTRkNjI4M2QxMDE4NDNiOGU0YTRhMWQ3MTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwYWYzZjkxNDNiMjdkYTBhOTk3MzdiMGIyOWM2NjBhOTRmYTliNDNmNWY3MmFlZGE5NjdkN2ViMTUyNTY2MmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkODVhMmIwMjQ5MTMyOWMyM2QwYWVjOTllNWMzMGM0MWQ1ZTlmN2IzZTJiOWU4MDk3ZjRjZWJjZGY5YmZhODgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ca71157f3084e1fa44b28ab3778f783",
+      "statement": "对外仅暴露 nginx 统一入口一个端口，backend/frontend/sandbox-gate 仅 compose 内网可达，与 TODO 端口策略表一致。",
+      "evidence": [
+        {
+          "resource": "repo://TODO.md#L175-L181",
+          "version": "repo-lines-v1:sha256:ac98bbabc1d78b7332bd8c43806f149f3e55564423ce63aa583ab72c9c5af81b:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjc2YWI1M2RjYzg0ODFlZTE5MTU3ZGNlZTcxMTEzZTUzYWFhOGQxNzhjZGEwY2I5OThhZThiYmI5MTllOWZjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjM2NGRlMzY1ZTIyNzkzMWYwYjkzYmM3MTUzNTc0ZGMwYzlmNjU0MmU3NjhlNDQ3M2U1MjZmMDI2Nzk5OThjZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmQ4MWE4MmQ4ZmQ0MDUxMWZiM2E1N2I0ZmVjZGI0MjE3NjM1YjkyZjQwOGQ3Y2RkNGQ3NmZjYjU3MjRlYjk5MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODNlMGRlZjg3NTUwMGE0Y2RkMmZmMTlmZjg3MThlZjcyMGUxZjdiMTQ5YTE0NGI2YmIxZDdkMjQxNmJmZTM4NyJ9"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L141-L154",
+          "version": "repo-lines-v1:sha256:875828ad2d3ab9e41ff830c28f3041445ef2d0223ab4051e1a408dceffce62c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkzMzQ0OGNkZWFiMzY2NjExZmU2NWE3MjY1NDI4ZTY3OWZmZTJiNTA0NDZiZThiZGUxYTQ0MThiMmRjMjIwNDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4N2UxMzIzZDA5ZjZjYWMxYjkzOTg5N2ZkZjkxMzM1YTk1Yzg3MjY5M2VhMjVlMDMyOTJmODBkN2U1ZmNkZDQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNzg3YThkYjVmNWQxZjA2ODUzY2U5NTIwYzMyNmM1YWUyMWZjNTg4MTk1NmY4YjNkNWU1NTQ2NDViN2ViNWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkMDZjMDQ2Y2FkYTQzY2JlMjc5NDY5ZmNhYTVkZDI4N2Q0ZDI3YjZmZTZkNzQ4ZTVjMDZiOTRlNDQ5Njk0YmYifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

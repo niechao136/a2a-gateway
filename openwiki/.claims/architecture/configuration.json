@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:1e7a76b044e32b26200475701820aa2bbb3ff59acd0aec2055e96b100e87b7b0",
+  "claims": [
+    {
+      "id": "claim_73c15f7d1d784837aa27622b22c5ab3f",
+      "statement": "配置加载时真实环境变量优先于 dotenv 文件：_load_env_files 使用 load_dotenv(override=False)，文件只填补缺失项，且支持 DOTENV_PATH 按 os.pathsep 加载多个文件或自动向上查找 .env。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L25-L43",
+          "version": "repo-lines-v1:sha256:d4c33730f7375cbfb15b75b891465b64337fcda7c1324ebfc7b1fc7796308192:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzM2IyOGZiNzZjNDdmNjEwMjRkYTRlNzBiMGRlNGUzZWY0MzYwNjQ4YmFmOGZiMTBjYThjOTE0N2MxNmQ0MmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxZTVlMDhjZDdiZGMyYjZkMjk3ZjFhZjhjNmVhNDgwMDYyZjMyZTkwZGFjM2M0N2Y4NWU5ZDVkMGE4MTgzZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5MDYwOWJiOTE3ZjU3MzlmNzJkZmIzMzM3YTViODgwYWRkN2YxNjAwYmIzMmQ2N2I1NmI2NTU3ZjE0ODgxM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3ZGZmNWFmNjgwYWYyNTQ1ODEyYzgzMWY2OTE5NWY1M2FiYWIyZDIzNDc5NTBkY2ZhOTg4NDk0NzhhMjgxMTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a19fc209624b4c17935178fc7db789d7",
+      "statement": "数据库连接串采用双通道配置：显式 DATABASE_URL/CHECKPOINT_DB_URL 优先；否则由 POSTGRES_* 组件经 model_validator 拼接出 postgresql+asyncpg 的 database_url 与裸 postgresql 的 checkpoint_db_url，密码经 quote_plus 编码。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L117-L132",
+          "version": "repo-lines-v1:sha256:8b5b5d81f940a8486dc3d868cacb2d93ca0c244f2567069ac095f08ab3b919f7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4MjBmODgyZWY1MzZjMzJlMjQ1MzBhZmNiZWUzY2E2ZmNhODYxNzc2YzZlZTIwZDc3MmEwYTUzOTJkNjg4NWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhOWY4YzJiYzdhMTQxYTAyMmFmM2ZlYjhhYjUwMDhlYzI1NzU3ZWYyNGFjZDA0OWY1MDg5YTc0YjdjOWFlODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY2YjU1MjM0NzhlZTFjZWMwZGI0YWJjMmMxMGVmYWI3OTZlNWNmMGJmNTY3YWNjY2ZmOTdmYzNlODJmNDkyZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1Njc4NmQzNWM0N2RmYWVhYjM2YmRmMjUwZDBhMjhiY2FhMzIyMmVlNDc1MjAwNGQ5YWJlNGQyY2UwYWE4MjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8d52da327ba1449192a4961f93cbe80b",
+      "statement": "migration_db_url 属性在 checkpoint_db_url 以 postgresql:// 开头时改写为 postgresql+psycopg://，供 Alembic/SQLAlchemy 选用 psycopg v3 驱动；alembic/env.py 用该属性注入 sqlalchemy.url。",
+      "evidence": [
+        {
+          "resource": "repo://alembic/env.py#L28-L29",
+          "version": "repo-lines-v1:sha256:aea74ef780d1f6c77603bb0aef326bd5e4af125639e11ede97a14acd5b9e1327:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGUwOWIxZGRkNTc2YjM2MmUwZWEzNWFjMGNmMjJjNzIxMWQ3MjkyM2ExNjBjNjY1ZjM2ZThmMWU3NGJiOWU2YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmE3MjViN2NjOTdhMzcxNDhmZjBmMDhhZjJkNTczMDM1NTU4NzIwYjY2MDkxMTk3ZTAzNDI0MGRjYzY5NjBjOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDBkODRlNWNlMWZhNDYxODcxOWYzOTRiMjU3ZmZlODc2NzJhMTQ5MTFhMDNjN2RkMzdlZDU0ZjdiZDMyOTNjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDg1MTk0MWUzOTE0MmRhYTgzMTc1MjdlOWY2ZjlmZjJmMTJhMTdiZGQxM2NkMzQ4OGM5ZWM2MjRlYTk2ZWZmZiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L139-L149",
+          "version": "repo-lines-v1:sha256:c3dbc0efee8bb36e70019fceb392eb760776d116cdea9416ed20164dad686106:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4YmRhMjAzYTZiMmQ0Mjk5NjAyYTllNDdmMWJiZjJkMTM2ZmVhODQ3NDc3NDQ3ODNhOTRhY2Y3YjdlODU3YTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyMTI2MDBhZDNhNWNlNWEyMzVmNDc3YTBiYTFkNDAyYzEwNmY4NzY2MDc2M2FkOTExOGQ3MTQ2NzNjY2YwMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhYTAwMDUyNTE4NWJkODdlZDU0YjA3YjZhOGU2NDFlODEzODA1NGNjN2Q5NDk0MDg0ZTZkOTI1NWVjYTQzOTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmM2YxOWRlY2Q3MDA1M2IwMWFmM2Y4MzNmYmFjNGJkOTE4YWU1OTVlMmZmODYxM2IxMDBmZTk1NDRhZTY5MTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bfae31aac5b046a1ae265461b1688ab8",
+      "statement": "get_settings 是 lru_cache 单例：同一进程首次构造后固定 Settings 实例，环境变量变更仅对新进程生效；模块导入时即完成 dotenv 装载。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L152-L154",
+          "version": "repo-lines-v1:sha256:16f1815e0170d22e0b1d108799cdf941ca3d9957b261ea7246d9b42045d3ecd8:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGM3ZjRjNTBlYzYyYjJhMzBjMDgwYjFiYjdhN2Y1ZjNmN2FiNGYzYWJhMTAxMDYwMmI4NDI3ODMxYzQ2ZTQzMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGQ3OTVkZGQ4YWRhMDk3YzU5OGIyMmMzZWVjOWNiNzYxYWFiMDJhYWNkYjQ1MmIzZmIzOTgzMzBiNzFkZGI1YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWZmNGUzYmZlNjBlZjI0YWZhMWI4Njk4MzViYWEyZTY5Y2QzZmE1MjRkNTkyY2FjMDZmMzcxNWM3MGVjNTFhZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L42-L43",
+          "version": "repo-lines-v1:sha256:7e1e24eca64ff23fcb585ae95682931ec7df4c6ab0070096d22f5914f16ca4fa:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjVlNjMzNzlmMzRkZmExNzEyMWQzMDAxMDAzNTA4ZTQ0ZjdhOTlmNWVlZTYzNWVhY2EyNGU4YzI0NmQxNmNiMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjFlNWUwOGNkN2JkYzJiNmQyOTdmMWFmOGM2ZWE0ODAwNjJmMzJlOTBkYWMzYzQ3Zjg1ZTlkNWQwYTgxODNlZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDlhNDVkMjIwZjJjNWQzZjk0NmRhN2Y5YzU0ZDk4ZGEwZTgwZWFkZDFhYTY0MDVhYThkYzFmZDYzYmE4MzlmYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODdkZmY1YWY2ODBhZjI1NDU4MTJjODMxZjY5MTk1ZjUzYWJhYjJkMjM0Nzk1MGRjZmE5ODg0OTQ3OGEyODExNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a3776375a80e4f0d8b98a72106c25b15",
+      "statement": "SANDBOX_URL 默认为空即功能关闭（不挂载 run_skill_script 工具）；docker compose 默认将其指向 http://sandbox-gate:8100 并注入共享 SANDBOX_TOKEN。",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.yml#L73-L75",
+          "version": "repo-lines-v1:sha256:637bf78039a9aec40ee67c3210de83ff4c05a3314e4b58a331ba784d648ff918:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGQ2MTQ2ZTg2YzczZWY5MWI4YzdkZGUwYTZlY2FkZTc5ZTNmZTJlMmFlMjIyZDhhMmU3MDc4ZjMwNzc0YjFmZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWNhZDRjY2E1MDI4NTlmZjM2M2QyMTk3ZDA0ZmVkN2NkZDk3NDExNTVmODYxMjczM2ZhMTExZmUzNTk2YTc0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWVhZDBhMDkwNDNjZGQ3NDUxYjg5NzU4ZTdjOTMyZjRiNDhlY2NjODdmZWY2YzVlMzgzNzgwYzRkMjYyZTFkMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWMzMjgwNjI0NTU1MDBhYTRiNTZiNGNhMjJiYzc5NDUyYzY0MzA0MmZlNjJjZDNiNWQwZGY3YTBkZjk1ZTVmZCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L113-L115",
+          "version": "repo-lines-v1:sha256:524994557320e05f5bbc1ee28ece6d551cde6fb407e7401343dd5a67aa2c1d2d:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RkODQ3ZDFkMmNiZmE0MWM0ZmFhM2NlOThhMjAyYTgwMDdjZDI4Y2I2ZTdmYzBhMDc1MjJkZTQ3ZTllOTRmOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDUwNThlYTBkMjBmYzQ3YTllYzYzNGQ2MmRjYmFkMzJkODQzYzMxYWM0NzEyMWI4YmRiOTQ5YWQ1ZGRkMDA4MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDMyOWYxYjc2YmYyMzNjMzNjOTk1ZDI3MDliZDI5MjRhNzY5ZTlhYTgyNjQyYzY2ZDM0MDNhYjUxMmQ2ZDM4OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2RjYmJhNGZmYmI0ZDI1Nzk1NWM4ZTRmNTJhZjMzYmU4N2VmNDMxNDUxYmIyMzk5OGFkZmZmOWViMTdhZmNiMCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/sandbox_client.py#L37-L39",
+          "version": "repo-lines-v1:sha256:cf7e58f95d18405e6e2f65159fc87775b9718a83bfcbefea229f92e01cd86c12:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjU5MzY3Mjg5OGQwMmVlYTU5YjVmYzliMWU2MWMxMDJkNDc2ZGVhMDMzZmIyNTE5NDE5MjAwM2ExYTFmMGVhMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNjMDczNjhlZDVjNGE0ODg3MzZhYmI0YTY2MWJkNjU5NjU0Nzk4ODQ1M2Y3YzllMjc2MjAxYWExZjljYmFmOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjI1ODcwNmVkMzkxNzVjYjllYWNmMTMxYjNjZTgzMTEzNzFlNTk1MTU5OGY4YzNkNWQyZjZjMmE4MTFjNzRhNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWUwZGZkYzhkOWM1ZGUyOTk0ZTc1NDAzNWI5MGY2NjNhNDUwMTg5N2FiZGRjZmI2YmZmMWMyNzllY2I4ZmFhNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ae1821bd8655491d9c48c9a5f763dc35",
+      "statement": "compose 部署将 POSTGRES_HOST 覆盖为服务名 postgres 且不向宿主机暴露数据库端口，仅同网络内通过 postgres:5432 访问；FRONTEND_ORIGIN 默认取 http://localhost:10099 以匹配 nginx 统一入口。",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.yml#L21-L24",
+          "version": "repo-lines-v1:sha256:8ff60bb50c077b531cf290a9d6003f2788f27c1f04b99bbf5f1a3dc7590734fc:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzIxZTljNjE3MWUwMjAzMDk5ZjgxN2IxZmVmNDI5MWE1MDc2ZGQ2NDA3NmYwNWY1M2EwMzI0ZGY4NzlmMWQwZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjJlMDMwZjdiNGFiYTUzY2QzODA5NDkxN2Y5MzgxOWIzMjQyNDkxMjAxMTVlNGUwZWVjNGYzMzZmNjI5MDU3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzZhOGY3ZWQ3YTk3YmZkY2U4NjA1NGUzYzA2YTI3ZTM3ZmQ0ZmEwZjUxYWVmYThjN2I4ODIyY2E0ZGEzODNmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzQ1Y2FhZTY3ZTg0Nzc5ZTExY2JjZTMzYWE2ZTZhYThlZGJlOWQwYzQ1OTU1NzUxZTEzMmJmMDVjMTNiOGZiNCJ9"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L51-L52",
+          "version": "repo-lines-v1:sha256:60355b05e50fc60dfaaef788e3a32ee1a80908de6a2edfae55c699936a5e1396:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTUzODE4NGYzYzYwYmFhYWZjZmMyZjEwNWEyZjNmYTc4ZTgyNzE4Nzg1ZGU3NmFjMWZkYzRiMzc3NDhlMTE2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQzODgzZGM0NjkyYzAxZWQxMzM0MjNmYzZhM2ExNmVhZGJlYTc4OGM0ODA0MDZlOTE4ODExOGQzZWUzZWQwOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzZhOGY3ZWQ3YTk3YmZkY2U4NjA1NGUzYzA2YTI3ZTM3ZmQ0ZmEwZjUxYWVmYThjN2I4ODIyY2E0ZGEzODNmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjRkODljMDYwZGM2NzljMTUzNzIyMjczMGM3N2NiN2M2NGVkOGE1MjZjYmJlYzMwMTAxNzBhNzE2NzEwODYxNiJ9"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L66-L67",
+          "version": "repo-lines-v1:sha256:57e11697aa3531b1661b2beb388840dbc23f39f0fba1be5f6a29f0a8d10d3fee:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTE4YWZlY2QwNmNiZTE3YWYwMGI0MmM1YWRjYWU2MTMwZDhkMTU2ZTRmZWQxMDRlMmUwOTg3OTM3NGRmZTY1MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTc0NWRiNjY3YjdjOWVmZmZjYzQ3MGE2NTM2MjA1MTBmYmE3MDhiZmYyNjZhMGZiNWYwMWZmNTAxZDM5OTk1ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzI2ZDdiYjYxZDllMzAzYmE5YjA2NDQ1YTBmYmYzMzc4NmIwZTlmOGRlOTNjNzBhZWYzZWViMjhmNTM5OTFiYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWI3NDk4NTNlYTUzMTZhODQyZTU2NTBiOWMzNDM4OGQyMjdkMDZlZTQxYjRiMWI2OTRmMzMxZjNjZmRhZGY3OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f1096276bd464b77b6376a25a20252ca",
+      "statement": "身份 cookie 有效期（IDENTITY_EXPIRE_DAYS 默认 30 天、VISITOR_EXPIRE_DAYS 默认 180 天）刻意长于管理中心 JWT（默认 1440 分钟），避免登录态 JWT 过期后身份 cookie 失效导致会话列表无故消失。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L72-L85",
+          "version": "repo-lines-v1:sha256:2a4b13d279dc202a398bf541e59e34da5bddc4d8a441201d9565106dd3a852f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxOTgxMDE5OTRjZWUwZDNhY2Y0YTEwYzEwNDlkMjI1NzdhOWUwZjIyMDc3NDkzYjgzNDI0Y2ZkNDE4ODA0NTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2ZTFiM2VlZWYyN2FkMzkwMTkwNzdiZTFjYzI0N2YwNDk2YzU1YzE1MmRlMWE2YmExMmYxMWQ3N2JiMzE0YjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0MWZlYjc1MGEzMGU4M2JkOTRhMDM5NzQyNzgxOGQwYTIyZjc1YWMzOWE2ODRiYzcyNzZkYWU1ZDM0Njc3OTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlYzkyZTY4OWU4ZTI3ZWRlOTI5MWYyM2FlZTZhNmViMDNjZDgwOTBlNTQzYWI5MmU4ZTE0NjliNjE2NjZlMGMifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

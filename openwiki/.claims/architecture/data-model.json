@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:0fa3a21076ceb2bbdd268793529d06efca2310f2fd613ad2ed4a1d54fb432da8",
+  "claims": [
+    {
+      "id": "claim_6d282320493449589b7a273ed996f6bf",
+      "statement": "应用层共 10 张自有表；agent_configs 对 A2A/MCP/技能各存 id 勾选列表与 JSONB 运行时快照两套列，构图与调用路径只读快照。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L60-L94",
+          "version": "repo-lines-v1:sha256:58ff65165845420621b573b187b4ed445896fe1cfb7b7ca44e9c1d40b04ebb5a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjOTk3OGYwNzQyYjk0YmU1OTNmMjMxZWU1NTYzYzE4MmVkNWIwNDgzMTI5OTUwZmRjZGRmODY3NTM0YTFmMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0ZTQ0MGRkMjYwZmYxODZjYjAwOGE2ZTdmZDVjZmMyYzM0N2Q0ZTQ0OTQwYTU0ZDA0ZWEyNDg0NzUzM2FkNzAifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L97-L189",
+          "version": "repo-lines-v1:sha256:bf8f13c8e825d1eb258b033886e8477b4a6147bc4b37a385d20e0aba154255e2:eyJzZWxlY3RlZExpbmVDb3VudCI6OTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2MGVkYmQzMTBiMWZhMTIzZTY2Y2U0OTFjYThkNjMzNzBlOGFlN2I5YjgzNjBmYTVjZjFmMDI5Yzc2NTAyNjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4ZWRiNWUzYjQxMGFmZWU3ZGNhMTMxYTdkZTNhNTUyNzdmNDA0ZWIxZWVhY2UyNGM1YWIxYTUwNDAzMDUwMmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjMWQ3ZjFiZTA2ZWIxNTZkZTBkNzgyMTg2MzY5OWU4ZTE3NWYyYmY3NzM1OGNkMGM1NTZkNDM1ZjQ2ZjFhZGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e8c1eefb13d54c7baf7b1f28b4a50e1f",
+      "statement": "写时解析按勾选顺序展开注册表 id，静默跳过已删除或停用条目；技能还要求 review_status 为 approved 才进入快照，注册表解析结果与手动条目合并时始终保留注册表结果。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L134-L179",
+          "version": "repo-lines-v1:sha256:26aade6c49b061ba304f520bee79ed05c03fd8ada0198e3fb5f8843b5502bf77:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMzZmOTZlN2FkNjBhNWE2ZjNmMzgwZmJhNzE1MjRmZTZkYWEzOGZiMDBjMWZhNjBmYTAzOWMzNjM3OGNiNmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4ODJjYzkxN2JjZjNjNmE2NGY0ZjgwYTdkMTQ0MDBmN2ZmYzQ1ODdlNzcyYzMzMmY0NzYwYjg2MDRmMTUzMzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4NWZmZjM2NWY0ZDRiOGE3NGU4ODY4YWNlYTc4MzMzZTUyZjg0NmE2MjE0M2E2NTViNDZmYmI2ZWZjN2E3MTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L527-L543",
+          "version": "repo-lines-v1:sha256:0836715cf93f8a9178de5f50eae58ff8e1f7c31dfb99fc1fd1592e2aebdb4e6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxMDk3ZGNmYjg0ZTU3MmVkY2QyZDdlMDQzNGVhOGQ4NDMyMzg1ZDdhOGU4NzEwYzYyYWMyY2E2YWZiZTk0ODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxNGIwMzc1YjdkMTg3MmY5ZjBhNjY2ZGU3NzVlMGM4MGNiYTNkNWEzZjRkMTNlMWEyZGU4ODVjYTliOWY3NGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MWJjYjA1YjJlMTBjMDJjODgwZDY2MzQwZDFkNGMyZWYwM2Y5YzVhZDY2ODY4MTZjODJiZmMzMWU5MjgyZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljMDY1N2I2YjdiMTk5NTg3NDc1MmY2NjNkMzVhYzA3YmI1MTVhNjMwNjMwNzIwYjU2NzJjNGJiNTE3MDZlOTMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L86-L111",
+          "version": "repo-lines-v1:sha256:c4c5b2a89c03cf1f5b942248056e53d0c7d2dc57f2e95442715032e8b8ff0da1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmZWRhZTIyYjRkNThjMTlhZjEyZjU2NmY3OGMyZjMyM2FjY2JjNjUyMmM5Yzk3YjgyYzg0OTIyM2ExYWFhNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiZjVlYmRkYzYyY2E5NDI5NjhmNGY5ZTIwNzE3MjU2NTBhMDQzZGRlYjMyYzc3NTQ5MGNjNDQ3ODQ3YjlmNzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5MzdmYjA3OGMyODFhN2I5NDNhZTNhNzE2YmNjNjNjYjRlZWQ2ZGNiY2E3NTZkNTc2ODNiMWNlMjA4ODUzNjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiY2RjYjQ3ZGUzYzI5ZGIyNTQ1MWJlMzBhY2JiNzM2OTU4Y2Q4ZGRkYzZjZTE3MjI2ODc2MDk5MmY3MDdjOTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a062410c998410a828822d4365e6a58",
+      "statement": "AgentStatus、SkillReviewStatus、ConnectorPlatform 均通过 values_callable 按成员值（而非成员名）构建 PostgreSQL 枚举，以匹配 server_default 与业务写入的 draft/published 等小写值。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L177-L186",
+          "version": "repo-lines-v1:sha256:a996bfad710edc62eef1c2c32290ea50955720eaebcdd57e5440029bd8082dfe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0YzQyNDAxYWRjNjE2ODUyMDg5YjVkNzBlYWZkNjI0NzkxNjc2YzVlZGYzZGMwYmJhZGRmZDc1YjFiZWQwOGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE4ZWUxMDk5NjU0ZjA5Y2ZhNWUyYThiOTIxNzMyZjViMzBhY2JlYTI0NWVjYjMzZjY1NDI1MjYyMmE2ZTg5MTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUwMmQxNmNiNjMwNmJiYjliMThkZjFlYTZhZWZjNWUyNzNhNzQwNTA4ZDdkMzFjYjUxMTVjY2Q3YWEyNDdiOTYifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L288-L295",
+          "version": "repo-lines-v1:sha256:38466720f5ca5c079d28cf1c09079bc790a3dbc6d3b212804b19db4257774b61:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGZmMTJkYWM1ZmZlODJiODk4YThhYTRkMTcwYTAxOWM5ZjdiNjlkMmJiNGI4MDliMmQ3MjI2YzNmNTJkNTFjMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzkyMjA0YzY1ZjUwMmRjMTY0NTRiNjI0MDg1NmE5YWI3YWRlMDAzYThlOWY4NjMzM2VjMGI3YzllNDA5NDkxZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2M0Y2YzNTYyNmJjM2EyNjhiNGVlMjk1MTg0ZmU0OTg1YjMwZjE0YTY4MDZjNWE4YzA4N2FjOTUwMGM2NWYwMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmNjYWQ3MjMxNmE4YzM4MTI5NzA3NDM4NjA5YzdkM2U3NDA1NDg2NTExN2VjNTRkMzUwYjZhMjA1YTg5YTM0YiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L83-L94",
+          "version": "repo-lines-v1:sha256:1cab8824d88aefab27b6a90186743ecc5facdf6a2e71d0e79433aab6e7388f9a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwZDg3OTgxZjM3ODZmYjJlOWY5NWI3Y2IzZWE5NGI3ZWVmNjRlZWJiYjZhN2Q1MDc4ZDdmZjdiYmMzY2Y2MmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmYTM3ZDMzZjgwZmIwMzQwNjZmMWE3MWUzOWNhZjNhZDIxMWQxOTNiOWE2NGE4YWFjMDNkNzRlOGIzMzNjNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0ZTQ0MGRkMjYwZmYxODZjYjAwOGE2ZTdmZDVjZmMyYzM0N2Q0ZTQ0OTQwYTU0ZDA0ZWEyNDg0NzUzM2FkNzAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f5cf9a69c4c341bea143f9996ecba5ab",
+      "statement": "conversations 表只是 thread_id 到身份归属的目录，消息本体由 LangGraph checkpointer 按 thread_id 存放，因此匿名到登录的归并只改 owner_kind/owner_id 而无需搬迁消息。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L226-L251",
+          "version": "repo-lines-v1:sha256:b9cecda9a5ebc7d2caca176271e3e83b1941a1b3d5371f1f48c30dd2570ff1c2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4NDg4NGUwOTg2MTAwYWJhNDA1N2Y0MjFhZmFhYWQzMmU0ZDM0ZWJlYzMyODZhODg0Y2JhNGJiYTZiY2M0NWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5OWNhODA4MzM1NWI5ZTg1MTc5ZjQyNGI2MGVkNDc2ZWQ2MGY1ODA4ODM3M2FjMWUwMzgwM2FkMWU5ZjljNWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiYjVhNzY1ZjM5ZDMyMTdkNDVjMzI1MGQwZTdmMDE0Mzg2YWZkNWE4MDNjY2U2NTg2Y2ZlYzMyODUwNjhiMjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhODJiYjQwZDhmNzFkZDBlNDBjNzRhY2FiY2ZjNTAyZDE0NjViM2U3NGFmNTI2ZmRhZjQyMDFmMWNhM2JjYzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7358e31580734ec2997fbbff27727e30",
+      "statement": "pending_a2a_tasks 以 thread_id 单列唯一承载双链：对话链以会话 thread_id 为键，A2A 链以对外 task_id 为键，行内保存下游 target_url/task_id/context_id/question 并对 agent_id 级联删除。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L254-L272",
+          "version": "repo-lines-v1:sha256:18cd0bbb1f08bfeb442a8712a7a60806f454a6d90f3ac226bcb215193f3ea666:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5MjI1Yzg5ODQ0N2JkYTg3ZTVjZmMzYmE4OWZjZTAyMDYwNTQ3OTRhMzZkNTNmMmE3YjU0OWI2YjYwYWI3NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlNTkyZTA1YzFlZDdiMzZlYTdkOThkYTZlNGRmYmQwN2JiNjQ2NWFjMzM4MDEzYjFiOGUwZWI3Zjg2OWUwZjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYzNTljODBmYTY1Y2QzYjk0YmNlYzE5YjNlZWQ0NDQ4ZjMxNGZlMGU0MjY4NzA4ZjFlMDkxZWI3ZDNlMTZhYjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjNDgyNWI4Mzg2Y2JjMGU1MjNkMDcyYTZhZTdlMmM3NjU1ODYwZmM4NWQzMjFmNWYxMjRhZDRmZDY2NzNmNzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc02539a15a443e4942863e66232417a",
+      "statement": "启动迁移先对无 alembic_version 但已有 agent_configs/admin_users 的历史库 stamp 0001_initial 接管，再 upgrade head；lifespan 中迁移失败时回退 Base.metadata.create_all 并继续播种默认数据。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/main.py#L41-L54",
+          "version": "repo-lines-v1:sha256:5086ff5063cd96d7f0345abc593e9993029cd3e6dc8ae777a0c81e6d23a85792:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiYTJiZmViZTBkMzg1ZTE3YzA4NDI2MTE4NDEyMzVkMjIyMzBmOTFiMGUyZTQwZDNlYjQxMDExOWViZmMyOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkNGI4NTRmZjJhMjVlMTc5MTUzZTJhYzZiNzliNTc2ZGEyM2U5NWI2ZjQ1ZWM3YTViY2I4Mjk0YzEzZjc5ZjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM5Y2NmODdiYTJhOTA5NjAwYWMxZDIwNTVmZWQ3YTRiZDcyODc2NDdmYWYzNDI0ZTNhNjZlZjZmMGQwZjMzOTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhMjk0NWQyNTQxZDMyZTc3MGQxYzg4YjdlMzA0MWMzNjBmOWRkYzU0NWM3N2IwZjcwNTBlOThiNDZlNGNhYmQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/migrations.py#L56-L77",
+          "version": "repo-lines-v1:sha256:8c6eb935b50f425ca6821bb33869889030786920d01a0696867d019d475e54e9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExNTU2Njg1M2EzYjRmNzFkMjkwMWI3OWIzNTJlMjhjODMyNGYzYjJhOTUwYjlhYWNiNTBmYzdjZDNhY2Y2MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmNmEzNThmOTE3MjNmYTNkMzliNTc1MzQ2ZTkyMjFiMmI3NTEyNGUyZGUwYTFmMzcwMDBhZTZmZTQ0ZGQyMTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVjY2I3NjkyNTRkMjEzMzI3ODkwNzdhMDBiYmIxMzVkZTA4ZTljNjRkMjBiNDkzZGNmNTE5ZjQwNjlkYzUzOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1da9cced6012401ba46bd28addd3d2c9",
+      "statement": "0010_skills 等迁移对 JSONB 列使用裸字面量 server_default（如 \"[]\"/\"{}\"），TODO 将其标记为待真库验收风险，必要时应改为 sa.text(\"'[]'::jsonb\") 写法（0002/0004 已采用）。",
+      "evidence": [
+        {
+          "resource": "repo://TODO.md#L16-L16",
+          "version": "repo-lines-v1:sha256:467bf8e2e2c7a7948528a69d4cf2e6b40ee2ce205b2f8e38abae431321eb80b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDY3YmY4ZTJlMmM3YTc5NDg1MjhhNjlkNGNmMmU2YjQwZWUyY2UyMDViMmY4ZTM4YWJhZTQzMTMyMWViODBiMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDY3YmY4ZTJlMmM3YTc5NDg1MjhhNjlkNGNmMmU2YjQwZWUyY2UyMDViMmY4ZTM4YWJhZTQzMTMyMWViODBiMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWRlOTExNTE1NTY2NTMxNTdkMjU1NDFjNThiNzAwZDA4YjU4ZGZjNGM2YTg2Mzk5ODhjYjBhMWViMWI4MDc1NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmY3MGYwMjNmODUzMmQ4OTJhMzAyMDg0ZjA5NDFhNTBlYjRkM2RjZjMwYzZlYjE1YTcyM2RiMWE3YWZiZjZkNCJ9"
+        },
+        {
+          "resource": "repo://alembic/versions/0002_registries.py#L27-L28",
+          "version": "repo-lines-v1:sha256:c6b5cf719bd0b0cb629e3aed1cc954727a9bef1e1d44df588ffcbf3c86871995:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGU4Mzg5MGViMWU2YWQ3YmFkYTA0NjY1Zjk5OTQ2NDM5MmI0MGRiYzViZGQ2ZDEwYWFjM2ZhNmRiNmEzNjZiZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmZmOTVlNDY4ZjcxMTcwYjVlY2M2MjQ1M2YzYmUwYmNkNjk0NTJlMWRkOGQyY2YzZTRjMmU0MThlNmZlNmM5ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTc2MWUyNjI0ZjVlNzdmOGNjZTgzMGYyODBiNjg0MzRhZmZiODk0MjVhYTMxZDhjMjdiMjA2MDc1ZWRhNGRiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjQ0ZmMyMTk2Y2U1OTBkMmRlODU3NTUzZTMzOTJmOTlhMDA2NTQzNzkwODFlYWVmZjRmYTA5ZGVjOGMzZDBjMSJ9"
+        },
+        {
+          "resource": "repo://alembic/versions/0010_skills.py#L1-L40",
+          "version": "repo-lines-v1:sha256:709c511de5d5faabf42bdc9f2a1c10f3d372bae31f71b5a81a80298d5d208f32:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmNmY0ZDAxZGNlZjAwM2E4OGEyOTcxZjdlYjI4NmIzNTJlOTE0MTcyY2YzYjJiNDNhZDBlYmM5NThmN2FlM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNDY1ZGQ3MTYwN2I4ZTMyMzEzMzRjNWMyYTM0NTg0ZjAyZTU5Yzg4MzYwZWUzZTdjNGUxMTQ2NDQ4ODhjYjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEzYzNlYzJmZTZiMjQ2ZDYyNTA0MmVhNzg0NjI5NmE1NjNlOTQwYzk4NTBiMzlmOGY2YzM2NjRmNDYxNDBmNTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3c88a3085eaa4c8ab0c9d358d7b4fc3a",
+      "statement": "同一 PostgreSQL 上存在两条连接：ORM 使用 database_url（asyncpg 异步引擎、pool_pre_ping），LangGraph checkpointer 使用 checkpoint_db_url（psycopg）。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L117-L132",
+          "version": "repo-lines-v1:sha256:8b5b5d81f940a8486dc3d868cacb2d93ca0c244f2567069ac095f08ab3b919f7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4MjBmODgyZWY1MzZjMzJlMjQ1MzBhZmNiZWUzY2E2ZmNhODYxNzc2YzZlZTIwZDc3MmEwYTUzOTJkNjg4NWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhOWY4YzJiYzdhMTQxYTAyMmFmM2ZlYjhhYjUwMDhlYzI1NzU3ZWYyNGFjZDA0OWY1MDg5YTc0YjdjOWFlODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY2YjU1MjM0NzhlZTFjZWMwZGI0YWJjMmMxMGVmYWI3OTZlNWNmMGJmNTY3YWNjY2ZmOTdmYzNlODJmNDkyZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1Njc4NmQzNWM0N2RmYWVhYjM2YmRmMjUwZDBhMjhiY2FhMzIyMmVlNDc1MjAwNGQ5YWJlNGQyY2UwYWE4MjIifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/database.py#L18-L28",
+          "version": "repo-lines-v1:sha256:950ac1424b3a27fd2b99bbe1664026b1bac597d48d1f15df1a3ff79c098b94f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxYWFkYjNlNWU0M2U0NjYxYmMzNGFmMjhhYzVjYWUwNzIzYzYzOWJkODU4MmNlZjkxODUyMGJlOGFlMDA5NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZmJhMDUyN2MzOTUzYzRiNmUwZTViNTczOWJhODM2MTJmODA1M2JjZGM5NDY2NzMwMTkzY2QxZDU5MGI0MDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmYTZkYmNkNzNhNGYyMTI4NDQ2NDQ2MGQzMjgwY2Y0Yzc1NTg5YjEyMzkxODRkZjY2MmM3MDhlZTM1MGRjMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVlNDVmNjY0YjMzNjk1YThkZjAyMzIxODkwZjA1NWY1NmIwZjVhYTc2ZjIyMmFmNTljMGZmZTEyZDIxODhlNGYifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

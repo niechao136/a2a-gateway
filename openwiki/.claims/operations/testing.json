@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:549377ed714473a1f2e7200757bb5aeb42ef33d29082f8e0097ea3ad57d03da8",
+  "claims": [
+    {
+      "id": "claim_82a6a0caf428412895e3c9de084548ce",
+      "statement": "tests/conftest.py 契约：全部测试零外部依赖——dependency_overrides 替换 get_session/get_current_admin、httpx.ASGITransport 不触发 lifespan 因而不跑迁移、httpx/A2A/LLM 全部 mock；提供 anon_client/auth_client 与 make_agent/make_admin/make_api_key 夹具并在退出时 clear overrides。",
+      "evidence": [
+        {
+          "resource": "repo://tests/conftest.py#L1-L7",
+          "version": "repo-lines-v1:sha256:b3ae65e5a85691456e4c02d320a31bef497f8aae696cc5b90c211d60dae0d886:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWE1NTQ4OWY3NmExNDQxYzAzN2Y5OGRkMjEwYjYzNjBmNGQxNDQxZDEwMzRlZjJiNWRjNjU3MGJlOGIxMjk4OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDc1ZDQ1ODllOTFjYzhjYjk3NDg4OWRhYjAxZGUxNWRiMTU3NGNhMTBlZWM3MjkwYTEwOWJmNTg4Yzk0ZTAxYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2YzZDU1OWJlYzM5YTFiMjViZDlhODk0NTE5YTk0MGQ0M2U4YmVmMTZjZGIxYTBjZDhjOWY2NGEyNDg2ZGI1ZCJ9"
+        },
+        {
+          "resource": "repo://tests/conftest.py#L80-L108",
+          "version": "repo-lines-v1:sha256:e2a68744ab7f94b3ac4e1ec8863f1d660f1697fc238b7519ffc98bd816c74855:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmYTVhZmU5YjFiNDBiNGJiMzc3YWVmMjlhNzA0OWFiYTZlODEwOTIyN2EyYTFlYjRmYWRhMzUzZmI4ZmQ2YTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhNTI4MTc3MGVmM2IzZGMxY2FjMzllYTUxYzljMGQwMmEwZmY4ZTgyYmZlODhmYjZjYjQ2YWFmMjg5YWVkZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4YWMwYTg0NTE0YzY0Y2JhZjFkZjE2ZWIyN2MyMzI4ZTM1NmU4M2E4YTZjZmZkOTFiMDgyOTEyY2Q1NDcwNTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b270426537e54157bbd968ba045cf59c",
+      "statement": "tests/e2e_smoke.py 因需真实 LLM 与真实 A2A 目标，文件名不以 test_ 开头故不被 pytest 收集；脚本对已部署实例走登录→复用默认 A2A 目标→创建/发布测试 Agent→/api/chat/{slug} 校验 SSE→清理的链路，退出码 0/1 可用于发版校验或 CI，管理员凭据从 ADMIN_USERNAME/ADMIN_PASSWORD 环境变量读取。",
+      "evidence": [
+        {
+          "resource": "repo://tests/e2e_smoke.py#L1-L18",
+          "version": "repo-lines-v1:sha256:29f2a5f5a0681f911f15375de2325bda20f5234923a09c934ce74baac0e1721d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3NmZiMTRhN2QyNWY1Nzg5MGU5OGJjYzk1Y2M0ZTI4ZWJhYTQ5YmZlNWI2Y2Y5MmVmYTQ3MWZiYmE5ZGFiOTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmODE0ZjJiYmZmMGNlOWVjM2MyZDMwMzI1NmRlNTA4NzlmODRiNDlmYmIxYmYxMWVlZjIwNzc5YTk4MTk2MzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ5NzFiNDY4ZmVjZjY0YzQ2YjU1YjA4MGYyMDIwODI3YjQ2ZjUzNmIwZDYzN2Q2ODJkZTIxMmZjZmU5NjMwNzYifQ"
+        },
+        {
+          "resource": "repo://tests/e2e_smoke.py#L63-L73",
+          "version": "repo-lines-v1:sha256:761612ea6224102a027a6dc111bbb0c83ffb389a96b14f38597a348fc2d583e0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwM2FjMDhkMjQyYTlkODJlOTY4ODNjNDRkNWU3MDUzM2Q1ZmE2MmYyNDJjNTMxM2M1ZmY2ZDllNmEwYzAzY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YjU0MDRiY2RjOGMxMTM0ZjcyMmU3NGNkZTc5ZDQ3NzU3ODBhNGQ4YTk2YWJlOTlhMDM5NjYxMTI1MjNiZmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUxODUzOTdmNDc3OGM0Yjk2ZjY4ZWU5YjhlMWIxODJhZmNhMjY1M2ViZWYxZTEzM2M1MzUyMjIyZGE1YTczYWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlNGE0ZjY5ZmQ2NmRhZjRhYmRiMGU1N2UxM2Q0NjJjZjc4YjJlZTJiOWVjMGFhYWRmYTA2M2FmNTU0Mzc3YzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3b61e07ad07c41fc801cdb725f039709",
+      "statement": "运行入口分四套：后端 uv run pytest -q（仓库根，零外部依赖）、沙箱在 sandbox/ 目录独立运行（唯一允许真实子进程的套件）、前端 cd web && npm test 即 vitest run、E2E 显式 python tests/e2e_smoke.py；统一质量门禁为 pytest + basedpyright + ruff check + 前端 npm test。",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md#L7-L7",
+          "version": "repo-lines-v1:sha256:2cb3d4a4669bdc7a40d9807735df608bfe31d386067c999b750aac632c1b6d31:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNiM2Q0YTQ2NjliZGM3YTQwZDk4MDc3MzVkZjYwOGJmZTMxZDM4NjA2N2M5OTliNzUwYWFjNjMyYzFiNmQzMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNiM2Q0YTQ2NjliZGM3YTQwZDk4MDc3MzVkZjYwOGJmZTMxZDM4NjA2N2M5OTliNzUwYWFjNjMyYzFiNmQzMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTA1MTY5OTI5YTliMjNhOWIwMDJiYjE5MDNhYTA3ZWMxZGE0ODA1ZjY3ZTEyNTBmYzZjOTQ4MDlmMzJlMGM3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjljZmFmYWEwYWRjYTI5NTQwZWMzZDIzOTkzYWQ1ZDYzYjhiMTA2MGFlNzk4NTk1OGM5MGY1OWY1NDgxZDE2NSJ9"
+        },
+        {
+          "resource": "repo://docs/superpowers/specs/2026-09-20-skill-binding-design.md#L287-L287",
+          "version": "repo-lines-v1:sha256:9945e627dcc6476e1e79b9fecfe2092b4bf502d806478e260fb35b4922ca76ff:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTk0NWU2MjdkY2M2NDc2ZTFlNzliOWZlY2ZlMjA5MmI0YmY1MDJkODA2NDc4ZTI2MGZiMzViNDkyMmNhNzZmZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTk0NWU2MjdkY2M2NDc2ZTFlNzliOWZlY2ZlMjA5MmI0YmY1MDJkODA2NDc4ZTI2MGZiMzViNDkyMmNhNzZmZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjRhZjkxYTQ1YjY2OTA1NGU3NDMzMWEwNjkxZmViNzBkMWI0ZWUxN2UxMDU4M2YyNDEwNmQwYmJjOGNmMmI2NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTk3NThhMmE3MTdkNWM3Yjg3NDQyZTc0M2FjOWZkNmI1MGU3MDNjMzZjZjc2YmJkYzc0ZDIwYTAzYTkzMTdjNSJ9"
+        },
+        {
+          "resource": "repo://web/package.json#L10-L10",
+          "version": "repo-lines-v1:sha256:36166dbdc4b55dedd88c0acd64f11c83abdee6f4e744b7deea400c840b0d4edc:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzYxNjZkYmRjNGI1NWRlZGQ4OGMwYWNkNjRmMTFjODNhYmRlZTZmNGU3NDRiN2RlZWE0MDBjODQwYjBkNGVkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzYxNjZkYmRjNGI1NWRlZGQ4OGMwYWNkNjRmMTFjODNhYmRlZTZmNGU3NDRiN2RlZWE0MDBjODQwYjBkNGVkYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWIwNTcyYjA3ZTI2YjcxNmRkMTQ0MjBmZjcyNzEyZWM1YzI1ZTE3ZTc4ZDI1NjI0MWIwOGM1YWY1N2FiZWVmMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTBlZjFiYTNjNTNlNzYwYThiZWRjOTk3NGM5MjY0ODg3MTBiYzdhNDJhNzRjYmIwNmRjNjhmMmU1ODJkZGM1OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_553e2973351548e582002d80b2fd6a80",
+      "statement": "沙箱测试与后端套件分离的原因是 runner 冒烟依赖 POSIX 子进程/rlimit 行为（stdout 捕获、sleep 超时 kill、32KB 截断、env 白名单断言、路径穿越拒绝、解释器白名单），Windows dev 宿主不保证，runner 恒为 Linux 容器。",
+      "evidence": [
+        {
+          "resource": "repo://docs/superpowers/specs/2026-09-21-skill-preview-edit-script-execution-design.md#L254-L254",
+          "version": "repo-lines-v1:sha256:8da061821ddbb7e80b1e0cc0c36e3900c329e243622ed9461838f2d048566d36:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGRhMDYxODIxZGRiYjdlODBiMWUwY2MwYzM2ZTM5MDBjMzI5ZTI0MzYyMmVkOTQ2MTgzOGYyZDA0ODU2NmQzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGRhMDYxODIxZGRiYjdlODBiMWUwY2MwYzM2ZTM5MDBjMzI5ZTI0MzYyMmVkOTQ2MTgzOGYyZDA0ODU2NmQzNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjY1MGJhYWFiMTE2MGNhN2JhYzQ4OTg0YTU0ODY4ZDkxNzFkOWU5MThkNzU3ZjJmYWQ0NTg0NzRkMzMyNWQ0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTU3MWZlZWFmYmM0NDQyNDkzYjc3YTNhYTk2NWYzZjI1M2Y2OWVhOGZiMzVkNTNlZWZjZGVmZDIyOWI4MDI5MSJ9"
+        },
+        {
+          "resource": "repo://docs/superpowers/specs/2026-09-21-skill-preview-edit-script-execution-design.md#L274-L274",
+          "version": "repo-lines-v1:sha256:432bbbf10f9e04c8fa5a0a5325754e0eb0b09f3edbefaf69d847cbe4085a2254:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDMyYmJiZjEwZjllMDRjOGZhNWEwYTUzMjU3NTRlMGViMGIwOWYzZWRiZWZhZjY5ZDg0N2NiZTQwODVhMjI1NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDMyYmJiZjEwZjllMDRjOGZhNWEwYTUzMjU3NTRlMGViMGIwOWYzZWRiZWZhZjY5ZDg0N2NiZTQwODVhMjI1NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjRkNjEyY2Y0MTFjMTRlOGRlNWU1M2MxNzAzOTFiZmI4Y2FjMGU2N2NhMTFjMDAzZTExMzZkMTljNjhkM2I3YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTY1OTEzNTdlMTU2NDNmZjE3MTE2ODQ5M2Q4NTE0Nzg4NmM3YWY3OTUwMmY4NTUwODE2Y2NkZWU2MmU3NmRkNyJ9"
+        },
+        {
+          "resource": "repo://sandbox/tests/test_runner.py",
+          "version": "repo-file-v1:sha256:726c789641fbcd085da9576d21f1697e8fbeafef3166f8b0c29900ff0b296d50"
+        }
+      ]
+    },
+    {
+      "id": "claim_fbb71e55979f41558679fa82836bfc59",
+      "statement": "前端 vitest 覆盖集中在 web/src/lib 下 5 个纯函数测试文件（api/adminApi/skillUtils/skillForm/speech），约定不为薄封装引入 React 测试工具依赖、组件层不强制单测。",
+      "evidence": [
+        {
+          "resource": "repo://web/src/lib/adminApi.test.ts",
+          "version": "repo-file-v1:sha256:7835153d47c5707e63a4084136d29231f58e3f5575c56a0864e1f4719b25cce8"
+        },
+        {
+          "resource": "repo://web/src/lib/api.test.ts",
+          "version": "repo-file-v1:sha256:44ae5fd31daa7b4dc643efcc776d31cc1f782891ac34e2662e3d5d8b1672b391"
+        },
+        {
+          "resource": "repo://web/src/lib/skillForm.test.ts",
+          "version": "repo-file-v1:sha256:f89a60d488b05e41f37bbefee72e1b517bc18d6a166960ede801ab9b15f689cd"
+        },
+        {
+          "resource": "repo://web/src/lib/skillUtils.test.ts",
+          "version": "repo-file-v1:sha256:b8a96e891dda3dfaa342e49e9c30be89dc7e03338c7cb2c7fc8df1ec4ff56225"
+        },
+        {
+          "resource": "repo://web/src/lib/speech.test.ts",
+          "version": "repo-file-v1:sha256:99fcc964d2777e3a1368661cc96a07dd1599f6f4463643511e2babed32da4209"
+        }
+      ]
+    },
+    {
+      "id": "claim_ab990f6390ab43d584895b56b5163fdf",
+      "statement": "测试按四行为簇组织：API 契约（ASGITransport 打真实路由断言状态码与文案）、域逻辑（纯函数/离线导入与校验）、集成（组件协作但 mock 网络/DB/LLM）、E2E（e2e_smoke 真实实例）；安全回归重点在 skill_import SSRF/zip slip、a2a_server API Key 归属、skills_binding 审核门禁、chat_api 错误不泄漏、sandbox_client 三类错误。",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_a2a_server.py",
+          "version": "repo-file-v1:sha256:88a77a090926e37a822d29e179ad95088e7bb9eefbf8103aa066e49c1fc04f39"
+        },
+        {
+          "resource": "repo://tests/test_chat_api.py",
+          "version": "repo-file-v1:sha256:d90e9068bdaf8611536a7905948e7417bd755ac8683feda8feb5aec132c7bf86"
+        },
+        {
+          "resource": "repo://tests/test_sandbox_client.py",
+          "version": "repo-file-v1:sha256:abcb346309b34a903bdd454ad21bf37526b130c4bbf4739a01007dce91b6447e"
+        },
+        {
+          "resource": "repo://tests/test_skill_import.py",
+          "version": "repo-file-v1:sha256:9354b14a2964d9b298a874783d1a5eb15911a222f691091f103a4293342ea2e9"
+        },
+        {
+          "resource": "repo://tests/test_skills_binding.py",
+          "version": "repo-file-v1:sha256:7ec3432e7852b111432354782436a31c42c419b5cff8a986e96c45ab61f2e80e"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

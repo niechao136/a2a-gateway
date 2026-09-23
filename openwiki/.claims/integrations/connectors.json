@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:62b380ddd319b2a0e70f689beb182346128bb53b48aca4cd122dcc7e481508e3",
+  "claims": [
+    {
+      "id": "claim_0f490e61e02947758135051b0055bc75",
+      "statement": "入站事件去重为进程内 OrderedDict TTL LRU：容量 4096、TTL 600 秒，键为 platform:connector_id:event_id，命中 move_to_end、超容淘汰最旧，覆盖平台超时重试场景；状态进程内、多副本各自独立。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/pipeline.py#L28-L67",
+          "version": "repo-lines-v1:sha256:92f132189633cc39ea1a29bafd5bb8be161dfda8fd384072ea7c54f0862b81b2:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1MTVmYTY5Mjc4NTY4NTcxYjAyMDA3NGRkMmQ2OWQyMWFkNzJhM2M0MTg5YzJhN2EwYTY3YzZlZTg2ZTQ4NTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmYzkwYjA0MDJiZjZhMzZkNTBmMDFhNTFkOTU4MWYyYzEyNmQwODRmNzRkM2ZhN2YxMGI4ZGFlODU1YzA5MGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0YzdkYTZmNzA5YjlkOTUyNWUyY2U0MWExOWI4NDVlMjgyZTQ1MTJjYzUwY2U1ZTYwZTQzYjQxMzlkMDFjOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/connectors.py#L281-L287",
+          "version": "repo-lines-v1:sha256:7f173a3fc345c1bf2e6a3de0a1f8eb9b41d13ee3a3e2df67800f8eb0531e1a37:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2I5OGVmMGY3ZDVlOWExNThjY2I4ZGY0N2I0MTBmODhmMWU2NWUwMjMyZjNiNmIxNmI4NjRhODJjMjgwZTI0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2JmMTE0N2EwZjlhOWIxNmU1ZWNiYmFlNzE5MzA1NjlmMGVhZjZiMDEwNWY2NmViNDM2MjcwOTVhZDhjY2M3NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOThmY2YwYmEzYjZjZTdlNzdjMWY3ZTIzZTg4ODIxNjU0ZmU3MDk2ZjIwMjFjYWFjZGJhMmZlMTQ1NWZkOWZmYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b182ef47a33449e88771751bd4fdce6e",
+      "statement": "消息处理按 (connector_id, chat_id) 建 asyncio.Queue(maxsize=5) 串行队列保序，队满 put_nowait 失败返回 False 且由调用方后台回忙碌文案；worker 对单条处理套 120 秒 wait_for 超时，超时或异常回失败文案（异常另发 notify_alert）。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/pipeline.py#L79-L125",
+          "version": "repo-lines-v1:sha256:565c8ce601da4737ac803a47f985f46523d566541ac67b32dd2583e708c26813:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQxNWIzNzcyMTYyN2RlODM5M2IyNGIxYTFhNmIyMTA4OTIxZmYxMTBmZTMzOWY4OTZhZDVhNzFkZGRiY2IwMGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlYjdiMDkzYjUzNTUyNTQ4NDE2NGI2MDIxMmQ5ZmNjOTQ5ODBhZWZlY2I1MGRjMDRlOTBiZDA5NTY5NDYzN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMDc4OTk4YjA0YmQxZWQwOTc2Njc2ZmUyZTE4NThjYzc5M2Q1MTQ3NmVjYjI0MWRmZTdiYTEyNzMxYmI1NDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1MDM5YmRlNjYxNDcwMzJiMzQ1Y2RhNTI4YTNlZGJmNTVkN2YwYzRiMzhlNjZlNzdhZTI4N2NjZGI5OWViMzkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/connectors.py#L285-L286",
+          "version": "repo-lines-v1:sha256:efcfcdafad30dda27054295668d1afe376de1e7c2327252b449b949997be92ef:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjIwZmZjMDJiZmZjNmZmNTBiYzc1NTc4MGQ5ZjhiMzMyODJiYTUzNWUwMWRiOGJmMWVmYzk4YTkxYzcxZmMzMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDY3N2NiODgwNjUxNzM4ZjAxMGFmNjY0MTNiZmRlYWY1ZmU3NzVkMmQ4ZTI3ZjQ5Yjc4ZmViNDI4OTBhNTMzYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTQwZTFlMWQ0MmFjMDg1MzUyZmQ2NjE5NzYxNGEwNTc4NmI2N2Y5MTMyZDY0N2NhZjhjYTNmMjFlNGRjMGJhNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2JmMTE0N2EwZjlhOWIxNmU1ZWNiYmFlNzE5MzA1NjlmMGVhZjZiMDEwNWY2NmViNDM2MjcwOTVhZDhjY2M3NyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6f0d227a1f47426893f472c62bef6257",
+      "statement": "webhook 路由因平台 3 秒确认约束：先 build_challenge（握手则立即返回，VerifyError→401），再 verify_and_parse（VerifyError→401），投递后立即返回 {\"ok\":true}，处理全部在管线后台 asyncio.create_task worker 进行；连接器不存在/平台不匹配/未启用统一 404 不暴露差异。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/pipeline.py#L1-L8",
+          "version": "repo-lines-v1:sha256:2c09d66608b8376f756ae2c18a2f2a52ca94b5d197e2ca04d90efc407f5954ef:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTNmMGZjZWMwMTAyM2QwZDM5ZDA2YTYzMjEzYTg4Njg3ZGZlYzQ0YzNhNjZhYjMyNGFjYzQyM2YyNTNmMTgyMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDc1ZDQ1ODllOTFjYzhjYjk3NDg4OWRhYjAxZGUxNWRiMTU3NGNhMTBlZWM3MjkwYTEwOWJmNTg4Yzk0ZTAxYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGZiNmYzYThiMDkyMzkwMjA2OWZmMGI2YzY0MzdiODQzODU0MjhmN2QyZmRhMWZkZjYyOGQzMDMwYjg5ZDkwZCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/connectors.py#L244-L287",
+          "version": "repo-lines-v1:sha256:1d4088372fcac3708819a1bfeeb3e0c0fc68e080188d0756d9cac4ceaf17ac15:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1N2NiYmY3Zjg2M2EyZTdjY2RlYWEwNTdhMzA4MTdmNzFjYzAyYjQzOGY4NTY1ZGY5YmViZjBiYmI4YTc3MjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiZjExNDdhMGY5YTliMTZlNWVjYmJhZTcxOTMwNTY5ZjBlYWY2YjAxMDVmNjZlYjQzNjI3MDk1YWQ4Y2NjNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1ZWMzMmI1YTdjMWVjNTI5MWRkZThjYzRlMjUxZTk1OWJjMjIxNzYyOWRiNGIwMGIyNWY3Yjg2M2NiODhkZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7bef81fa6e004aea8f79f0109dd18ee2",
+      "statement": "三平台验签差异：Feishu 校验事件体内 verification_token（加密体先 AES-256-CBC 解密，key=sha256(encrypt_key)，不依赖请求头）；Telegram 校验 X-Telegram-Bot-API-Secret-Token 头并 hmac.compare_digest；Slack 按 v0:HMAC-SHA256 校验签名且时间戳偏移超 300 秒拒绝。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/feishu.py#L32-L69",
+          "version": "repo-lines-v1:sha256:5d291dcead734311c4ab1f5e21d2dabf58a98be45319a04cd59c2663194e445d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0MzkzYzIyMTgyOWNiZmExNWQ4ZDM2NTVmMjA0ZGJlNDJlNGJlY2Y4OGYyYmY4MDQzODM4OWQ2ODhlZTE1OGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjNGFkYzc4ZjQ2MDdjZjY3M2VlYTFlZDhlNGY5NTJlMTAwNzE4MzlmYjE4ZDkxNmRiODczOTI5ZTAyY2ZkMTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiY2IyZjA5ODgwYWQ5Y2Q4NmRmY2EwNmYwMjcyN2U5NDQ5YzhjNjUxMWQzMGE2OTViZDVhMDZkYjVhNzAzZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViYTE3MzMxMGJkNTUyNzAxMzY1Mjg5MTNkYTMyMGM1MzAzYjdmNmZiOGFkNzVlZTBjNjdjODE2N2QwODA4NjMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/connectors/slack.py#L19-L45",
+          "version": "repo-lines-v1:sha256:2b02642882f41d4bcccafe3cc6f97840464c7a687f2a37632f47281591044045:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlYjZkZWI4Y2NmODUyMjU3OWJlYzA5OGQ1NDM4MzBjNmM2N2JjZmY0MmQ4ZWU0OWY2YTM1YWFkZjllMWVlMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhNWU1ZDliM2M2Y2FjZWU2MTRkMjMxMWI3MTUwY2EzN2NkZmJmNWNhMTdiNWE2ZGE2MjI4ZGNlMzgyOWM4NjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4MDAzZWIyN2QxNDg0N2M5NWZiOGU4NDMyZGE3OGI4ZTlhZWRiMjkyNDFkMTA4MjVlNjI5OTc0ZjQ3ZDRhNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYTg3ODEzNzE3NmIzYjQ4NDBkZWYzOTE4MTE1MzQyMWRlM2E5MWRjNGY4NzlkOWNhYzFhYmU5NWZhMTFhNWQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/connectors/telegram.py#L44-L52",
+          "version": "repo-lines-v1:sha256:dfccb55542bbfea85343ad2d50a0a8df1925e2c0db8c2b4752327f40526ee7dc:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWUzNGYzZWQwOTJiODkyMjc4M2I1NTA0YzFmN2YwYWRhYzNkMDg1MjUxNDcwOTg3NmQwYWRmMTEwZTMyNjc4YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg2ZDBlMTY1OWI5NzMxYmZkMDA4NDgxZDQzMjk4ODdjYjNmZDk4MDNjYWZkYjlhZWViMDRhMzM1M2ZiM2FkMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzQ1NDk5OTY5YjI3N2MwZjFlYWI3MGRlZWI1N2QxYjM4NGViYmIzOTYxYmE4YmRjMTY5M2I4MWNhOTYxNzliOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2U2MGZlMWM1YWFiMjExOTc4MThjZTQ4OTUyNDVkNTY1Y2FhNTJjNWQ4YzI3ZTI2ZTczNWQ2ZTQ5ZmNjOGZjZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7fd14ece8b3c4e358a872d0fe985a763",
+      "statement": "challenge 握手：Feishu 与 Slack 对 type=url_verification 返回 {\"challenge\":...}，Slack 先验签；Telegram 无握手事件（build_challenge 恒 None，经 setWebhook 注册）。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/feishu.py#L75-L81",
+          "version": "repo-lines-v1:sha256:e0155748041d070a51bc78b1a597c9344d65a91f805e9087df0efd08d9c5c4fa:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzQzMzNhNWI1YjJkZGM0NmZiZmVkNDZkZWZhNTA4MTYxMDg1ZGI5Y2ZiNDc4YTgwYWVmMzZlNDY0MWM5ZTNmZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWVjOTQ5NTBmYjBjYTc1NWFhN2I5Y2VkODY4ZmEzN2RmYTIzM2I3OTk5NzIzMzQ2OGQ2NjRmNjNkNjE5MDk5YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTYwMDlmNjljZmU2NjBiZmI3NzEyOWM2NDVlM2M4ODNhMGJkYjVmOGFkOWQ2MzE5MGI4NDA2MmU5ZWRlNTgxYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGU3YmViZjA1YjY4Zjg1MjE2ZWVjN2U2YWU1OWE5NDNiYTZhNTVjZjZmYTk1MTdlYjk0OWJkNDFmM2U0OTQ2YyJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/connectors/slack.py#L51-L58",
+          "version": "repo-lines-v1:sha256:468c175839141e54d0cdd5779dd3c202ed9c772b9a741d8e2cba6ca4ec323958:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzQzMzNhNWI1YjJkZGM0NmZiZmVkNDZkZWZhNTA4MTYxMDg1ZGI5Y2ZiNDc4YTgwYWVmMzZlNDY0MWM5ZTNmZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWVjOTQ5NTBmYjBjYTc1NWFhN2I5Y2VkODY4ZmEzN2RmYTIzM2I3OTk5NzIzMzQ2OGQ2NjRmNjNkNjE5MDk5YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTY2OWFmMTZiNDAzZjhlMzgzOWU3NDIzNWUyY2U5NWI5YzViMzZjZTFiNzA3ZTZmMzU0Mzg0NDVjYmRiMmIwOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2E4ZmE3NzA2MzgyN2FjODMyNmUxNDU3NjdjNmI4ODIzY2NkOWUzNjcwNzEwMzM0N2YxMzE2MGFmOTM3ZjRmNiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/connectors/telegram.py#L39-L42",
+          "version": "repo-lines-v1:sha256:e96d380948b45cdfb02ae21846e12ca40dd8df2bc8e968f6963297451ce385ad:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzQzMzNhNWI1YjJkZGM0NmZiZmVkNDZkZWZhNTA4MTYxMDg1ZGI5Y2ZiNDc4YTgwYWVmMzZlNDY0MWM5ZTNmZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmQxMTZlMjgxY2ZhMDgwYjk3YmM1OTI0NTcwMjVlMGMxYWI0MDBjNzBkOTg0MzI4OGU1MWFiMmQxZDE1NGM3MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDA4ODNkOWQwY2U0YjM0NDk2MTYyMzJiZmYyNjBmZDc0NzNiN2I1ZmMzODI5ZTRjZjk5MTUwZmZmMjZkODM5OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2E4ZmE3NzA2MzgyN2FjODMyNmUxNDU3NjdjNmI4ODIzY2NkOWUzNjcwNzEwMzM0N2YxMzE2MGFmOTM3ZjRmNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9f957fd2cdc84abab5338f4c4be9729c",
+      "statement": "单条处理经 upsert_connector_conversation 取 thread_id 并作为 LangGraph config 的 thread_id 调用 ainvoke，非 PUBLISHED Agent 回复未发布文案，群聊消息前缀 [user_name]: ，回复经 adapter.send 推回原 chat_id，兜底回复失败只记日志。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/pipeline.py#L128-L183",
+          "version": "repo-lines-v1:sha256:b4000fb3b6e116a6ca62e2fa61b307ff072a5adca7302a28fd7471e05d947730:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkZWFhNjI1MjM3MTgzY2NmNzBjNmRkNTlmZmFkYzU1Yzk5YTBlM2Y0ZThhNWFkNGMwZjYzNzRiNjA3ZmM4M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2NTFhNmU0OWQ4NTE1NmVkMThmMzk1MjEyOWI4ODFjY2NmNzg0OWNiNDk4ZWYwYjI0MjI4NDYzYzhkMmVkNzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzJhNTZkNGUyZWFiYzM0NGRmMTlmZWFiZDRiMmMwYTllNjJiOGUyOTcwYzcyNTdhOGQ4NjgzMzE1ZDFiNDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c2f77324d57c4182b0465ea1979e8322",
+      "statement": "凭据对外仅返回掩码视图（已配置字段→••••、空字段→空串，不含明文）；更新合并时新值为空的字段保留原值，使回显脱敏、留空=不修改；webhook URL 基址优先 PUBLIC_BASE_URL、否则 public_base_url 请求推导。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/connectors.py#L53-L60",
+          "version": "repo-lines-v1:sha256:bfb4a3d826f032b6d04bede999335aeaaa7f7544c60383aed5715094ef4f81cf:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjI3OGYxMzA2OGE1NDE3MWViMzI1ZGU4ODU4YjJhNzdmODMxODE5OTJkYWM0YmE5NGQ5YTg0MDM4NGZhN2UyZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGM1NzIwY2YxYmRmOGY0ZmVkZTBiMGU0NzhkMzg4OTk3NGExZDc0NjY2MGViZmRmODI3MjcyMWZkOGJjZjc4ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjY0NmM2MDQ1YTZlOTdmN2U0OTYzN2ZhZTIwOTMzZjg5NjZhYWEwNzJmOGZjMGI4YjY4YWMwNDBlYjJhNzVjZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmE2YjZjNDhlOGI1MzUxMzg2OTJhNDFkNmJmNWI0ZmEwZjI1NWY4MmVhM2I1ZWU0ZjljNzZlNDc5ZDhkNzhhZiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/schemas.py#L509-L522",
+          "version": "repo-lines-v1:sha256:fcb209e3b8b8a921dc27404e9dd244bc90dfc9033255fb06df0b4da2db4ecabd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2Mjg1NmQxNThiZjNlODAxNzRkMDM1NWVhYjc4ZGRjMGE0MGMzZTliMDVmZjQ0Mzk1MmI0ZGJmNzE5MDI1ZTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5YTIyMDE3NGU1YzY4NTQ2YmVkOTcwYzk4Y2M5YjEyM2NhNWE5ZTFjMzdiYjc0ZWJmOTcwNDlmNjQwNjU0NzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ3NDNlM2JmNTkyZTc5MjRjNmVlYjI5NjAwOGRmMzcyYzA1NjQ2ZDgyZmE2NjliNWI3ZTc2MzRhYTNmM2QyMGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhZDcyMGIyMmQxOGMwMzFjMTZmYjVhZGRjNWM5ZTkxYWE2NmI4OTc3Y2Y5ZTAzMjEwZmYwZWYyN2YzZjBhODcifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:8e65b4f9145c6fb9c0742b020833cc4986332293ac495531c39a272eb6dfceec",
+  "claims": [
+    {
+      "id": "claim_d14a92d6deea45c59d5e1d86079615cc",
+      "statement": "A2A 调用失败被分为三类：network（卡片解析失败/httpx.HTTPError）、timeout（A2AClientTimeoutError/httpx.TimeoutException）、target_error（A2AClientError 及未知异常）；仅 network 与 timeout 参与瞬态重试，target_error 一律不重试。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L181-L191",
+          "version": "repo-lines-v1:sha256:ae39df6ace9668edc7b3ef63bfe283a5c4c36cbc592b8970c5f32539f45a9820:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2Y4MjUyN2E3NjA1ZTBmZWFlNWExYmE3ODBjNDY0ZjEyYjhkZDA3YTY0NjE5OGE4NGFiMjY0NzY5ZGY1ZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlOGZlMTExMTJkYTdmMDNlMTE0MTRlNzk3OGEwNjYzOTc3NDQzODc4MGQ2MWEzNTljNGEyODY5ZDJhOGNmMTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzODFjMTU0ZTExZWRhYWMzMWMxNjUyMzRlNjQwMGY1MmM2ODZlMmZkMWU1NWUxMDhlYmZiMjU4MTljYTJlYWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0NzcwMDYyZjFhN2UyNjJhMWEyMTZlZGJhNWY1Y2Y4MGM3OGE4MjllMDVhYTUyNmI3OGMwM2YyNzBiNTZjNzYifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L295-L308",
+          "version": "repo-lines-v1:sha256:5b518395ece4e2a9aeb7383dc3ad53d0c8344e728a385e853295d5507f0c470e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4YTU0Mzc3OTliYzdiZGViNWNlNzU0Nzk0YzAzNjNhZDI5NmNmMTZmN2M2MTgxZDU2N2FiYzFiN2I0NTViYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1MjgyNWM4ZjZkNDk1OTRiYmExZjhiMDM5YTM3ZDBjNTg5MDQ2ZjQ1OGRhMjM2NzQxMTYwM2RlMzIzYTFkYzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhMTlmZjFkNDUxNzEyMTljYjQ5NzVlZWNkNmMyZWE5ODIzODVhYmQ2MWZjMjQzNjljNjZjNWJhZmFjMmNjNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiZjhiODgxNWY4YzNmNjI2MzJiNzdkMDY4MGQyN2ZlNTliODI2YTk5NjU2MzMzMGIzZjliOWJkZDU1Mjk0NjIifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L94-L100",
+          "version": "repo-lines-v1:sha256:8350141287c50db35d99c8bf4f867468e99f3f656029ac8cb65ee14578b21b3d:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGU1NTA1NTY5Y2QwZmRjY2M0Y2I3OTgxMWM3ODA4MzFmM2RjNjdlOTgwNTk0ZTFhOTYyNmI4YWMwODU0YWM3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTJkYTdiODI0YWRjM2Y2MzUyYzJlNGJkMTc4NWVlMzIxZjBiMTQ0YmJiZDA3YzY0ZTM0MzFiM2YyNjdjZjM0MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGUzMjVlMWE4Mzc4ZDIxZDBjY2VjNjAxM2JjYmYyMjI4OTk5NTcxYzJjMDEwMGIwMThkNDJiYTMzNWJjNTc0OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWY4MGI0OGU4ZGFkYWYyYzNhYTY2MTA3ODY0MzY1YWJiZGNjNWUxMWVkNzcxNDhhYmI4NjI1ZWMwNWI5NDIxYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e7dcbdfe7c5c4600a96b63a10516bd9b",
+      "statement": "stream_message_events 默认 retries=2、backoff=0.5，延迟为 backoff*(attempt+1)（0.5s、1.0s）；一旦已向下游产出任何输出（yielded），即使网络/超时错误也直接抛出、绝不重放已有输出的流。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L234-L241",
+          "version": "repo-lines-v1:sha256:3b345e2d5fbdd7bbc040b92afdef007a7bf3d585762fe95818fc40f7be0c7afe:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTVlOWI2ZTExZWExOTVhZWFhMjc2NjAxOTE1ODE0MjE2MTFhMjliMDc2ODI2ODc5OTRkN2Q0ZjVkYjU3YzI1MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2Q3ODNiOGFiMWExYzVlNzZlYTQxYTdhMDczYjMxZWYwYzQ4MjI1Yjg3NjYwMWZiNjU4YTJhOWRiOGU4NTA5OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmFiNTRhNTA1MDExMWJiNWQ0YzFlMzBmNWM3ZWVlZTI5Y2FmYTcwMGJmZTFlN2E3ODFkYjhmZDBiYzc4YTBhMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmQxZTM5MjUwN2Y3NDA4YzhhODMyYmJlOGRmZjVmOWMyNWQ2OWFlNjIwNzY2MWY3YmQ5ZTVjYWUyMDQwNzhlMiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L295-L308",
+          "version": "repo-lines-v1:sha256:5b518395ece4e2a9aeb7383dc3ad53d0c8344e728a385e853295d5507f0c470e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4YTU0Mzc3OTliYzdiZGViNWNlNzU0Nzk0YzAzNjNhZDI5NmNmMTZmN2M2MTgxZDU2N2FiYzFiN2I0NTViYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1MjgyNWM4ZjZkNDk1OTRiYmExZjhiMDM5YTM3ZDBjNTg5MDQ2ZjQ1OGRhMjM2NzQxMTYwM2RlMzIzYTFkYzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhMTlmZjFkNDUxNzEyMTljYjQ5NzVlZWNkNmMyZWE5ODIzODVhYmQ2MWZjMjQzNjljNjZjNWJhZmFjMmNjNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiZjhiODgxNWY4YzNmNjI2MzJiNzdkMDY4MGQyN2ZlNTliODI2YTk5NjU2MzMzMGIzZjliOWJkZDU1Mjk0NjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8c62ad703b2744b7833ba3c811d63dcf",
+      "statement": "Agent Card 发现：带路径 URL 解析失败时回退到 origin（scheme://host[:port]）再试一次；接口地址改写规则为 target_url 自带非根路径时原样使用，否则以 target_url 的 scheme/host/port 为基准、保留卡片声明的 RPC 路径与 target_url 查询串。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L103-L144",
+          "version": "repo-lines-v1:sha256:c01018953330be814d85cfc9a7d1fb3637faac44c17442c4b7d13d9099598fd8:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0MzAxNTgzZjY5ZGU5MTQyZWQ5ZTAwMTcxZDk0OTYxNGE2ODA0MTFhYzE5ZGY2ZWM2NTdmOWZkOTA1MGZkNjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyMzBkOWU2MmU4YTUyZWRlYTk1YTNhYzQ3Zjc0NjBhNmNjZTEwMmExYmIyNzNiOTM4MTdmYjM2OWRlNDhjNGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1YTFkOTdkYjM0YjQ5YTU3ZWZkMWM3YzkxOTMwN2Y2YzMxMGJjZDkxZmY5NzI2MjRjYzc0ZjNiYjEzYzVlOTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5Yzg5MzE2YWFjZjFlYmNmYzI2NDI1MjI2M2YyNzUzZDkxYTg3ZWIwNzRhOTRmYjRiMTI2MTFmZWUwNTk3YjQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L165-L170",
+          "version": "repo-lines-v1:sha256:e5e6793fa27d27f1f942c4cade95e563af700481fa614ed7ec98f7a65f9ac5f3:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2FiYTE3MDc2ODU5NWQ5ZDkwYWE5NjcwMGM5MGYzMmYwOTViMTdlYTkxMTAwMjAzZDNmZTAyODY2M2IyOGQ1ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzVjYmY5OTY3MWRkMDllNTNiMzk5NWMzNWJkMDhhZTM4MzA0Y2RkYTMwNjkwYjRiYTgwMDZjODEzOWEwMWJjOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmI3OWRhZjc5ZGNmZDlmMDAwOWI5ZWJlNDFmMTI5ZjI5ZTYzYjMwZWRkYmQ5ZDNhZWY3NTRkMTFiOTFkMGE4YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODczMGQyNWQwNTYzYzQyNzIzNjI2ZDJhOWNhYzUxNTNjOGM4NjQ2NTdhMDMwMDEwOGI0YzA5Zjc5Y2M1YWVjYyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_75f128857b504006941f2a046bb3a0e6",
+      "statement": "httpx.AsyncClient 统一 timeout=60.0 覆盖卡片发现与后续调用；出站认证为 A2A/MCP 共享的 auth_scheme 五型方案（none/bearer/header/query/basic），token 统一承载密钥，query 型经 apply_query_auth 拼入 URL 且随接口改写保留。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L157-L159",
+          "version": "repo-lines-v1:sha256:0461e8f7b7352c393bebfb412c61875d65c3c9dbefc828f6e47434085262a619:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkzMDdlOTNjZTBlMzAxOTgyYWJkZTAwOGViZjk5MTM2ZWYzMTM4MDg4ZDE1MDkyOWEwMTVjZmJjMWExMzFhZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTViY2U0MWI0MjQ5MGFmNGE5NWU1ZTlhZGE0YWIwNWU3OTljNmE5YjZlNDhmNjZlN2UzN2NkODI0ZDk1Yjc1YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWUzMDNiZmU4ODgwYWNjZTdkZjU3YTU2MWYyMzMwMmE0MDNkZWJhY2IzYzgwNTIxZGFkZjVkYjRjMTMwMmYyNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTE2Y2E3YTQwNmM0MzE5YjUxNGQzNmY0Yjc3ZjBiMzg2YjlkZTllNDU0YjhkOTJhOTIxNWNkZWZiZTUzYjY5ZSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/auth_scheme.py#L20-L24",
+          "version": "repo-lines-v1:sha256:d8647671f94043ea363aa39e965c00aa680708cc1f7bb1e8e387736203646109:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRmNTUwNDQyYmU2MDY4OTkyNzkxOThlNzExMjk5Y2U3Y2UzMjVkNTZiNmQwZmRhZDFjZDQyZDgxOGM4ZmNkMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTAyYjE0NGFhNTQ2M2Q3NzM3ZWFkYjQ2NmVkOGViNjdiZDQ0YWJmOWRkZTQ4YTNiZTc2NWM5ZDcyZDNiMzA3ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDQyMWE5MmZlY2Q1NDZjMjk2ZDMwMzA2ODNiYjY3ZThhMzZhYzVkM2Y2NjgwZDc0ZmUwMmQ4OGZiYTgxN2NhZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzdmYmM1Yjk1NWUxODg5NGYyOGQ0NzNjZjAxMThmNWUyNGY4NDdkNzVlMTE2MmIwOGRmZDI1OTdlMzQ3OTgyYyJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/auth_scheme.py#L32-L57",
+          "version": "repo-lines-v1:sha256:526383277fbd9c7ab1f89a68e0415a17a025da25fc97701934eb86011fb6d5a0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjNmExYWJjYTNjNzU5ODU2Y2Y5YjNmMDMxZGE3NjIxMDg1NjQwOWRkMzNhNWNmNzI4Mzg5MzBiMTQwOWFlMWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI5MjdlZDA4YjhiMDg2MjczNmQxZjg1ODBjZmYzNjQ1ZjNlZjllYjIyMzI0NGUzNWJlMDEwYWIzMGZjN2FmODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3NDVkMzE3OGQzZTUzYWU3MjkwMWE0MDc3Nzk5MjU4NzE3ZjZlNTYwNGNiZTU0MzM0ZDI1NGM2OWM3OGZiZWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d7a27db5bd694289be801d97031164f2",
+      "statement": "流事件三态为 TextChunk/InputRequired/Completed，状态信号由 _state_events 从 task 快照与 status_update 两种形态派生，调用方保证先文本后信号；_extract 覆盖 task/status_update/artifact_update/message 四种响应形态并对 data part 做整数还原。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L193-L232",
+          "version": "repo-lines-v1:sha256:08e1135cc344892a658f6992886bee06ec145b5f93b50fc2be4bf73fd586fd24:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2Y4MjUyN2E3NjA1ZTBmZWFlNWExYmE3ODBjNDY0ZjEyYjhkZDA3YTY0NjE5OGE4NGFiMjY0NzY5ZGY1ZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzOWJiYWM4MGI3YzZkZjVhNmQyNjdkZTllY2M2ZTM4ZjAxZTY3ZDU0NzZkM2ZjMjAzMDVkNjJkNTcxZjk5MWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI4OTViZTJiMDc1OTFlZWFjMmNjZGY4MGY2Zjk1NTc5Y2E3ZDFjYjYwYjUyZjhmZWY0NjFmZTQzZGNhN2U4N2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM1YTM5ZjZlM2QwYjA2MzQ5ZGY1ZjI0ZTJhYjMwMDRlYjdhNDk5MTk2NGM4ZWFhYzM5ZjMxMTkwYjdmMjFiYjMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L318-L361",
+          "version": "repo-lines-v1:sha256:1ffb80db57bdeede85e51f5a53f535987e804db5cb09f3bdf8ace38b6aeaae8a:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4N2Y4MjUyN2E3NjA1ZTBmZWFlNWExYmE3ODBjNDY0ZjEyYjhkZDA3YTY0NjE5OGE4NGFiMjY0NzY5ZGY1ZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyZGY4OGRkZGIyOTY5OTQ4MDY3NjI0OTM1M2UwMzA0MDhiYTUyOWEzYzU0Mjg3ZTJhNmQxMDMzNzJkYWZjZjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM2MmNlZTgzMTZmNTA3N2U1MWY0YjI3ZDUwYTRiY2ZlOWI4MDQ5ODVkMjBlZTU1OWQ2ZWJjMTVmM2UxMWI1YTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkMjVkOWFiMjA1MDcxYmViNzU4NjA1MDcwMTRjMDIwOGUwNjM4MDhjY2NjNDIyN2FkNmQyNDEwNDY3YzhmOWEifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L43-L76",
+          "version": "repo-lines-v1:sha256:7c214e377ce7596b7cac0fc73925f35a30e9923474e82b99784c02135c9b0163:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3YjA0ODA3ZDRlMWIwZDJjYmRmOWY5M2VmNTViNGI4YTIzNmIzZjhjYTBhZDA4MmUzMmYxY2I4NGU2YWE2YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1MGZlOGYwNTkwOWIyOGI5NjRlODg1OWI4ODFiODcwOTA4NTEyYjQzNDVjYjEwMDk1YTcxZjc3NmEyOWU1NzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0YzdkYTZmNzA5YjlkOTUyNWUyY2U0MWExOWI4NDVlMjgyZTQ1MTJjYzUwY2U1ZTYwZTQzYjQxMzlkMDFjOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0Y2JkMzFkNTBhMDU3YTY2MWU1YjhhM2YxZWYxM2RhNzM5ZWU4Y2RiMGY2N2ZhZTBkNGUxZjIzYjQwNDEzMjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_575e7b958100475498f8e2afe250169b",
+      "statement": "流结束且见终态但未见 artifact、未见终态 task 快照时补拉一次 GetTask 提取产物（零产出兜底）；补拉失败仅记 debug 日志、不影响主流程，已见产物或终态快照则跳过。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L264-L293",
+          "version": "repo-lines-v1:sha256:3aac1af11669df3d557231c098cd173bb4511fb37da2c0ab9c0bdad1a64090b9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjODliNTRiMjg3YmFmZTkwOWFjOTBkYWY3ZTJhMGE3YjMxNDQ1NGNlMjlkZjZlOTVhMjg3MmQ1OWNiNTZjYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjYTNhZmM5YjllMDhlZTI0OTQxM2EyOTA3MjAzZWIwYTc3ZWJmNTExNzliYmJmNjQ3MzAyOGRmMDQyMDcwYTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVkMDU1ZjAwNTRjYzQ2ZDY0ZmIxNDc1ODNkODA0NjBlYWUwYzJjNzBlZTFjNTUyNWU1MTkwNGRmODRiMjZkODQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJhNjkzNmE3ZDhiMTU1YzcxN2FkYzgzNmJlN2RlY2E5MDU1N2I5NWU5OTNjY2E5MjZjYWM2MjE2NGM2ZDI4Y2EifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L363-L375",
+          "version": "repo-lines-v1:sha256:ca10e09ba049927f05f332a76658a1c6784c97b81296fc70fa8b36a381c01a1d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyMTM2ZTliMmU1Y2ZkMzExMjBiN2UwMTQ4OGUwNGRkOTg1YTgzYmQyZDQ3MjA1MDllZWRjMTFmZDA5MGM2NGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5ZDE1MmNkNDE0ZTM3MDJiNDYxMjIyZmJhYjhiYmRlM2I1YWY3ZWNjMjIzYTI3Yzg0MzQyMzJiMGVlMThmNjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg3NzAwMGUyNjBjOTZkNjljZjY3ZTZiNDc2ZTQ2MzU5MTkxMDJjZWI0OWNhMTJhMWYxOWI5Yjk4NzgxZjI1M2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmZjkzZTRlODZiMzI0MDYwMDJiNTkyN2U3MDAwNTQwZDBmYTU4ZTNhMGFlZDZkNGE2MTNhZjE4M2IxYTlhYTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f044c3f1842c4a08bc622d752e7dae16",
+      "statement": "连通性测试（a2a-endpoints test 与 agents/test-connection）仅调用 test_connection：_ensure_client 成功即返回已连接，A2ATargetError 时返回失败详情，不发送任何消息。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/a2a_client.py#L377-L382",
+          "version": "repo-lines-v1:sha256:b47239a92a2cbe73ebd725cc5c35a852a363dae90da48f696ab67a7db6edd9de:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM0ZDk4MDI4MzAyNDg2NTNiOTY0MGMyNGNjZmM5ZmM4YTM0NDM3MDNkOTExYjUxZGJmNmNkNmUzMTBkODNjNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmNhODU0YzZjNTU3ZTI1MDk0MTdjMmRkN2Q4MjZhMWMzZTk4NDVkZDc5MGIzY2Q0MzcxMWI0MTY1OWRhOWZjNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOThmODYwZjg5YjFhNzA2MmViZWM4NTViMjhkZTcyMGRhMThjODY1OGRjNzgxNmVkMmY3YTg5NmNkODE5MTE1ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmRjZGVkNTI4OWI0YmQyYzA0ZDYzOTAxY2FiMDE5MDA0Yjk1Yzg0ZDcxZmZlNmViZjRjNGMxYTYxNjQzZDIzMSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L238-L254",
+          "version": "repo-lines-v1:sha256:1f00eb26b832a62d68fd63fc3c1066f55b201572508f0fc37d04ec470ef508d1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4MmIyYzMxNGRkYjI3OGU4MDkyMjE1YTRkNWNhYzJkZDdiMDg3M2E4N2E1YTZmZGMzMTc3MDI0MDEzYTY4ZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxM2EyYjRjZTQ1OTRkYWRiM2E1MmY2ZWRiMDY5MDExMGYwMmIwYjVhMzBhNzNkODUwZDM3ZmI5Mzg0ODNmNWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5OGYwYWYzNjlmYzIxNjJkY2JkNjQ3YTM3YTAxZDc1MDRhYWYxNGUxOWIyNWEwYTQyZDg5ODIyYzdlNTIyODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzYmYyMGY1OTY5ZWNkMWI5NTZlMDI4OGEyYTc1ZDViNmFkZjkwODhiNGEyYWViNTNiZTliNzhjNTY1ZWUxZTMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/registry.py#L145-L157",
+          "version": "repo-lines-v1:sha256:5be7975ee0307a597456f2ce1373801d06323f2df90df6e5638e18876099f37a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlMDZjYzkzNTdkNmM3Y2M3OTdmYzlkNjZmMzc5MWM5NTI5ODdmODQzNTQxODM1M2Y0YTM5ZDhlOTk5NTI2NmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxZDJlYmRhNmQzNzNjY2VhOGU1Y2VhNGYzOTdlYzMyMWUzM2Y2NTVhMzU4MWI4NTZkZjc1N2E4YzViYTBmNjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMyZTA2MzAyMTQ4ZWNiODU5MzU4NzEzOWZjMjZkOTM1YTc1YWM3NDkyOTJlNjIzZTg4NjVjMGY3MmJmMGM3OTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllM2U3MTA5ZmE3NmY4OGZlMmFjMjBhYmI1MmRiNTVlNTU5NmI1MWFlNjBjOTFjZTBjYjBkODk3YWFlYjEwZjUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

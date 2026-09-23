@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:bf5c81efbe7f4e952b61db823612f79f530f0eeca7decb5ab051b6cc78b0df9d",
+  "claims": [
+    {
+      "id": "claim_401dbfbb13524df586ee1b644db56c48",
+      "statement": "TTS 代理使用 httpx.Timeout(120.0, connect=10.0)（总超时 120 秒、连接 10 秒），成功响应以 8192 字节块 StreamingResponse 转发 audio/wav 并在 finally 关闭客户端，避免大音频整体驻留内存。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L52-L52",
+          "version": "repo-lines-v1:sha256:f35adba8ccdfcef17c80b1878bc5014a2992ae6fa85c758d7b40cedab80a8399:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM1YWRiYThjY2RmY2VmMTdjODBiMTg3OGJjNTAxNGEyOTkyYWU2ZmE4NWM3NThkN2I0MGNlZGFiODBhODM5OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM1YWRiYThjY2RmY2VmMTdjODBiMTg3OGJjNTAxNGEyOTkyYWU2ZmE4NWM3NThkN2I0MGNlZGFiODBhODM5OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWFjN2Q0YmIzMTVmZDg5NmRmOWQxNzgyNzIyODI4MzE5MmNiZTIyMzJlYWNiZGY3ZGFjOTkxNTQ5Y2Q2MDdiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmFiNTlkOWI4MDdkZTAwODcxODUyZjEzMTYwNTc5NDI0OTEwZDBiNjgwNmM2YjFhMDI0NzdiMzU4MDkyY2E0OSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L84-L96",
+          "version": "repo-lines-v1:sha256:44336cda58e24497bfa361bff406b3f51530ea10b03cfb523679a7ec8485155b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExZDNjZTAzNGViNzgzNGQ5ZTRmNDcwZjFiMzUyNGJkMTUyMzY2MDZlOWExOTZjNmViZTRkOWFkOGE2MGZjYTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiOGFkMDYyOGI2YjM2OTEyZmVlYWNhMDk0YTU1Mjc1YTA3YzVlZGVkNTI2ZWRiYWMwOTMzZTQ2ZmQ0Y2U2NzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c290960a17f84bb8a66b10dfeb760422",
+      "statement": "TTS 上游非 200（含 401/404/409）统一映射为 502 以避免向前端泄露上游语义细节，detail 优先取上游 JSON 的 detail 字段；连接失败亦为 502 且 detail 仅含异常类名；未配置 ONNX_HUB_API_KEY 时返回 503 固定文案。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L44-L48",
+          "version": "repo-lines-v1:sha256:ae42ef193f72db21624d77668568b1303dee8fddaafeaf0b647594ac44661c89:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTE0NzY3YTVmMjJmMTM1MTFlY2ZiYmQzZWJiYWRhYTg2MjQ3YzMyMTMzMjkxNGQ0MmRmMTljYmFjOTU2MTg3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmE5ZjhjMmJjN2ExNDFhMDIyYWYzZmViOGFiNTAwOGVjMjU3NTdlZjI0YWNkMDQ5ZjUwODlhNzRiN2M5YWU4MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzFmYzNkMzBkYzY4N2UyNDhhNjU0YTRiZmEzOTNkZmUyMWJlMmI5NGZmNWRlMDJjOTNkYTFmOTQzYzRhYWFhMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWFjN2Q0YmIzMTVmZDg5NmRmOWQxNzgyNzIyODI4MzE5MmNiZTIyMzJlYWNiZGY3ZGFjOTkxNTQ5Y2Q2MDdiNSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L65-L82",
+          "version": "repo-lines-v1:sha256:8dbdb5693f07ac9508ebc16efa7677d324a790645fe2c9dadd0c1b97d08b6503:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5YWVhZWM4ZjNhYTNlMDYyZmZjNGY5ZTVjNzk5MGMzYWUxZTgzMWJlODE3ZmY5MzAzMzRkODdiZGUwMWE1ZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NTY1YWE2YzE3NThhMjM1ZjM3OTNmZDJiNWZiNjZjYTRiODQwNTQ3M2NlNzlmMmNlYzQ2Mjg4MjRmMTIyZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRmYTdmNTYzMzVkZGU2NDZiMDEzZGU3MjQ1YzQ5NDQ5MWMxZWRiYmZlYzc1ODhmMDZlNTJjNjZhMTI1MjM0MWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZmNTAyMmMzNDUzNDBmMGVkYzliOTNmMTZmZTc3MTgwNGE0OGQ2NzU3MzQzZTBlYjRhNDU0ODU0ODk3NzhkYWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_615f5ae17a4a46699d8376439ed8c5e0",
+      "statement": "ASR WebSocket 在 accept 后若无 ONNX_HUB_API_KEY 以关闭码 4503 结束；上游连接用 websockets.connect(open_timeout=10)（open 10 秒、max_size=None），握手/连接失败均以 4502 关闭客户端。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L141-L158",
+          "version": "repo-lines-v1:sha256:a535f3ca7f1555a0d9401ee1fc1c15698feb1ef57ebe20b33985bdca4333991c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExNDc2N2E1ZjIyZjEzNTExZWNmYmJkM2ViYmFkYWE4NjI0N2MzMjEzMzI5MTRkNDJkZjE5Y2JhYzk1NjE4NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxZTEyYmU0MjA0MTE2YzkyNGEyMDlkOTcyNjBjZmY4NjdkNjE0NjMzZmMzMzM4MTc4YTljMjA3OWQ1ZjFjZjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI4OWNiM2I4YmUzY2E3OGUyYzFmNDJmMzZlNTY0OTU2Y2RhYzdjOGFkMWNmMjBkNDQxZGEyMTE0MWEzOGQ1ZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1MDVmZmEyMGI3NGVhNWExMWM2NjNkNjM5NjNhYTkwNjY1MzNhNjgyODhlOTQ5MGM1NDdhOGE2N2Q4NDUyMzkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L172-L186",
+          "version": "repo-lines-v1:sha256:1ead5a2889bcbd9a267733dba42f886a9d205ecc82bc42ccbd870b127dbc4561:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1YzFmMDFlY2YzZjM3NmU5MjRlNzI3YjcyYzc4YWJhYzBiM2MwMmIxZGJkM2MxMjYxNmIyM2VmNDdhMDMzYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwNjQ3MDRiM2RjNGVjZDc1YjM4ODRjMjM0ODM5MjNlOWY5MjY0YWI3YTc3N2Q4MzM2YzBlODA0NDUxN2YxZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMzNjdhODA0OWJmZTcxMmE0MjM5MDA1MjIwYTRiN2QyMDRlNTlkYjZjNjFmMjVkYmNlZjUzMjBhNjE1NDYwOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmOTlkYzRjMWE5N2QzZTgxODNlOTI5ZTc1MTM2MzI4ZTViMDU3M2E0MTlmYTQ4MzM0YjZjNjQxNmQ4YmZhZDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d90a42e078e64256abc0a6d4744480da",
+      "statement": "上游 InvalidStatus 中的自定义关闭码 4401/4404/4409 映射为 reason 文案（API Key 无效/模型不存在/模型未启动）后仍以 4502 关闭；关闭码非整数或未知时回退「上游连接被拒绝（{code}）」。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L172-L180",
+          "version": "repo-lines-v1:sha256:6174c284533ebd3a0d0b4508161b52a4b1351a050e86ecd9d8b349c747d50a40:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzVjMWYwMWVjZjNmMzc2ZTkyNGU3MjdiNzJjNzhhYmFjMGIzYzAyYjFkYmQzYzEyNjE2YjIzZWY0N2EwMzNhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTgxZjI5YTUzMGVhYzIzMmRiNDlhMmVjOTg1NmU2MWEzNzkxMzFhYjIyNjYyMGVjNWEzNjYwZDc5NzBlYjdlMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzM2N2E4MDQ5YmZlNzEyYTQyMzkwMDUyMjBhNGI3ZDIwNGU1OWRiNmM2MWYyNWRiY2VmNTMyMGE2MTU0NjA5OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDczN2MxYmY3MWZkY2MxNGVjOWYwZjY1NTBkZDA0NjA3OTNiMWQ5MWVhYzIwYTA2Mjg1YzIwZjkzMzAyNmNiOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_388ca5c6808740e7bb2f9fd0a40f2602",
+      "statement": "双向泵 client→hub 按 ASGI 消息 type 分发 text/bytes，hub→client 按 str/bytes 分发；asyncio.wait(FIRST_COMPLETED) 时任一方向结束即取消另一方向并关闭客户端连接。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L102-L171",
+          "version": "repo-lines-v1:sha256:f98615534ef468047c4c352fea3ac5052bde74e15f8d4932ac9941cedf8d9625:eyJzZWxlY3RlZExpbmVDb3VudCI6NzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM3MWFhMzNlOWJiYzlmNDBkNWIxNDE3MjA2YTYwNWUwZWYxZjg2MjljYWJiMWMyZjZlYzhlOTMxYTM1MzJhMDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwNjQ3MDRiM2RjNGVjZDc1YjM4ODRjMjM0ODM5MjNlOWY5MjY0YWI3YTc3N2Q4MzM2YzBlODA0NDUxN2YxZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc0OGUxNDljYjNjODBlYWNkZDg0MWE4MTAwNzBkZjdlOTUyODZjYjIxNjlmYmQyZmRkNGE2NjM3OGZhOTcxODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlM2NkMDdjMDAzNjVlM2RhZWFiYmQ3N2Q1YmY0NzdhNmMzNTFkNTc1ODE5YjM0MDcwZjgzNzA0NjU3MzEzMjYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ada0e74877ba4297b93adc70c9fa79b3",
+      "statement": "API Key 从不下发前端：TTS 在服务端向上游注入 X-API-Key 头，ASR 在服务端向上游 URL 追加 api_key 查询参数；GET /api/speech/status 只返回 configured 布尔与 base_url/模型名，不含密钥。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L145-L153",
+          "version": "repo-lines-v1:sha256:4a3b95c91b61287f2e9edb8425eab9910b970952b8cd83e7907db757e6084c0f:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdmYmQzNGMyM2NkNjU5ZjIyNjExMzBhMjc4ZWJmOTlmZWNkN2Q3MDVmM2Q2YmM3NmI0ZjhiMGQzNTIyYzRjYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGU3YWMwY2JmN2QwOTllYzlmY2MzZWQwNzQ1YmE1N2FjNDRiMDE0NTc4MjAxY2Q4ZTYyZTQwNDUzNjFiZTE5NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzNhNTkwZTgyNThkMTE3NjUxZjE1ZjUwODlhYTJlMjIxYzYyN2MzM2E3NzJjODY5ZGMxMWFiZGUxYzY1YzM0ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzVjYjMwMGYxYzdhY2U2YmNkMGNmOGIyNDMzNTIwNjc4YTUxMjUyMTJkM2I1OGRlYmE1MGQzMmNmM2Q2Zjc4NCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L189-L198",
+          "version": "repo-lines-v1:sha256:3f2ff53786d8fc414feb741b214cf785194ad6bbcb17d71c4a81d962369ef2a9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlNGYyMmE3ZTZlZjE1M2VkMDY5ODg2Yjc0ZTg0MjA5YzdkNzllMjViYjYwNmM5NGE4NzY2NmJhYjFhMzVkNmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1NzhhYjgxNGU2ZTU2ZjJkNmI0NDZiZjdiNzhhMWVkMjExY2Y5MmM5ZDcyZjVmODVjNzJiNjRmM2U5MzUxMjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L60-L64",
+          "version": "repo-lines-v1:sha256:961f2922b55f654e2438c5371a63dfb429f6b6d7ffcfc4077b83e219a96f0c46:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzFmMjVlN2JiOGU2ZTlmYWNlZDM2N2U5NjAyZGY2NTJlZDE3YWQ4YmMzMDRmYmNiZTZmOTEzMGNkMWQ3NWU0OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmE5ZjhjMmJjN2ExNDFhMDIyYWYzZmViOGFiNTAwOGVjMjU3NTdlZjI0YWNkMDQ5ZjUwODlhNzRiN2M5YWU4MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjQ5YWNjMjgwNmVlNGY3N2M0Y2EzZjdmMjczYTdkNmIxNTNjZTEzNGYwMTk5OWEyOWNhNjJlNmY1N2RjOGIxYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDNmMTI5OTdiM2UyM2I5ZWIyMDU3YTZkZDdmMjAwYzg2NDRlZjQ1NjUzMGU0ODZjMDBmOGRlMGU2YmE1ZWQ3NiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/speech.py#L9-L10",
+          "version": "repo-lines-v1:sha256:a3d1129107663292914fcba7524f8b359fac6071ef3f6832c67de9715b3dc5fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTRmMjcwNDkyMDIyNGY5MTVkMzI1OTk0OWE1Y2RlMmQ2ZTkyZGVmZDE4NDE5ZjRmYTg1ZDYzNjVmZWY2ZGQyNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDc1ZDQ1ODllOTFjYzhjYjk3NDg4OWRhYjAxZGUxNWRiMTU3NGNhMTBlZWM3MjkwYTEwOWJmNTg4Yzk0ZTAxYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTc2MzY4MmY4MmMwMmYyYjJmZWFjNjE3MzRiMDRkMmFmODU3MmI0N2FlNzNmZGJiNjg1MmIyMmY4MTA4NzFjMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGZiNmYzYThiMDkyMzkwMjA2OWZmMGI2YzY0MzdiODQzODU0MjhmN2QyZmRhMWZkZjYyOGQzMDMwYjg5ZDkwZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_afb6178651194a239dd89da2efd5b09f",
+      "statement": "nginx 为 /ws/ location 设置 proxy_http_version 1.1、Upgrade/Connection 头透传与 3600s 读写超时、proxy_buffering off，使 ASR WebSocket 升级握手可用；/api/speech/* 走 /api/ location。",
+      "evidence": [
+        {
+          "resource": "repo://nginx/default.conf#L52-L61",
+          "version": "repo-lines-v1:sha256:8e5a7598bd4dc33ec721c9d1cb4450c3709ad55bbc80cf11cf1af99c9a855350:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0YWZhZTE5YWQ3ZDJkMTg2OGRkY2UwMjk1ZDRhNGI3ZjlmYWQ3M2JlZjkyN2I3ZTU5ZGZhNGJhNmM0YmVkYzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiZDQ5Y2I5MTNkMDViYmVjYjlkMGY1YTlhYWM1NDg4Zjc0MzBjZTkwNjM4MjFlNmU2OGI1ZmFhMmY5ZDFiNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZiN2ViMTQ4N2IzOTZiOTc4ZmM4MmE0Mjc1ODQyNzAxZWQzNjI4YmFmZjg3MTNmNjdhYjRmMzA4NTIyMDIxNzYifQ"
+        },
+        {
+          "resource": "repo://nginx/default.conf#L87-L96",
+          "version": "repo-lines-v1:sha256:2c665020217ff7807fe15c189a4904173a44bc7a97969f78e282815ef2e9607b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwOWRhMTIxMDFkNjY1ZWQ4ZDJjZThiMzY4OWZkNmNjYWZjZWMxMzU0OGEyMTBmZWNiY2M2M2NhZDQyMTI0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NjU1YjE5MThiNmQyMTBiYTViMjA4ZjViM2IwYzhjMzJmYWUwMmNjODc3NzgxY2FiYTYyYjcxYjc0YmUyZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0MThkYzc5ZjVhMDZhMjU0NGZkZDhjOTFiYzM4ZjcxYzI2ZmFjODIzMDNmYWM2Yjg3MzNlNTFmOTY0MTgwNTIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

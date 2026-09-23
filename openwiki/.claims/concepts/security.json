@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:5b8f09ed1aa0f17500bf0894abf09d26b84f21621c7f4f12efa0dad13f652ed0",
+  "claims": [
+    {
+      "id": "claim_41ecc9a55aab426c8e5dd4d8ece19d3e",
+      "statement": "管理员密码用 bcrypt 且显式截断到 72 字节（bcrypt 5.x 对超长输入会报错），刻意不使用已停止维护的 passlib；登录校验走 bcrypt.checkpw 并把异常收敛为 False。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/auth.py#L1-L32",
+          "version": "repo-lines-v1:sha256:73fce9d267e253f88e62532b0ad8045da848db004c26a29fe9a2621cf6588710:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkMjQ5OWQyNTFhNzUwNTE5ZDlmYjY1MWRlYzYwNmZmYWY4YzAyYWFkMmRhMjI4YWIyMTI5YjZlYzk5MjNiZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5N2M3MTI0N2FmM2NkMWVkZjU1NWE3ZDEwNzU5MzE1N2Y2ZGMyYTIyYWYwZGU4MmU3Nzc0YWJmMTBmOGFkZTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1NTExNzE2ZWJmOTc5MGQxNDllYzk0MjIyMWEzMWI4ODYyNDZiYzc3ODY5NWJhZjI5ZTc4YWM5ZDg0MWNjZjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_395be12273424c78b43c085dc6759622",
+      "statement": "get_current_admin 解码 Bearer JWT 后仍查库校验账号存在且未 disabled，任一不满足返回 401 并带 WWW-Authenticate: Bearer。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/deps.py#L14-L39",
+          "version": "repo-lines-v1:sha256:926da0cf7bb60649d2b235863b7f9f0f9c1d810abc466d15b756000d6af85111:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzNjc1OTVlODY5MjdiZWU5YWIyZDJiOWQ2ZTI5MjA1ZDQ2Y2M1YTdjODkyYjZiNmE0MjczMjRlMDE4YzIwOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFjNWE4YmJlN2Y1ZThmZjQ3MGM2MjE2NGM1ZGUwMDA1NWJiNGIwMGQ5NzI3NjczMDVlMDM0NDZiNjU1MjM4ODgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0MGViOWQwNDg1MzRiOGQ0ZDI3YzdlZTNlZGY4NDQ4MGNjMTdkNzRkZmM4M2E2MTFkM2NiZjMzMDQxYTYzOGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5MjJjMTUyNDU1ZDY2MjEyOTYxYzEzYmU5NTkzNzVjMjE1NzVlNjNiMjI3YjViYzNiMzU3MmQ4MWQ1MzE4NzgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_936b66432a9d4690bd2434955605dc5b",
+      "statement": "对外 A2A 的 validate_api_key 要求 Key 存在、enabled 且 agent_id 等于被调用 Agent，接受 X-Api-Key 或 Authorization: Bearer 两种头，失败统一 401。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L111-L132",
+          "version": "repo-lines-v1:sha256:4fe143de9ef4b703db297281399c73fb8fd2cd3ec6895780d97f2ca9a5416c4b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiZTUyMDQxMTdlZWM0NTk1YjM0ODQzOWEyMTU3ODM1M2QxNTVhMDMwNjllOTE0MDRlYjUzMTA0OTJkMGYxMTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhOWY4YzJiYzdhMTQxYTAyMmFmM2ZlYjhhYjUwMDhlYzI1NzU3ZWYyNGFjZDA0OWY1MDg5YTc0YjdjOWFlODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlNzNmYzE3MmUwODI5YWM2MmVkNzA2ZjE3MDQxZDY1YjlhOTgzMmZjZTM2NTIwMTQzYjIxZGU0MTE3NjUwNjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_47763832c93e461692732cce2fcd41c6",
+      "statement": "出站认证由 A2A 与 MCP 共用 auth_scheme：none/bearer/header/query/basic 五种方式共用 token 字段，stdio MCP 因无法携带 HTTP 头改为注入 MCP_AUTH_TOKEN 等环境变量。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/auth_scheme.py#L1-L73",
+          "version": "repo-lines-v1:sha256:4e1a934217ff0c951f8ac7d3c82f16754d8fda9b29b818a5f0d97bf8b89112d4:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiMjFiNmM0NjJhYjNhMzc5NGMwZjk1YmViZTA5OTAzODRmZjBiZDU3MmVhNmVhYWFmNmY1ZWIxMzdiYjJjZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2YjMzZjhlMDBjZTg4NzI1OWI4MjBmMDAxMDdkNTZkZjNmZjA3ZWJkMTk0OGNiN2Q4N2Q1MjBmOTY1MTA4N2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYyMzUxYTBlNGI3MTliMTA1NDJmYjRmOTMwMWNiYzY4YTYwNzM2MTA4M2RlNmViMWE4NGNhOWU5ODU5YzMwYTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c621efd4ddae4877a7eb26ea26bc0d49",
+      "statement": "连接器 webhook 不依赖管理 JWT 而按平台验真：Telegram 用 secret_token 的 hmac.compare_digest，Slack 用 v0:{ts}:{body} HMAC-SHA256 并拒绝时间戳偏移超过 300 秒的请求，飞书校验 verification_token 并对加密体做 AES-256-CBC 解密。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/connectors/feishu.py#L32-L69",
+          "version": "repo-lines-v1:sha256:5d291dcead734311c4ab1f5e21d2dabf58a98be45319a04cd59c2663194e445d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0MzkzYzIyMTgyOWNiZmExNWQ4ZDM2NTVmMjA0ZGJlNDJlNGJlY2Y4OGYyYmY4MDQzODM4OWQ2ODhlZTE1OGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjNGFkYzc4ZjQ2MDdjZjY3M2VlYTFlZDhlNGY5NTJlMTAwNzE4MzlmYjE4ZDkxNmRiODczOTI5ZTAyY2ZkMTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiY2IyZjA5ODgwYWQ5Y2Q4NmRmY2EwNmYwMjcyN2U5NDQ5YzhjNjUxMWQzMGE2OTViZDVhMDZkYjVhNzAzZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViYTE3MzMxMGJkNTUyNzAxMzY1Mjg5MTNkYTMyMGM1MzAzYjdmNmZiOGFkNzVlZTBjNjdjODE2N2QwODA4NjMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/connectors/slack.py#L19-L45",
+          "version": "repo-lines-v1:sha256:2b02642882f41d4bcccafe3cc6f97840464c7a687f2a37632f47281591044045:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlYjZkZWI4Y2NmODUyMjU3OWJlYzA5OGQ1NDM4MzBjNmM2N2JjZmY0MmQ4ZWU0OWY2YTM1YWFkZjllMWVlMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhNWU1ZDliM2M2Y2FjZWU2MTRkMjMxMWI3MTUwY2EzN2NkZmJmNWNhMTdiNWE2ZGE2MjI4ZGNlMzgyOWM4NjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4MDAzZWIyN2QxNDg0N2M5NWZiOGU4NDMyZGE3OGI4ZTlhZWRiMjkyNDFkMTA4MjVlNjI5OTc0ZjQ3ZDRhNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYTg3ODEzNzE3NmIzYjQ4NDBkZWYzOTE4MTE1MzQyMWRlM2E5MWRjNGY4NzlkOWNhYzFhYmU5NWZhMTFhNWQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/connectors/telegram.py#L44-L52",
+          "version": "repo-lines-v1:sha256:dfccb55542bbfea85343ad2d50a0a8df1925e2c0db8c2b4752327f40526ee7dc:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWUzNGYzZWQwOTJiODkyMjc4M2I1NTA0YzFmN2YwYWRhYzNkMDg1MjUxNDcwOTg3NmQwYWRmMTEwZTMyNjc4YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg2ZDBlMTY1OWI5NzMxYmZkMDA4NDgxZDQzMjk4ODdjYjNmZDk4MDNjYWZkYjlhZWViMDRhMzM1M2ZiM2FkMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzQ1NDk5OTY5YjI3N2MwZjFlYWI3MGRlZWI1N2QxYjM4NGViYmIzOTYxYmE4YmRjMTY5M2I4MWNhOTYxNzliOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2U2MGZlMWM1YWFiMjExOTc4MThjZTQ4OTUyNDVkNTY1Y2FhNTJjNWQ4YzI3ZTI2ZTczNWQ2ZTQ5ZmNjOGZjZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_2ae722e772844e7a933947a509b32d19",
+      "statement": "技能导入管线实施 zip slip/符号链接拒绝、解压总量与单文件字节及条目数上限、URL 导入 DNS 解析后逐 IP 的 SSRF 校验、重定向与 4MB 响应体上限，且后端零文件系统访问。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/skill_import.py#L1-L13",
+          "version": "repo-lines-v1:sha256:efe328ca77b6cd4e08432d5f0eb194e5e8deda362b79a93c00362579fdd9ebdd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlNTk2NTQ3NTA3M2Y5NmMxMzY4ODIxYTMwM2M2MjdjM2JhYzk5MGNlZDRiNzBjMDBkOWY5MDJlOWY2YmM0MTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3NWQ0NTg5ZTkxY2M4Y2I5NzQ4ODlkYWIwMWRlMTVkYjE1NzRjYTEwZWVjNzI5MGExMDliZjU4OGM5NGUwMWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmY2QyYWY0NThmYjExNWEzNmU4NGE5NmRlNWNiNThiOTAzMTIyNzAwMjVlZWMyMDgxNDc4NDhiMmRiODYxYjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_da6f8d1df87640589867be8fd924e569",
+      "statement": "CORS 仅允许单一 FRONTEND_ORIGIN 且带凭据；聊天路由除 cookie 所有权校验外无额外认证，非浏览器客户端不受 CORS 约束，防护依赖签名 cookie 与 thread 未知性。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/main.py#L68-L74",
+          "version": "repo-lines-v1:sha256:7267d5177b1d9d17f73f676f8d6ed960a53a1e4cd428731a3d1a340a9dbd1528:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQyMTU4NTk0MWYwZGRiMmYyZTEwMjY4NTVhODI0ZDBiODI1Yjk5Y2Y4MWE2Y2VkZWUyZTU0Y2E5ODIzMTdmMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWIzOWUwMjJlMGQ4NTQxMjAwMDNkNzkwYzI4Yjc1OTYyZWRkMzAzNzU2ZDUxMzMzZGY3NDVjZmI4NmVhMTFjZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTBjODdhMTYxYjk1MmY1M2JmODg2MmU5NWM4MTVlZGViZmZlZTBkZGUyMzQxODk2ODAwMjYzOTMxNGM5NDcwNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDI2YzE1NDQ5ZmM0YWZkZGZkMWE0ZjVkYWNmYTZiZjc2ODg0ZjcxZGE4N2U5OWQ5Y2M2YmFlMjUzNDkwNzY4MiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L398-L406",
+          "version": "repo-lines-v1:sha256:bc013be87882271c70f18301d6847d2eb11d6423abd2f87ef0f0fd129ef484bd:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTVmYWEwMTc3YzlhMzBlYWM0YzgyMTMzMzNjMTAzZTlkOGVkNWI3M2Q3MzUyN2ExZDU0YjJlMTliNzczYmY3NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmE5ZjhjMmJjN2ExNDFhMDIyYWYzZmViOGFiNTAwOGVjMjU3NTdlZjI0YWNkMDQ5ZjUwODlhNzRiN2M5YWU4MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTdlOWQ2ZTM5MDYyYjlmYjQxNWJiZDcwZDJiMmYxYzFmZDRiN2VmNGIwODNkMmFmNTEzMGJkN2VmYWI5YWMwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTVmYTQzNTlkNDVlNjgzYjVlNzRlODJmZjEwOThkYzVjYzNjNjgxOWVlZDBhZDZhZjBhNDBiNDY3YWVjZjEyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5c8797e377b34697b22014e023e85c08",
+      "statement": "沙箱 runner 施加解释器白名单、相对路径校验、环境白名单与 rlimit，并在容器层 network_mode none + read_only + cap_drop ALL + 256m + 64 pids；SANDBOX_URL 为空时后端不挂载 run_skill_script 工具。",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.yml#L105-L122",
+          "version": "repo-lines-v1:sha256:e628c018a6b8d16250c3deeb5c8279f8f89de09fd16950f8c15b8a3c72f5cf45:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3MjgwMGE5NzkyNTA0ZjJhZTY1MjJlMDNhODhiZTk2MGM4OWI2OTAyYzBjOTIzN2I2YWNkNjE1M2E1NWJjYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkYWRiZjY5YWU3ZTBlZmU5MDZkZWFhNmU1NThiNWZlZDQzNjkyODdlMGZlMjBmNzQ3YTM5NjhmMDgzMGRjN2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxMjc0MTg2YzM0YTM5MDdiYTdmNTI5ZWQyMTM5MjdjN2FjYjc3YmY3OTgwNmM4MDEzZWVlZmJmN2MwMDhlNWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3YTBkMjRiYTEyYjYyZjIzZWQyMDBkZTMxNjFjMjZlYjU4NzMxZmRiOTZmNjEyY2FmNTg2Mjk0MjdjYTgwZTAifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/protocol.py#L22-L87",
+          "version": "repo-lines-v1:sha256:4daf23e8950302d7af8f3ef0ff4cf97e93e6e33315e7ae77140f5cd715f65aef:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwMjRiNDEzOTEwOGRkYzU0MmUyY2U3YjM3ZmM1MjkzOTkyOGQzMGMzZTlkNmFhMzAzYzY3NTkwYTI0NzkwYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlMThkMzM5ZjJiYzM0ZjNkNWMxMDZmY2FlN2M2NWQwZmU1MDZhZDAzZTZkZjQ4NzU2ZTY5ODgyNTVjODQwZjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdhZDJiM2Y3OGE2NzFhNWZlNTg1ODQzMDQ3NjFhODU1ZmJmZWNlMWU5YTQ3ZTMxYmZhNGNjMzhmMmM5OGQ1NjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNmI5MWJiZTY4ZTQ5YWRhMzlkOTk4ODI1ZjhiZGVmZGY0ZGY1NmU3MDVmY2YwMWQ2OGYzNGYyYzJiYzA1Y2MifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/sandbox_client.py#L37-L39",
+          "version": "repo-lines-v1:sha256:cf7e58f95d18405e6e2f65159fc87775b9718a83bfcbefea229f92e01cd86c12:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjU5MzY3Mjg5OGQwMmVlYTU5YjVmYzliMWU2MWMxMDJkNDc2ZGVhMDMzZmIyNTE5NDE5MjAwM2ExYTFmMGVhMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNjMDczNjhlZDVjNGE0ODg3MzZhYmI0YTY2MWJkNjU5NjU0Nzk4ODQ1M2Y3YzllMjc2MjAxYWExZjljYmFmOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjI1ODcwNmVkMzkxNzVjYjllYWNmMTMxYjNjZTgzMTEzNzFlNTk1MTU5OGY4YzNkNWQyZjZjMmE4MTFjNzRhNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWUwZGZkYzhkOWM1ZGUyOTk0ZTc1NDAzNWI5MGY2NjNhNDUwMTg5N2FiZGRjZmI2YmZmMWMyNzllY2I4ZmFhNSJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

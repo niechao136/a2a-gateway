@@ -27,6 +27,7 @@ docker-compose.yml
 Dockerfile
 nginx
 docs
+openwiki/
 
 *.md
 !README.md

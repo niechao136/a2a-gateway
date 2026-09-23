@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:7f7774290af03bd13705c6f447094f5431af218e83eb2a1e66bad4b72a335fa6",
+  "claims": [
+    {
+      "id": "claim_d7642fcda5ac402ea1f4d39971b7e3e0",
+      "statement": "checkpointer 为进程级单例：get_checkpointer 惰性执行 AsyncPostgresSaver.from_conn_string、__aenter__ 与 setup() 后缓存，所有 Agent 图共享同一实例，close_all 在关停时 __aexit__ 并清空。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L119-L128",
+          "version": "repo-lines-v1:sha256:7a41947a7aa39b22d54cee5c0e2cf85d7ebc82a95a5914df981af90932c8d2a0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkNWJiMDY4OWI5ODUwOTQyNTI1MzVmOTc1MmExOWM2MWQzNGY1YzBhMmRhY2E5ZmQ2MGNhZGI0ZGU1Nzc4YzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNTZkNzI1ZjBlODhkOTE1MTBiMDUwNTZjMjNlMmI4NDA5YjRlMTc3OGRjZjZkYzJiOTE4MWM1YzBjZmNjZTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwMjZiNmUzNDIyYjBjNmRiN2ViOTQwNDUyY2QyZmQzNmQ1NTA2ZDExNWZiNzBkZWU0NzdmZjgzNTExOTI1MGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L23-L46",
+          "version": "repo-lines-v1:sha256:04598f88d5a30b909d762598b4fa6ec1dcea7547d8a8a0a088a45e7b60e66a60:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlZGU4MjZiNWY2ZTUyMmUwYjIzZjdkNDIxYzBjYTcyZDhiYjQzZjQ3YzFiNWEwMjlmM2JkYTgxNWQ3NTUwMTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczMGM5MDBjZTY1OTljZTY2MjFlODAyMDE3Njg4MGM1Y2JiM2ZjZjY4OWNlYTY3MDc4NzE1YmIzNzhlODE4YWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NjAyYzBhYjM4YjBkZWQwMzMzMmQwNWY4ZDUxOGU1NjRlODZmY2VkZjBhMzE3YTJlZjJmMmQ3OWNmZjA3ZmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjZWEzYWFkN2YxOTU5NzY3YzJhYTQzZWMwMTMxMzQ0NGY5NjMzN2IwZWQ1ZjQ0YTBiMjBiODk1OWY5NDg0OWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_55d5002e2d42421988ec99186b4b29fb",
+      "statement": "图实例缓存键为 (agent.id, updated_at.isoformat())，值为 (A2A wrapper 列表, graph)；未命中构图后写入并清理同 id 旧 updated_at 条目且关闭其 wrappers，invalidate_agent 弹出该 agent 全部键，配置变更靠 updated_at 变化自动失效。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L27-L29",
+          "version": "repo-lines-v1:sha256:314681f9d7a2edf26d3f2791760a800d5c95a09763cbb4ca84584546c0d1e4ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTFhZjM3ZjI4YmZlYTg2M2ViYzNhYzE4MzczNjcwYmY3YTk4YzFmMDdkYjM3YjEwNWUyODgzMWIxNGU5M2U1NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWNmYWE4MGExNGMxZWZhZTZiYzA5OTk1NzM5MGM0YjUwYzUwNjQ1NzgyMzA1NDU0NTE4MTIwMzU1NTQ1OWNkNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWRiZDRkNDI4YTA0ODZmZGQ3YzIzYzRlMzk0OTQzZjAzMTdmMGMzMGQ3NDZmZjQ5MGZkOGRjNzEzNjAzYjY3MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWRjYWE5Mjk0NTkyNTFmNTBlYzA4MTFmOWVkYmYwNzgwZDdkYjQ1N2Q3NTVhNDEyNTBkOTI4NjUyNjg4MmUyYSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L70-L116",
+          "version": "repo-lines-v1:sha256:6f64ff53bc532fa4e08aa715f4d713db4f9b15a22f8bc2a6f4929ff084ebfe1c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0YTc4MDgxMzAwNjViNzNhZThiZmJmMGM0YzNlZWFhMDdhMjM3NjhjNGYxMWNkYTM0YjJmYWMyNTliZjIyZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyOTdkYWQzZDA5ZWZiNGE5NTU0ODYyOWM3MWZiNDg1MzlkNzNhZWIzYjU4YjUyZDlkYjZlMWI0NjhhYTU5MzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVjZjVmMjUzODM0ZTFmN2NjNTc3MmQ4ZWQ5Y2Q4ODJiMjYwY2JkOTkyZGFjZmQ0NGNlYWJmZjk3NWEyYjE1MTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2MTg5NGQyMDI3ODZhZTBhOTY1NzNiOGZhYmUzMzI5ZThkMzgzYzdkZGI3ODg5NmI4NGVmMjA3YWI4N2Q5ZTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d9b1a6398d2341edb6134f22e13aa488",
+      "statement": "构图时 _probe_mcp_tools 对各 MCP 快照 asyncio.gather 并发 list_tools（8s 内置超时），尽力而为：单项失败仅使该 name 不进 index，except 兜底保证探测失败绝不影响图实例构建。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L49-L67",
+          "version": "repo-lines-v1:sha256:8e13a5c4f8073e361c09295d6637720ac66ffa44cc69861596ecd72fe76c6c93:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkYzdjNGU2NTZkZTE0NmFiN2FlYTYxYjQ5NTBhNTNhNjJiMTEzNjc1YjYyMDZlNzYxNGE2NjI4ZjNkOTg5YWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2N2MwOWJmNWIwZDIwNzk3MGJlMGNjZWFiMDE4ZGNkOWNhMDZhMjJjNWEyZDNjNzU0ZDBkYWVhZWNjODM4ZjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhMzcwOTU2OGZkYTAwYjg4NWZhMGNkMzJhNDRjOTUwNzM3ODhiMjY2NGNlODVjZGY4YjNkZDc0Mzg2YjExYjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMzVjZWExZWY1OWMyYjkyZTNhNTc4MGU0ZTBlZDA5NGRmNjU5MTA2MDk5MThkNmYzZDRlMWNmNjZhMWI0N2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4aed13d148064979ae2a8b6c37096aa5",
+      "statement": "工具组装顺序：build_tools 先 A2A 后 MCP（有绑定工具则不挂 mcp_call，全探测失败才退化），再 make_skill_tools（传入全部绑定技能不按 load_mode 过滤以保 always 附件可读），再 make_script_exec_tools（allow_scripts+沙箱已配才挂），prompt=system_prompt+build_skills_prompt。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L273-L327",
+          "version": "repo-lines-v1:sha256:900f3f496feb1694893568018dcea2bf5ba3d9ac336c2dfe658a22aa06326ecd:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNGY0OWQwNTg3M2NlYzM5Zjk3MDI2NzZmYTg0MGNkMDIwNzQxZGMwMDgwNGNmYTQzMDEyMDk3ZDUzOTU4NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmZWI3MDFkODZiNzk5MGIwYzJmZWZiMjEzYjFkYWViYjM3YTMxMmQ1NDUyODM4MTYzYjNkNTg5Y2E0YjBlMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhOTJhMGFkYTBjZTJkMjcxN2IzZWMwYTg4MWI1NzI5N2FiZWIyZGZmZWI1ZTQ4ODFmM2Y2OTQwNGY1ZTIzYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg4YWUyMTNkYWU4NDBmOTJiZDk0NTIwY2NiZmRmNjZmNmZhNTg3NTRiZDZlZWVjODM3OTc4ZTI4ZTcyMTI4NjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f19dfd0dd6c149ebbd6bb079231fc058",
+      "statement": "AgentChatState 必须继承 AgentState 而非 MessagesState（prebuilt 要求 state_schema 含 remaining_steps 否则构图 ValueError），并在其上扩展 summary、summarized_count、active_skills 三个无默认值字段，读取处一律 state.get 兜底以兼容历史 checkpoint。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L68-L83",
+          "version": "repo-lines-v1:sha256:dc5ce421bed13a9b9a22555c0d50d61166b433dba9ccb85666f899c0b9296bac:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY3MDdiMzk5ZGNjODEzYjM5MGUzMzdiNzRlYmM2YzJkMDljNTMwNzA1ZWVkODViZmIxMjUxMjUzNjI5NzFjYTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjNzlmNDczNDA2NTMxMTgxMzg1MWY0MDM2YmViZmRiMmMxZDljNTIwM2UwZjQ5OWQ4ZTgwYTYyNjAzYjdlOTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmN2QwZTVmMDI4ODdiYzUzNjg1MmRmYTZkZWU1Y2I4NWI0ZjI4NDYxZDdhYWE5ZDU4NTk3MzUzNzdhMGE0ZGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMwOTIzMWI3MWQ1YmNkN2Q0ZDU1MDkzOTBhYTUxNjA0MzFlM2FiNDI2ODZlODhhNWJhOGIxN2Q1MzliMTg5ZjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9e899777ba5741b1bce82344f47535af",
+      "statement": "调优常量：KEEP_RECENT=20（模型可见最近消息窗口，_safe_recent 剥掉开头 ToolMessage 以满足 OpenAI tool_calls 前置约束）、SUMMARIZE_BATCH=12（窗口外累计新增未压缩消息达到阈值才触发摘要）、MAX_INJECT_CHARS=32768（技能重注入单轮总预算）。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L62-L65",
+          "version": "repo-lines-v1:sha256:48440d1a52e519fff8d6d7d16b8747c13c5f5afd49093890761a5975058f1e57:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWQ0NjNiNGI4YzMwYTM4NzFiZWM3ZjY1MmRlMzMzNzVlZTI1MzRjZjRiMzRmNDg4N2YyYjc4MTdmYTUzZjJjNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjI2YzFhYThiYWM1ZWI2MTBkMWVmYmZjYjI0NTUwNTVmY2JhMDQwMzQ5N2ZjNzgzM2U3MjY1NmMzMjNiNTZkMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2M1Y2IwM2FmYjA4ODU4MmNhZThlOWQ3ZjFjYmZiNmM5NDY2NDhjMDI1YmUwMjQzMTgxM2Y3MDIzYTA2OGUzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWY2MWZmNDM5Mzg5M2VmYmExZDk1ODc4MWQ1YTQ2MDMyODFiMDc2ZDgwNDJkMmRmZTU2YWQ2NDZhNzFlMTAwMiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L86-L95",
+          "version": "repo-lines-v1:sha256:5a7024c0cbb372752b46aaf7ef6f66147295a1d2a7fbebe1f9034b6855cffe61:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzZjgyZTI0ZDk3NjcwNWVjNTRiMDVlZjM3ZmViZDFhNzNlYThmNWJhZWQzYTJmMjk1YWMwYWRhMGE4ZmY0ZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxNTdhZmFjY2U0YWU5ZDBmNzYyYjI4NDhjYTNmNThiN2Q0MjZiNjAwM2MwMzA5NTFmMzdiZTU4ZGVjY2EwZWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQxYjlmNjc2NDBhZjg2OWZkMjdiNTg5MGFjYWRlYjMxNzdkOTBmZWRjZDM1ZDdiMzZhMGIyNjJlYzA1MjU3NjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMyNjUzMDdiYzlkMGFiYzM3N2FkMDkxZGVhNWJjYWFmZmMzNGI5MjI2Mzk5OGIzMDcwZGQyODMxOWUzN2NjMTAifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/skills.py#L26-L26",
+          "version": "repo-lines-v1:sha256:40fe3761f3a54beef5bf4a40552b031871223e1d6034699fe4a4e56edffb411f:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDBmZTM3NjFmM2E1NGJlZWY1YmY0YTQwNTUyYjAzMTg3MTIyM2UxZDYwMzQ2OTlmZTRhNGU1NmVkZmZiNDExZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDBmZTM3NjFmM2E1NGJlZWY1YmY0YTQwNTUyYjAzMTg3MTIyM2UxZDYwMzQ2OTlmZTRhNGU1NmVkZmZiNDExZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODA5NWFiMDRkMDBiMGMyMzUwZWU3MWI3NjQ4M2NhMjk3YzE3ZDU2YjY4NmU0ZTY1NzkzNjRmZDUxNTdiNDQwNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTU4YzcyN2QyNGNkY2Y1ZmExOTUwNzViMzUxZjQ2MTMyMjVmNTIxOTY2YmE4ZDQzNmU4Y2YyNWVkZDExZThjNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_75d5bc4c39c64614812321351d9db0f2",
+      "statement": "历史压缩仅摘要增量段 messages[summarized_count:overflow]；llm.ainvoke 失败时 logger.warning 并回退为「旧 summary + 最近窗口」本轮跳过压缩且不推进 summarized_count，下轮重试同一增量，对话绝不因摘要失败中断。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L242-L267",
+          "version": "repo-lines-v1:sha256:4781ea2b53647feb5def4d01e310bab3a715ef5fcf161d6112eaef53b180c9f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzYzhhMTk4ZmFjMDlhYWM2YzVkNjhmOTNkNDFhOGE0MjBkY2ExOTllODNhZmI1YWFlYzNkZTE3M2Q4ZGM0MTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0OWVkZjU2OTY5YmJjZmJlM2M4NWI2NGMxZDM5MWE5MjIwOWY2MDg4YzA5YzM1MWVkMzY1YmJiN2I4YTM2MjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE4MzRjYmQ4MGQ0NTMwZjBlNzgxOTU0MDdhYTk0MDdjNmFiMDFmODg3NDUyYzMzN2Q1ZjY4NzYxOTMyYzFiNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwZWVmOWQxNDY5ODNkMWMzOTFhMWU5ODYwOTM0ZTM3M2NkMzg1ZTc3M2UyOTBiYjFjMWJlNzUwZTg1NjliYjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_eb3e53905ae74648b0ba48a98f3c9312",
+      "statement": "pre_model_hook 注入顺序固定为挂起任务提示、已加载技能正文、历史摘要 SystemMessage、最近窗口；pending 查询失败与技能记账失败各自独立降级（warning+本轮跳过），只影响 llm_input_messages 不写 checkpoint 历史。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L190-L226",
+          "version": "repo-lines-v1:sha256:83802ca119033fac642d18bb52c8066a7a27883b1d2282fb1c6a246fece7c45f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ZGMxZjlmMzBhNjA2ZTE5M2I0ZGU3NjFmN2YwMGYzNmE3ZDBhNmQyZTNhMzQ0MzRkZTBmODY2N2U5YjIxNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlNWRiMzNmYzU1NDMwZjI2ZDg4MDQ4ZTBhNzQyYmE1MjQxODdjYzQ1NDAzMmIyOTg3N2MzYTg5YmJmMDVmMDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5YTllOGJlN2Y5NzQwNzI4YzE4OGQ4ZTIyZDE5N2JlODkyZWFiNmRmZGFlYThkNTYzZjlhYWFjNzQzMmY5ZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE3YTJjMjg0Yjg3Y2MxNDYxNjY3YmYwMmU1Njk4YTBkNTM4MmY2YzBjOTJlY2RmNmVjNjRjY2I0NmU5NWJjYmEifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L231-L240",
+          "version": "repo-lines-v1:sha256:25989c3bc4b3458ae001432958e90076efe0ab73a14c80ca6d51b55b79ce4d73:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MWRhZjIwYmM0MGQ4MWViOWQzY2Y2ODVlOTUxZmY5ODhmOTVmZTYxZmJmZTcxNTZlYzEwZTIwMzIyODVhOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyOGM3OTAxYzM5ZjQwM2UxMzAzMmY2NzQzYjU1NzdhMGFlNGM3YTZmNGM1NmM5YTViZmQwYTA0YTU2NjM4YjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyNThkODg1MGMxMzAwODY3NmZkYzA1OTgxY2EyMzIwMDgzZGY5NzFhM2U0ZTAxYTFlY2Y2MGIwZmYwZmEyMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjZWJiMzkwYTMwZGMwMzhkMGY1MTM3ZTkxOTgyZGNkNzc3ZDEwNTA3OGE2Y2NhZWFjZWQxNzg1OWMwMGRkYzEifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L334-L336",
+          "version": "repo-lines-v1:sha256:5856476a4fa2cf3bad88a36d89bf93aa9b6dcc1db7f09789d0dfd4d5feea0d3a:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjE3NGM2NTE2NDQ3YTEyNTkzMTY0NjhkYzg4YWYzYzVkMjRlZWYxZjM3YTU3N2NlMjA4YjA4YmZlMTFlNmEyYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmNiZDRiOGU3NzM2ZWY5NzIyZTEzZWFjOTZlMDBlOGE5YTdjMzUxZWYyOGMwOGZiYzc0ZTQ5NjNhYWU1ODQyMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzJkYjg0MTkwYWY0MjYzNWJiMzE2YWIyZjM4ODdlMThmZjFlNjZkZDU2YWIyYWNlYzcxZThkMjFiMjM4MmQ1YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzkyMjA0YzY1ZjUwMmRjMTY0NTRiNjI0MDg1NmE5YWI3YWRlMDAzYThlOWY4NjMzM2VjMGI3YzllNDA5NDkxZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5fe1345e91df476eb6f5aa3d55b8e456",
+      "statement": "thought_signature 兼容层三向补齐：流式入站包装模块级 _convert_delta_to_message_chunk（_PATCH_FLAG 幂等安装）、非流式入站覆盖 _create_chat_result、出站覆盖 _get_request_payload 按 tool_call id 回填 extra_content；全部捕获失败仅 logger.debug 静默，对无该字段的端点零行为变化。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/llm.py#L1-L18",
+          "version": "repo-lines-v1:sha256:3ac1c1698a14e09af6f8c89a66a3ce357dd1bbbcd508566ed9ca206fabc31c08:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhZmQ0Mzc1YjlhNmYxYmQ1NTlmNGEyM2M5OTcwMjJlODEyMGZlZGMzZTM3MTVjY2U0N2U2MjQ5NDcyMGRjYmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3NWQ0NTg5ZTkxY2M4Y2I5NzQ4ODlkYWIwMWRlMTVkYjE1NzRjYTEwZWVjNzI5MGExMDliZjU4OGM5NGUwMWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc5NjFjNmE2Mjg1Y2JlNWQ1NTk4ODRhYzQxODlmYTU5Y2JjMWRjY2U2Y2VmNTNlZjA3ZTg1NGNiNTUzZTk1YTMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/llm.py#L142-L150",
+          "version": "repo-lines-v1:sha256:c69198a0110a2d898546e11e4dd86e6dda23ea5ec4911d19926c9b54d207d936:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTg5OTcwNTA5NjQ5Njc1MWEzMGM1ZWRjNzdmOGFmZjFkNDY0YzhhZmZhYzZlZGRiNGQ0ZDc5YmMyYmEyMzE0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzkyMjA0YzY1ZjUwMmRjMTY0NTRiNjI0MDg1NmE5YWI3YWRlMDAzYThlOWY4NjMzM2VjMGI3YzllNDA5NDkxZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWIwMjdjZmMxNWVhNzliM2VlOGMzYjg5Yzk5NmNmOThkY2JlYWIwOTQwZDYxMjlkMDA1MTUwNjZlZDBhNTIzMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/llm.py#L88-L139",
+          "version": "repo-lines-v1:sha256:ba98dcd7a96d6630dfeb8b9b24e3e7e0761b2e5b92563183290a8f6c839faa5c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkMzFlNDZiMDhiNmMzNzQ5YjY3M2Q4NGI2YjFiMjZjOThjZWQ4NGY3Yzg1MGFkODgwMzE0ZTYwOWUwZWFiM2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNhZDc0ZjQ3MjRlOWFmYzA3NzcxZWQyNzBhNDMxYTg0NTEyMzI4NTM4YzQ5YzNjY2ViNGQ0YTUwNzhkMTIwNjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3YTFkZDU4Y2VjZGVhOWYxNjc1NDY4YTlhNWMwNzBiZWQ1OGQ2YmQzODRhOWExODIyNTE5ZjAxN2EwYzYxZWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllZmQxZDIyMWQzZTNmY2Q1ODJiN2NhN2UyODlmMzkxMmJjZWM1ZWI2MTFjMzNmMDg0NzM2ODMzOTBlMjI0ZTYifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

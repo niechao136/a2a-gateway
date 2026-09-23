@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:282ee1fc3967aad4b21e6b95f750b1f12bf83219877a5317dda2222169606dd9",
+  "claims": [
+    {
+      "id": "claim_a17ed6109f6144ab8c4e7a098d851334",
+      "statement": "PendingStore 协议定义 upsert/get/delete 三操作，生产实现 DbPendingStore 每次按需开短会话走 PostgreSQL pending_a2a_tasks 表，TTL 默认 86400 秒（Settings.pending_a2a_ttl_seconds，别名 PENDING_A2A_TTL_SECONDS），模块级单例 default_pending_store 供路由层与工具层共用。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L96-L96",
+          "version": "repo-lines-v1:sha256:4d2a1e5cd14765474106e1c7d3670b2c9544584aff1ec02ff746030247a2c8e6:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQyYTFlNWNkMTQ3NjU0NzQxMDZlMWM3ZDM2NzBiMmM5NTQ0NTg0YWZmMWVjMDJmZjc0NjAzMDI0N2EyYzhlNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQyYTFlNWNkMTQ3NjU0NzQxMDZlMWM3ZDM2NzBiMmM5NTQ0NTg0YWZmMWVjMDJmZjc0NjAzMDI0N2EyYzhlNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGU1MzAxOTAxMDRlZWYyMzU2NWYzYjMwMDlkOTRjMTcyYTliY2VjNjMwMjNkZTc0YmJiMGU4OGNmZDQyZjhiZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmU4OTRjYzBmMmQ5YzUxNWRiOGE5NzdmZjhmOWU3Y2Y5N2U1MDMyNzA1MWZmMzMyNTQ0ZTU2MzAyNDhmYjNlZCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L131-L132",
+          "version": "repo-lines-v1:sha256:d27d3c8fc871733b064b5fa875917d396b458a0471e47df0c2b5ea4b8a1c1dcc:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWFjODYzMjQ2OTVkZmU0OWNmMjBiMDdmMWMwMzIxZDI4OThmNzQ3MjM3YmU0MWMxYmY3YzE0YmJiY2E2Yzg3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQxNGQ4MjAyYzRjYzJlMmU4ZGE5ZWNhNDQ3YjcxNzhhOGVhOGFjMTI0YmQ3MDJkMWI4ZTMxOGU2ZjQyZjQyZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjY1MWM1ZjE5NzUzYmUwNzAxZjg4YThkOWM5ZmQyNmNkMzQzZGY5OGUzOWMzMDhmYWQ3M2E2ZmQ0ZmVkNzlhZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L47-L64",
+          "version": "repo-lines-v1:sha256:67143938dd978b486f8788e659c8c7a823d8008d45644006f21f968fbdc295b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjYzg4NDk0Y2RmZDhlNzQ1ZjI4NmM3M2MwMmQ1NDY5ODhiNzFmODBiZDI1Y2E1Yzc4MjA0NzNkZmM1M2EyZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmOWE4NTNjMWRhN2E1YzQ1YTFiNDVhOGVlMGFmOThlNDljYTQ2YjQ5NzcyMDc3MjE5YTQwNjQxNDlkMjJkMGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdlZGRiOTdlNWNkMWIxMGRhNDZmNTE2NWFmOThlNmNhNGUxMzg4YzA4ZTY1OTRmODU0YjVlZjJiY2Q3OTZhNDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkMzQ4MzUwMDNmOTMzZTdiMjhhMDdjNjVlYTNkNmVkNzBmZTEzMGI2ODYxNGYyYjA3MjFiZTg5MmNmYTBkMDUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L67-L82",
+          "version": "repo-lines-v1:sha256:b0acd059625e0262db268719c592cb1c96d23de86f2bd088723dbc6b19c0a74d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5ZmYxZTFlNTRlMmRhYmU5OTgyZDY3NmNiZGU2N2RlOTE3OTdlYWExMmE0ZWU5NWIyY2EzMDA4YmVmMWIyMjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzZWMzOWNjNzEzOWFjYzgzZTdiYmFiNGQ2ZmMyNWUyN2U5ODRiZmFiODg0YTQ4Nzc2YWViNmNkZGQ3MWRhOGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdlNzI1YjIwMWU5NWJiMGEyM2JlM2U0ZmZiZmNlNjIxMjgwMTgwYWI5YTdiZGMxZjg2N2ExNjA4ZDIzY2M1YWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjYzMyNDMzY2Q3YTc3YTdjYTliZDNmNGY3YjA0MzdlMjc3NGMwMTNiZmM4OTM2MDQxZjhkZTNiZmEzOGEzNDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d76e915aa6214a61b964636ce65c3b1e",
+      "statement": "TTL 为读时惰性清理：DbPendingStore.get 发现 updated_at 距今超过 ttl_seconds 时当场 delete_pending_a2a_task 并 logger.info 后返回 None；repository.get_pending_a2a_task 只查行，过期判定全在 store 层，无后台 sweeper。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L107-L115",
+          "version": "repo-lines-v1:sha256:83bdfe58a188abf73ec5a56b43002db586b1fa6711ce91f843794899b9b42db1:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM1ZDdkODY1MjI1ZTBmMzA4MzhlMGMxNTM3ZDQ0ZTAxZWJhMmY4NTM2ODU3YzNjNTA5ODBkMWQzMTgxMDczNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwYmZmZmJhZWRjYzFlM2E5MDU5YTE0MzkyYzQ0MDkxOWJkMDJhOWIwNzczN2IzNzI2YzA3NDM1YWQxMzZiOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjIxODliZDJlMWYzZDFlZTQxMDExMmVmODRlMGU0Mjc4ODMyMjcyNTI4ZGYxODNhMzZlN2Y3ODI1NjZlNTZjYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjFmMjdkYWExNGIxYzgyZjUyNWM5OTM5NmEwNWJhMzgzMjFiNmM5OTc0NmEyYzM2OTIzOWNkYWI5M2EwZDEwNyJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L38-L44",
+          "version": "repo-lines-v1:sha256:760a38411cb53353facc436c2cb31a9b794e5927c9be9e578692136f1f6335f3:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjYxNDNjMTcwYWE5MDk5YjRhZWY0NGFkZGEwMWRkMzQ0MzJkOTg2ZGM5ZWU1YWQxOGNmNjZhYmFjZTM1Y2VmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGY3ZjNiODgxYmY0OWZiYTNjNzhlNmUyZjJlOGQ1YWY1MjZjNjg0Y2ZiYWJkZjI3ODM0NmRmMjA2N2M0YmFmOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjEzMzRmNjEyYzY4NWEzMzBiMTA0OWFmNGM1YTQxYmQxMzcxMDA4ZTc2OWU1MTBkMzJiYTg4MDlmNmZkNjNiMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGIzN2FjYjM4MDAxZjI1MzMzZjNhMTk4NDBiOTIyZDgzZTZkZDkwMDEzMWU0Yjg0ZjI0YzM4NWY4MmNmNGRhMiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L1109-L1116",
+          "version": "repo-lines-v1:sha256:5a159aaf95366b8b370133f86bc1c71e610a6964fe77ff5fdf4e9372d1dcc816:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjNmNDg1N2MwNGZlZGI0NWVkZWMyMzgwZmVhNGZmMzI1ZjA3Njg3MjY2ZWVkMjlhZjgxMzljM2RkYzI2ZjE2MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTNhMWEyYjY3NzZiN2RiOTE3YzkyZDExYzU4ZDI2YmUyMzkyYmNjNzA3NzAzODg0NTdjZWZlYzc5OTViOTJjNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjQ5Njg4N2Y4NGRiY2FiN2IzYTcxMjIwY2M1YjcxN2RmYzA5YTk4NDc5NmQ1MjlmZDk0NTZhYzQ5ZjE2ODkxMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDk0NWM2OGM1NWI0NWRkZjUzMTJlNThjNWNhYTIxMzM4ODVmM2NlZWUyYTRmNWM2ZTlhOWVjODJmOWNhNmY1ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_996c0360548a43dba086fa57e0e836bf",
+      "statement": "repository.upsert_pending_a2a_task 按 thread_id 冲突更新：行存在则全字段刷新且 updated_at=now（TTL 随每次 upsert 续期），不存在则插入。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L1119-L1152",
+          "version": "repo-lines-v1:sha256:bd0576ceec4fae6f081dff2ec21cc0965c6dc89ecd5640f8389acf42cb81e50f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3YjhmMTBlNGU3ZDM2Y2U4MmVlYmVhM2Q0NTI3NjY2Zjc3MjkyZGNlNGQyYTMyNmU1Y2U3NzM1YzQyNjljM2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxYjU0ZTJmY2UwN2Y5MDE4MDNhYzA2M2RkMDcwZDI0NDJhMjc1YjMyZWY2OWI1OTg1YmQ3YTc0MGRmOTZhYzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFkODZjMzJiNmRmMjBhZWNlM2NhZjgwM2Q0OTM3YmI1OTFiOWJjZGI4ZDhlNDNkYzdjYWRjY2JlZGVmMDQ1NDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5ZjU1ZTQyZGFlNzA4MzlhNmNiOTczYjEyZmVlZGFhZGJhZWExMDNmODZjZDExMGUwNTMyOWUyZTZlMmYwNGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_220134efe48b454f9def6fa439f6da27",
+      "statement": "写入方之一：a2a_call 工具流式消费遇 InputRequired 时从 config.configurable.thread_id 取键 pending_store.upsert（thread_id 为空则跳过写入），工具返回值即 question 原文交模型转述；A2ATargetError 仅 notify_alert 并返回错误字符串不写挂起。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L51-L85",
+          "version": "repo-lines-v1:sha256:b31c20896f6ebf04dfccc0cdfd414a37116aaaac7304b3de443ba40255350b1a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxZDI0NjIwMmMzYjJkZjdmZjk3ZWU3ZjBmZjNhYzBmYTFhZDA4N2U0ZjQ1ZjU0MmJhN2E0N2FjNjg4NWM1OTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmZTY2OGZkMjY3M2U3NWZiOWZmNGY2M2I2NTdiZmI5OGNjMjcyNWIxMzlhMzFkNTIzMDY2NTNlNmFkYTk3MzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhMTA2OTY2ZTE0ZDEwZjBkMThjODNhMTNjYWQ3Y2M0MzEwMzI2Yjk3ZDVkMmM4Yzc2ODhlMTI0NmJkOTU0MDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ3MjU5M2M2ODU0ZTFiOWFkZWQwYjkwYWFmMDNjMWVjMGU0OTM2ZTA1ZGMwOTZjZTJkMDZhYmJiYWUyNDc1MmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e2beb07f4cd6490d98685a5edf318235",
+      "statement": "写入方之二/三：a2a_resume 恢复中再次收到 InputRequired 则 upsert 刷新 question/task_id/context_id（续期 TTL）否则 delete；服务端 _settle_pending 语义相同——again 非空刷新、否则删除。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L528-L541",
+          "version": "repo-lines-v1:sha256:3ced8321458152f94293d934baba7b51aa0a6aabf38f1666f0d00b71d137f5a3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2OTg3OWYyNjk5OTBiMDBkZDg1OGJmMTgwZTY4NjJiYzU0YzhiN2Y3YjJiYmEzZDJjZmYzN2ZjMGQ2N2QxZDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5NzdmOWY2YjI2ZTYzNGI1OTE1MGM3Y2I0MzJlZTc2ZjAxYzlkZDU4YThlYzQ1ZmE5YTFmZjE4YmU2MDlhYmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmNjM3ZTI4MTZlMmU0MmYyYmE5NDYzYWI3N2M3ZTJjNjIwOTc1MmI3NzFkMGFlYzY4NzEzNjNiNTY4MzIwOTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0YzgxNGUxMTMxNTMyNzRjYzkwYTZlMjRlN2Y2NTllYzE3MDMwZTYzMjhmYTNhMTY2ODc1ZWNjZWRlNzhhOGQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L123-L153",
+          "version": "repo-lines-v1:sha256:be1f61410b1bec3beb3708e1795bc64ab32b937f91605418fb60f09c81b0789e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTgyZThjNTQ2ZjgwYjI5MjdlN2M2ZTk4Nzk4MjQwYjBiZDFiYTBkNWZlZmE1YmFmMzI4NjE5MzZiMmVlMmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDljNGQ0ZDk4ODhlZWUyY2UxNjc0NmRiZGY5OWU5NDg3NzZjOTkyZWZiM2ZjY2RjMTI0OTBhNjVmY2U3NjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5NzUxYjE0MmEzN2I2MjY5OTUyNTZiOWMxMDFmYjY0NTU1ZTg3MWZiZWE0NTFkYzJhZDU4ZTY4ZGFhODg5MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkNzY0YmY4MmFkMjA1YjE2ZmJmYWQ4YWU2MzM2MzYxZTY5ZjkwNmIzMTI4NzdiOTliMmVkODg1MDE5ZjQ4YjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f3383e0a08f141fc92242f8be1b6cf38",
+      "statement": "消费方之一：pre_model_hook 的 _pending_notice 每轮查 store.get(thread_id)，命中产 SystemMessage 指示调用 a2a_resume 且不要编造结果，注入位于 build_llm_input 第一位；查询失败 logger.warning 并本轮跳过注入，这是恢复轮不在路由层拦截的前提。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L190-L211",
+          "version": "repo-lines-v1:sha256:888b92b1cbf2423830ea25ee476af003c645d755f6d2c6d8dd0f8035db7914f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ZGMxZjlmMzBhNjA2ZTE5M2I0ZGU3NjFmN2YwMGYzNmE3ZDBhNmQyZTNhMzQ0MzRkZTBmODY2N2U5YjIxNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY3Y2RmZGVhYzFjYWFiNGQ3YzJmMzQ4YmQxZmVkMWE2NGRjODg0MmJmNGU4ZjBmMWQ3YjU2NmU1MGYwNTUxYjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5YTllOGJlN2Y5NzQwNzI4YzE4OGQ4ZTIyZDE5N2JlODkyZWFiNmRmZGFlYThkNTYzZjlhYWFjNzQzMmY5ZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2NzhmYjA2ZTAzMjViNGVmMjE4OTE4ZmQ5MTU3MzQzYzEyYTI1MGZkODQwMGZmNDdhZjY2ZDNlMGJiOGNhMTMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L231-L240",
+          "version": "repo-lines-v1:sha256:25989c3bc4b3458ae001432958e90076efe0ab73a14c80ca6d51b55b79ce4d73:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MWRhZjIwYmM0MGQ4MWViOWQzY2Y2ODVlOTUxZmY5ODhmOTVmZTYxZmJmZTcxNTZlYzEwZTIwMzIyODVhOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyOGM3OTAxYzM5ZjQwM2UxMzAzMmY2NzQzYjU1NzdhMGFlNGM3YTZmNGM1NmM5YTViZmQwYTA0YTU2NjM4YjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyNThkODg1MGMxMzAwODY3NmZkYzA1OTgxY2EyMzIwMDgzZGY5NzFhM2U0ZTAxYTFlY2Y2MGIwZmYwZmEyMDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjZWJiMzkwYTMwZGMwMzhkMGY1MTM3ZTkxOTgyZGNkNzc3ZDEwNTA3OGE2Y2NhZWFjZWQxNzg1OWMwMGRkYzEifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L121-L123",
+          "version": "repo-lines-v1:sha256:6b48ff8e6367190a32b7daf7a0697caa29e4173b1b7a20ba90e62e49388a34b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2ViNzAyNTc1OTNkYTA2ZjY4MmEzZGRkYTU0YTlkMjYwZDRmYzUxNGY2NDUyMzdmNWNhNzRiMDhmOGRhNjFhNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTcxM2FlOTBlZTBiN2Y2MjNiZDE0OTA2ZDY3YWUxN2Y4ZmJkYTQ2ODkyNDJmMzg2M2E5NjMwZThlNDg3YjBjMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjA4NjA3YjYwNWQwNjQwZmM1ODkwMTY5NDk3YjZlZmQ3Mzg4OTU3NmZlZmM3ZmZiMjRhNDhmOWY2NTNiMGRhYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDQ4Y2NiNzM0ZDMyZjJlMzQ4YzAyN2Q0ZDI3Yzk1N2M5MjlmZmU0MDI5Y2RmZTRmM2Y1MmU5ZTJkMWQwY2EwMiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_aea3f41bdc584e77b28d3d1ce501621c",
+      "statement": "消费方之二/三：聊天链轮末 _stream_graph_events 复查 pending_store.get，命中 yield interrupt{question} 后恒发 done（查询失败降级无 interrupt）；A2A 链非流式返回 input-required 任务快照、流式发 input-required 终帧，挂起表不可用时降级 completed。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L392-L408",
+          "version": "repo-lines-v1:sha256:4b3cd8472584fb4cad532de1db1a2425d4778a4455081d3bd903eda84110fb34:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzNmE0NzhjYjM2ZTcyZmFjZGI3ZWJiNjdkZjdhY2ZjM2JmYjdkY2ZlYzE0OWI5ODllNjJmYTBjNjk0NTcxMWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgwNTBiMDY3ODdlNjRhNTk5ZGQwODlmMmRiNzdlNmEyY2ZmZDQ0NTY1Y2VmNDkxMDA3OTYwYmJkZGFmYTFmODYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3OGExMmNlMWE1NGM3MjkyMTdlYTBiMGRlMzI2NGI5ZjhmZTkzZDI2NThiNDJlNGRhZjBlNzkxNzcxMTUwZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwZjkwODNlMzVmOTk4NjIwOTQyY2RmODcyMTIxN2ZkMzI3YjI3OTMwNjI2YzczNTQ0YjU3MTkwM2E5MDQ1ZTUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L453-L482",
+          "version": "repo-lines-v1:sha256:9f8217c6b554700b7ab8df8c4d86632a61a59d46b5b6ca45ac6977e4bb3b4ba0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExOTVmMTZhZDFhMGE1NjYyYjMxNTkxZjU0YzlkZGZlY2Q2MzE2MTFkZjc3ZTg1MDEwNDgyZjk2NjQ0MDE1ZTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkMDAwNzg3NWRlOGY5MmQ5MmI3ODdhMDE4YzE2YzAwMDQxOGJkNWY5NDk5MjNiOTBmNGQ2M2M3ZWMxNmQ4M2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY0MzE5MTM2Yzk2NzAxYWEyYjRjNTY1YjIwZDFiYzY3ZmQ2MmRkNjQwNzc0MDg5NGU3MTE3OTdlNjhmY2EyMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdkOGFjYmFlNDllODA0Y2QyMzM5N2IzZGVhODA2NmNhZjhhNDA0OTRkYjYxOWU3MzZlZDBjMWJlYzkzZWI4MzEifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L104-L116",
+          "version": "repo-lines-v1:sha256:aa906fea887eb0eb9986c8462c73f543b88ec067e2d93460df4e144789fa6266:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3ODUyY2JiZjVkNmMyMWE1YmExZjliMDRhMDZmOTRiNjc1Y2E4YzRmMmQxYjRiYmM0MzNiOTA3NTJkNWQ3ZTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlMjIxNGJlMGQ5ZjE2M2RjOTIwMmY5ODA5OGFmNjRlOGNlMjk0YTRkNjI4M2QxMDE4NDNiOGU0YTRhMWQ3MTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1YzY1OTI0ODdlZjdkOGQxYjQ2YmU0MmQxYzI1NjIyM2FmMDQ2N2M5ZmFkNzI0N2FhMTNjMDk4NzQ2YTVkMGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkODVhMmIwMjQ5MTMyOWMyM2QwYWVjOTllNWMzMGM0MWQ1ZTlmN2IzZTJiOWU4MDk3ZjRjZWJjZGY5YmZhODgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8614051c4bd0461cb518c4f8be3264a3",
+      "statement": "双链键设计：链路 A 以会话 thread_id 为键；链路 B 以对外 task_id 为键，创建新任务时 task_id=context_id=uuid 同值使挂起表主键可被后续恢复请求的 task_id 命中；带 task_id 的恢复入口校验 pending 非空且 pending.agent_id==agent.id 否则 TaskNotFoundError。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L1-L4",
+          "version": "repo-lines-v1:sha256:0576ee17ad4fa7356cdd390aad320a41c654b34aef9e24c8dcd24d0b5fa73fe7:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWIxODJmZjllYzExODZkMTZhZWJlYmQ2MTRlMjE1NzYyNmNiMDAwNzg3MGQwYmIzODQ4YTc5YjA5Mjc3YmZiZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjA2N2NiNzZhZmQ1ZWEwNWNkODk2ZjVkYjc4MjQ2MjAxZWQ0NDI3ZGM5ODA4NTJmM2E0YTRkZjY5YzNhZjg5OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODBlODI1NmVjZjkyNTYxY2Q5M2FmZjkxNzM4NjY0OGVkYjQ1YzRlMWY5MDY3NjBiZjI2ZGUzYWUxNGUwODM5OCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L320-L337",
+          "version": "repo-lines-v1:sha256:9fe56fca55e2bead8f594eb36664a95fdab0237f5daf4aabaa88d46c659f7825:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxYzY3NmE1ZWI0NjQyMGY5MzU2ZWYyMzNkZDU1YjdjMDdiNmRlMDg2YWZmODAzMzM0MmM5NWI2NGJmZDJkZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjZDU2NGE2YzgwZmFhZGRiYTUzNTkzMGI5ZjhmYWI2NjMxMDFlYzFhZjViNGEzNTQ3YWE2MWMzOWY4MWYxNWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlY2Q4MTIzMGIwMGY1Y2Y2MmY4NTgzNTQ1N2I1ZTY1NjYyMTQxZmE4ZjZkODM3MjQ4MDNlMjgxZjcxOTM3N2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxYzExNDZiMDAxOTQ3Njk2MDM3ZGEyZjhmM2ZjOGI3ZmZlYmI0ZmMwOGI0OGNjMWMzNjViMzc1ZTBkZjVjZWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc75dc77aa5048529674df1aa505bec0",
+      "statement": "配置变更安全性：聊天链 a2a_resume 与服务端 _match_wrapper 均按 pending.target_url 在 Agent 当前 wrappers 中匹配，失配（解绑/URL 变更）即 delete pending 并返回引导文案，绝不把旧 task_id 恢复到错误目标。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L500-L507",
+          "version": "repo-lines-v1:sha256:a318af3b2bce8b7bce88292b75976971699454e2b7738ca509c53a5d53b208c5:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjNlNGJhNDgwNzE4MmM2MjY1ZGMwZGZmZmQ3NTkyZTliZjljNjA0MzRmZTUyMmQxYWUyYjg4MGUyMmRiZTM5MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzlmNmJmMGM3ZjUwYzg2ZWM1OWViYmFhODE1YmU4YWQ5Mzk5ODUyYjA4ZjQzZDUyZWVmNTZlNTUxZDYwNGJiMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2U2NGMzNmMyMTRlYzAxZjJhY2ViZDhkODMzN2ZlZjA0NTRkMmJhNzkzMTM3ZDAxNGNlZWNmODNkMDgxYWQ3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzBlZmFkM2Q4MDAzMmE2YzI0MmRiYjA5NjU4ZjkyZmI3MDM0MDk5ZjViYTgzZDdkNWUxN2NmNGI4ZTRjNjMyYyJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L99-L121",
+          "version": "repo-lines-v1:sha256:70ad9dbc9f510cc1a354ce9bce015bea1ea26f785c5220682de65313f7322ccd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYzU4NjUzOWI0MTE2MTIzOGIyZmQwZWRmYjU0NGM1NWM0MDczNWY3NDAzNDdiMTNlN2I4YzNjMDFmYjM1MmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgwZTUxMWM0ZWMwZWFiNmFkODJiNTdlZWNjMDBlNGQ5MDczNWM3ZThkMDQxZDgzMWU3NDhhNGIyZWNhOTY0NTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFiMjllMWZkMzY2ZTdkMDNhYzIzMGZjZjAwNmZiYzEzOGVhYTAxZDRmNzNkYjE4Y2MwYTQ1NmZlNzFiYWJhMzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_db879f30590c42e2ac5d4ad1eef2b8b4",
+      "statement": "挂起表故障三处独立降级互不影响：hook 注入失败跳本轮、SSE interrupt 查询失败照常发 done、A2A 终帧查询失败降级 completed——挂起表不可用绝不阻断对话主流程。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L196-L198",
+          "version": "repo-lines-v1:sha256:0c51b25818efb8a95752101061e42c40e80e8746fd5b7114a0f6b4a7c07d6869:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmE4YzhjYjZjMzNiZjhkNGJlN2FlZjM4NTU2YmJkNDJlNTg1MTY2OTU0OTg3OTcxY2UwMjJmN2FhMDJlNGM2ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjNhMzc1OGFjOTBkM2M5MmE5NDA4MzI0OTVjOTJhNWQ1MDJmN2Q4YmNmNTNlYjQ5NDBkMzBhMjQ1OWU0MTMyYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWMyOGJmZDk3M2Q5ZWMzMjExYmNlZjIwZDFhNTg2YjRjYTg1Y2U4YjVmMWRiMjBlZWVjN2E3YzhiYjE5MWUxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjdiYWU3Y2E4OWE3ZGVlMDg0NWZkM2M0NTY1ZjdjYTFlYTQzOGY2NWZkODUyZWUxNDcxNDNhYTI0ZDY2MmM1YyJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L453-L459",
+          "version": "repo-lines-v1:sha256:01ba05ac2bb93136f3ccd21260dfbefa0f8310a41e71c23f263a65fbe34a9916:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTE5NWYxNmFkMWEwYTU2NjJiMzE1OTFmNTRjOWRkZmVjZDYzMTYxMWRmNzdlODUwMTA0ODJmOTY2NDQwMTVlNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTJhZDNjZTUyZjI0OGNjOWFkNmI5N2ZiY2E3ZGQ5MDIwYmZlZDZlMjBlOTQxOTlhYWZlMDFkYjI1NTMyYmRhOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjQzMTkxMzZjOTY3MDFhYTJiNGM1NjViMjBkMWJjNjdmZDYyZGQ2NDA3NzQwODk0ZTcxMTc5N2U2OGZjYTIwMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGNkZmJkMzcyZjgwNTlkZmI5MjBmNTE1MTljOWEzZGYzMTk3Yjg4YTAxNzQ5NGNlNDBiNzY4ZDhjY2MyODQzYSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L105-L109",
+          "version": "repo-lines-v1:sha256:4c7946b46e1d3f46b6630d8d9569562691711c16074fb19eef6bd263813818a3:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmE5YWI4MGU4NDdmNmRhZmZkMDdlMjJlNGZiMDg5NzdlZDcyYzYwNThmMDkwNDBhODNjZDBjNDcyMzIyMWYwMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTJhZDNjZTUyZjI0OGNjOWFkNmI5N2ZiY2E3ZGQ5MDIwYmZlZDZlMjBlOTQxOTlhYWZlMDFkYjI1NTMyYmRhOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjdlMTIyNGMwMmNlN2YzNmI5ZjcxMTg3NzBhNDIwNzM5NWIyZGQxODU2MzkxNWExN2RhZmQ4NTExZjQ1YWJlNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmEyZTY1MDgzZTVhMTk0YWQ4MWE4NTc4MTliNjliY2ZkNTFlZTVhOTI3YjM3ZWFmY2U5YTQ1NGRiNDNlYzAzNiJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:d432b246af816bfb4a5cfa76e4f02f88b4c35a5d295d2dd3046e0235a75418f6",
+  "claims": [
+    {
+      "id": "claim_1b1f55037911463ca2c06341c547ad18",
+      "statement": "docker compose 只暴露 nginx 的 ${GATEWAY_PORT:-10099} 一个对外端口；postgres 不发布宿主机端口，backend/frontend/sandbox-gate 仅 expose，sandbox-runner 使用 network_mode: none 并施加 read_only、cap_drop ALL、256m 内存与 64 pids 上限。",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.yml#L105-L122",
+          "version": "repo-lines-v1:sha256:e628c018a6b8d16250c3deeb5c8279f8f89de09fd16950f8c15b8a3c72f5cf45:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3MjgwMGE5NzkyNTA0ZjJhZTY1MjJlMDNhODhiZTk2MGM4OWI2OTAyYzBjOTIzN2I2YWNkNjE1M2E1NWJjYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkYWRiZjY5YWU3ZTBlZmU5MDZkZWFhNmU1NThiNWZlZDQzNjkyODdlMGZlMjBmNzQ3YTM5NjhmMDgzMGRjN2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxMjc0MTg2YzM0YTM5MDdiYTdmNTI5ZWQyMTM5MjdjN2FjYjc3YmY3OTgwNmM4MDEzZWVlZmJmN2MwMDhlNWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3YTBkMjRiYTEyYjYyZjIzZWQyMDBkZTMxNjFjMjZlYjU4NzMxZmRiOTZmNjEyY2FmNTg2Mjk0MjdjYTgwZTAifQ"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L141-L154",
+          "version": "repo-lines-v1:sha256:875828ad2d3ab9e41ff830c28f3041445ef2d0223ab4051e1a408dceffce62c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkzMzQ0OGNkZWFiMzY2NjExZmU2NWE3MjY1NDI4ZTY3OWZmZTJiNTA0NDZiZThiZGUxYTQ0MThiMmRjMjIwNDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4N2UxMzIzZDA5ZjZjYWMxYjkzOTg5N2ZkZjkxMzM1YTk1Yzg3MjY5M2VhMjVlMDMyOTJmODBkN2U1ZmNkZDQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNzg3YThkYjVmNWQxZjA2ODUzY2U5NTIwYzMyNmM1YWUyMWZjNTg4MTk1NmY4YjNkNWU1NTQ2NDViN2ViNWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkMDZjMDQ2Y2FkYTQzY2JlMjc5NDY5ZmNhYTVkZDI4N2Q0ZDI3YjZmZTZkNzQ4ZTVjMDZiOTRlNDQ5Njk0YmYifQ"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L21-L27",
+          "version": "repo-lines-v1:sha256:79d77cc4851e2d50e0adc01a6461808a089c3fb8fe357d3917f6256704d30e3d:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzIxZTljNjE3MWUwMjAzMDk5ZjgxN2IxZmVmNDI5MWE1MDc2ZGQ2NDA3NmYwNWY1M2EwMzI0ZGY4NzlmMWQwZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmQ5ODFmODE0OWNmNGI0Njk2NzBjZWMxODAyODVmNWZjMWEwY2Y5NDEwZTBiODAyMjZiYjQ2YzdjOWViYWNiMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzZhOGY3ZWQ3YTk3YmZkY2U4NjA1NGUzYzA2YTI3ZTM3ZmQ0ZmEwZjUxYWVmYThjN2I4ODIyY2E0ZGEzODNmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTZkYjdhZDhkYmI2YWY1OGYwYzljNWMxMGZhOWI1MDA3NWVlNGE5NjcxMmMyNjc3ZjQxYjA4MzBlZDhjNzZkNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_449da230f5634586aa10241b2719e280",
+      "statement": "nginx 刻意不用 upstream 块而用变量加 resolver 127.0.0.11 valid=10s：避免容器重建后旧 IP 缓存导致全站 502，使上游域名按 TTL 在请求时重新解析。",
+      "evidence": [
+        {
+          "resource": "repo://nginx/default.conf#L46-L48",
+          "version": "repo-lines-v1:sha256:592cc023221b48b9a82daad1f235f8433afdfdc442a6a9e9e92ee371c808328f:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDczMzNlZmI3YWIwNWVjNWUxMmJkYWYyZTA5ODIwMWY0ODk0YjVmYjM4YjQzMDQzZDEzY2I4ZGE0ZjU2NzVhZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2Q2Y2U1ZDIzOTVmNDIwZDJlMTQwNDQzM2E3NDhlNTM4YjQyNjdhNWRlNjBjM2EwM2U2OTMyMGM2NGMzZDIwNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2FkMGVjY2FiY2FjMjAxNjZhMGRkMWNmZTMyNzJmNDE1YWVkOWZhMDJhMThhZmQzZTZjY2EwYmE1OGExNWFiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2JkNDljYjkxM2QwNWJiZWNiOWQwZjVhOWFhYzU0ODhmNzQzMGNlOTA2MzgyMWU2ZTY4YjVmYWEyZjlkMWI0ZSJ9"
+        },
+        {
+          "resource": "repo://nginx/default.conf#L7-L15",
+          "version": "repo-lines-v1:sha256:79b1d4356dc71085fc4d4dcb0fb41d308f37c08970f4bbc39a0ea006b73d4b14:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWJjNjJkYjhlZGJmNjM1MzI5YzAzMjk1MzlkNTY5MWQ4MGU3YmRkNmQyMmQzNWY4NDY0Y2M2YWE0Y2FhNjYwYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzVjYmE3NDdkY2ZhMjMzYjI4OThiODlmMzEyZTU3ZDJmNjk2NTllMjA1NTlmYTQzNGE0ZjNhYTVlYmU3NzNiZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmQwNzgxNzVkNzFiMjYxMjk2ODU1ODFjNzFkMGVjMTQ0NjE5ZTkxYTA5OTBiYWY1ZTQ0YjBkYzUxYzYwMDEwOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDg5YzNiMzg5MTFhMmFkMzBhNTIyMGM1ZGYwNzUwMDA2NmFlYjc5ODE5N2MwMzE2NDU5NmZmYTE1NDMwZmM4NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6796e4914ac5425b84d707a88eeb5827",
+      "statement": "nginx 将 /api/、/a2a（精确与前缀）、/ws/、/docs、/redoc、/openapi.json、/health 转发到 backend，其余转发到 frontend；/a2a 的精确匹配与前缀匹配缺一都会导致前端 301 重定向循环。",
+      "evidence": [
+        {
+          "resource": "repo://nginx/default.conf#L50-L122",
+          "version": "repo-lines-v1:sha256:3b47f5184fe481f0b79ac9538e389199483ac9e46275c4f3929f15cffe1f1b18:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzOWIyYmMzZmMwZGNjZTdkMjJhZDkyZTdhMDhlOWUyNmFkODg1MzAzMjA1ZmY0YTAxYWJlMTFmYTgxNTFhMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzZTE4ZWE0N2Q4ZGJiYzFjYTM5MjA0OTZkMTJmYmVhMWIyNDc1OTkwNDhhODM3ZDgxYmNkNmY5ZjEyYTI3MjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_524e69f491d0462cb61691890e24074e",
+      "statement": "SSE 与 WebSocket 路径关闭 proxy_buffering 并将读/写超时放宽到 3600s，X-Forwarded-Proto/Host 外层已声明则透传、缺失才按本层补全，Host 用 $http_host 保留端口以支撑 Agent Card 回连地址推导。",
+      "evidence": [
+        {
+          "resource": "repo://nginx/default.conf#L17-L27",
+          "version": "repo-lines-v1:sha256:49fba37efb8c081ebff49570b38de1f82b660ba719373ad1c390d1f7bd57c8ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2NGJlMjNhZGRkZTUxYWRmMzFlMGZlNTViMDBmMGE5NWM1YzJmNGQxYmRhYmI1Y2E5YWI1M2E4NWRkYThhY2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5MDUxMzcwOTQ1MzA5MGVjMjgyNWE1N2JhOGVmN2EwNTNlMWE3MzQxM2U2NzAwM2NiMjQxMzVjMjdlZDdmZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMyYjEyZWQzMWJjNmNjNzA5OWUzZTk3NDdlODI5NjE0ZjliODBjZDVjMDNiNDM1ZDNmMmU5OWRlOTZhY2M3NTcifQ"
+        },
+        {
+          "resource": "repo://nginx/default.conf#L52-L61",
+          "version": "repo-lines-v1:sha256:8e5a7598bd4dc33ec721c9d1cb4450c3709ad55bbc80cf11cf1af99c9a855350:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0YWZhZTE5YWQ3ZDJkMTg2OGRkY2UwMjk1ZDRhNGI3ZjlmYWQ3M2JlZjkyN2I3ZTU5ZGZhNGJhNmM0YmVkYzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiZDQ5Y2I5MTNkMDViYmVjYjlkMGY1YTlhYWM1NDg4Zjc0MzBjZTkwNjM4MjFlNmU2OGI1ZmFhMmY5ZDFiNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZiN2ViMTQ4N2IzOTZiOTc4ZmM4MmE0Mjc1ODQyNzAxZWQzNjI4YmFmZjg3MTNmNjdhYjRmMzA4NTIyMDIxNzYifQ"
+        },
+        {
+          "resource": "repo://nginx/default.conf#L88-L96",
+          "version": "repo-lines-v1:sha256:dacc616533c1c033ff4ee4b7fe84739ae3deb7d64e8d55d30a953c1e27550f74:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWM2YzhlNTg5YTEzYjg1YjI1MmE2ODJhNDY5YjkzYzAyNTFiZDgyYTAxZGZmMmFkODdhODAzMzg2MWVlMjNhYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTQxOWE2ZGNjMDRlMjEzYTNjN2E3N2E0NTZiMDFlNzZkMWVmNzhjZDAwYmJlYzFkOGY4MTQ1OGZlOTNlZGM1NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTcxZjRkMzU1MDg3ZmQxODgwM2MyYTRmZjQ2YTliNmU0Y2RjYmY5ZjMzNjdmNzEzOTFkMTdlYTZiZjE5YjE3YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzQxOGRjNzlmNWEwNmEyNTQ0ZmRkOGM5MWJjMzhmNzFjMjZmYWM4MjMwM2ZhYzZiODczM2U1MWY5NjQxODA1MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a40e0b7f3a5e452787b890122693f91f",
+      "statement": "后端 lifespan 启动顺序为：线程内执行 run_migrations（失败回退 create_all）→ 播种默认 Agent → 播种默认管理员 → 为每个缺 Key 的 Agent 补默认 API Key；关停时 close_all 关闭缓存。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/main.py#L39-L58",
+          "version": "repo-lines-v1:sha256:62b90f976a66680c29eb570ccb6004bc2d2ac40b03de0e0b172e5800553be530:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiY2M0NDVlYmQyMGQ1ZGYyYjlhMWY3M2JjODdmNjQyZWQ1MTcyYmFmNzc3NzAxNzJhNTczNzJhMTQxOGVlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3OTEzMTgzOWNiODdhN2VjMTQxMzY1NmYwZjAxMGFjNzJkNWYyMWRlODQ4YWUzNThmYTYxNGIyOGI1MjZjMjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1MzYzZjQxYzIwNDkyMDM0ZTViODkxNTQ5ODhlM2QzYzhlZGI1YWNkNDI4ZTk4MzQ5MDBjOTViMTM1ZTczMmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyYjY2ODkyZjQ3NjhlNjE0MmUyMDYwYWVmZWQwNmFkMTYzYmY3YTZmODJlNmU1ODRmNjg2MDFiNDBlMGI3N2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_da9189495f4b4231bc4b2c0f0991ff15",
+      "statement": "前端镜像构建时将 NEXT_PUBLIC_API_BASE_URL 显式置空，强制生产走 nginx 同源相对路径 /api/*，避免本地 .env.local 的 localhost:8000 被打进产物；运行阶段以非 root nextjs 用户启动 standalone 服务。",
+      "evidence": [
+        {
+          "resource": "repo://web/Dockerfile#L13-L43",
+          "version": "repo-lines-v1:sha256:0566c3b35060252779823bd5d5a845248220c329a96693a53259ce8a20dc7302:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjODdkYzhkODY2MTlmMWQ0NGUxNWNmZDhlNTJiNjgwMDA4NWZiMDRjNmQ3ZWNhOGJmNjkxNDU3NzlhZTcwNGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQxOWM4MTQxMzI3MjE4YmFmNjUwYmM0NDU0YzUxZDQzNjg1MzNhMGQ2Mjg4ZGQ2ZjBiZTk2MjJkZjRkZDkyMTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYwYzM5N2FiODg5ZDQ4ODA1MjA4OGI3Y2Y3ZWY1ZWNkMjE2MzU5OTRkNzRjNzYzNjIxNzBmY2Q2MzVkNmQ3NzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ca3f5e83b7c45f1abf9c93a162a2d10",
+      "statement": "backend 镜像内置对 127.0.0.1:8000/health 的 HEALTHCHECK（start-period 30s），compose 依赖链为 nginx 依赖 backend/frontend 健康、backend 依赖 postgres/sandbox-gate 健康。",
+      "evidence": [
+        {
+          "resource": "repo://Dockerfile#L31-L36",
+          "version": "repo-lines-v1:sha256:aeb3538c9c0f8540dd632e259979fe18ea301a107df9bde4caa45ff0fb570623:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRlMzIwODA0ZWE5MzNlMDE2OWM3OTViMzFlMjhmMjU5ODQxNGViMGY2YmRhODMxYzM3Yjk1MjUxODE2MjBiZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTBkNmI2YWE2YzJhODI1ZTU4OTUxMzA0Zjc5NzE0MGQ2MDNiMTU5YTI1N2VmNzg0YWI4ODFhZmVkNTMyOTFhNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTc1ZjE5NGMxM2Q2ZmVjNWM1YjlmZjMzY2ExNzFkODM1NWI5OTlmYzQ1YWRjZmJmMTRiMzc2ZGZkNDI3YzU3NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L145-L149",
+          "version": "repo-lines-v1:sha256:7409b2fd68e9a9850d5057479fed21cdbc9a72afe7c320cbce63be222e011793:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTNhMmYxMjQzZmFmYWUwYWJiNjllYTdhMGMxODFiNmE5YmYyOGJmYzFiMDc2NjQwNTBmZmUxZjRiMTIxMTYwNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjY5MDA1OTBmMmUxMjExNTBiOTMyMzk3NzkzMWI2MDhjYzY2NDk2NDg1NmUzMWYzNzgyZTA3NTA5ZWVjZmI3YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmVmNTA5ZjY1ZDFiNWRlNmJmNTU0MjU5NTRiZDA0ZWExZThjODEyOTg1MjQ4MjY0ZmFmOGVlMmIwZWY4ODcyNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTNmOTM0MDZhNDdkYWQ5YjdkM2E2NWQ4MmI4NDM1MzcxZjQyZjE4MDg5ZjA5Y2U0ZjYwN2U0NWJiNDQxZTliNCJ9"
+        },
+        {
+          "resource": "repo://docker-compose.yml#L41-L45",
+          "version": "repo-lines-v1:sha256:ad9524336d51312984499b2c81e8349fd26dfc33f64b8f4f35a5ebf7d28f41d1:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTNhMmYxMjQzZmFmYWUwYWJiNjllYTdhMGMxODFiNmE5YmYyOGJmYzFiMDc2NjQwNTBmZmUxZjRiMTIxMTYwNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjY5MDA1OTBmMmUxMjExNTBiOTMyMzk3NzkzMWI2MDhjYzY2NDk2NDg1NmUzMWYzNzgyZTA3NTA5ZWVjZmI3YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGQxY2MyMjkwMDg5YzBkNDNiOGUwYWRjN2FkMjBhODQ3MWRiNTllYjYxMDFjODA3NzI2ZTBlOWQyMDJmYzk2NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzE5MzlhOTUwMTY5MjdjMDczOWY1YmMyMGExNDUzMDZkNGM0YzU0YTg1ZjVmOTE3OWJmNjk0Y2Q5Zjc5NGY2OSJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

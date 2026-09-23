@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c4086ebafc482802b9ff7c4c16ab3bffedd277b83a025fe5b4b08e9efe12d378",
+  "claims": [
+    {
+      "id": "claim_22f3638dd49447c19421c15ed81334ef",
+      "statement": "MCP 客户端采用按需一次性会话：每次 test_connection/list_tools/call_tool 都建立连接、initialize、执行后关闭，不在 Agent 图生命周期内维护长连接或断线重建逻辑。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L3-L13",
+          "version": "repo-lines-v1:sha256:1f23f1fdf0869525e6969b139204893c884106d2b6db6e4a432788fb6e3324a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NjQzYTRhOGJkMjFmNThmYjRhNDA1ODViZTlhMjYzMWI5NTNmMTAwOGM2N2NjZWMwYTdmMGY4Y2NkMzI3NDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3NWQ0NTg5ZTkxY2M4Y2I5NzQ4ODlkYWIwMWRlMTVkYjE1NzRjYTEwZWVjNzI5MGExMDliZjU4OGM5NGUwMWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmYzdiNTc2NzY3Mzg0MDViOGMwNjFjZjc0ZGViZmFhMmNlMGIwOWMyOTMzZDllZjVmYTNiYjJhN2MwZjJkZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmYjZmM2E4YjA5MjM5MDIwNjlmZjBiNmM2NDM3Yjg0Mzg1NDI4ZjdkMmZkYTFmZGY2MjhkMzAzMGI4OWQ5MGQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L73-L106",
+          "version": "repo-lines-v1:sha256:d17d02c7c75de4f23a85b9e57301e2f08ca1e8d60dc810084ffbbc1839d1f453:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiY2M0NDVlYmQyMGQ1ZGYyYjlhMWY3M2JjODdmNjQyZWQ1MTcyYmFmNzc3NzAxNzJhNTczNzJhMTQxOGVlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkOGQ3MmFjMTM0N2NlYzU1MGJhNTY1MjA5ZjZhZjdmODZhYTUwNDM1ZWU5ODBjMGQ3YjM2OTQyY2JjYzZmYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkOTUxMGFmM2RhNjI5MmU0YzdjMWZhYzk2ZDM4NmRmYjM3MDE2NGJlZWYxZTE4M2YzMmJiNzU4NmM4MGNiMGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3a65135e82d14d8c84d45816ae916cf2",
+      "statement": "超时常量：握手类（连通性测试与工具列表）PROBE_TIMEOUT=8 秒以避免拖慢图实例构建，单次工具调用 CALL_TIMEOUT=60 秒；streamable_http 自建 httpx 客户端亦为 60 秒超时。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L36-L39",
+          "version": "repo-lines-v1:sha256:d9946bd297da5eca50d056e4ae81d78021fe74cdb8826de90b6a90be3952dea9:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzQ5ODFlOGE2MjczYWE4MTRiYjU3NzYwMWJhMzU3MzRhMTY2NTFiMGE1ZGRhNGE4ZjE1MzE1ODQ4MWEzM2IxNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjhhODA5Mjg5ZmU1YTE3MjE3ZDM3ZmJmODE3M2E2YmU0ZjczYWQ3N2VkOGViZjhiZDJjMzNmMjZkNWY4OWY3OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTRjN2RhNmY3MDliOWQ5NTI1ZTJjZTQxYTE5Yjg0NWUyODJlNDUxMmNjNTBjZTVlNjBlNDNiNDEzOWQwMWM5OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmY3ZmNmZGEyNzI3MTcyYWI2ZDAwNzc2MzFiYjI2ZDFjYTRlODA5NDgzMGQxYWMzOTZmNjg3ZDNkZWQzYzM0ZiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L95-L106",
+          "version": "repo-lines-v1:sha256:872bc94c4b90562308c8d4b1b767827b8bf740f62d2c6ad0dc21575f110742ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlNDZmMzAxMjBjODhkM2QwZGMxMTkwODkxOWU1MmUyYjM1NjUyYzgyYmI4ZTM2MGQ3NGNhNjVjMzNiNjg1NWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkOGQ3MmFjMTM0N2NlYzU1MGJhNTY1MjA5ZjZhZjdmODZhYTUwNDM1ZWU5ODBjMGQ3YjM2OTQyY2JjYzZmYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0Mjk5ZDk2OWJmN2FjZGEyNjE4NDg2MGQ0NjI4NWMwMWQxN2FiMDJiN2VkMzExOTliNTBkOGM0YTlkYWJkNjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkOTUxMGFmM2RhNjI5MmU0YzdjMWZhYzk2ZDM4NmRmYjM3MDE2NGJlZWYxZTE4M2YzMmJiNzU4NmM4MGNiMGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9875fd473a60476697c00fe992c4faae",
+      "statement": "三种传输鉴权落点不同：stdio 经 build_stdio_env 注入 MCP_AUTH_* 环境变量（HTTP 头无法穿越 stdio），sse 经 headers 参数直传，streamable_http 因不接受 headers 而自建预置鉴权头的 httpx 客户端并在 finally 关闭；公共前置为 build_headers + apply_query_auth，与 A2A 出站共用同一 auth_scheme。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/auth_scheme.py#L60-L73",
+          "version": "repo-lines-v1:sha256:264e6e30531c6a7257954b72b21d3c56c4aef92410ad294eb0aff52bcfa8fef6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlMzY1ZjAxYTlkZmE1NjQzZjU0YTMzMjEwYzA5NDFkNGUyMjg3OTAyNjFjMDQxZGZjZGI4YTJjNGY0N2RhNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2YjMzZjhlMDBjZTg4NzI1OWI4MjBmMDAxMDdkNTZkZjNmZjA3ZWJkMTk0OGNiN2Q4N2Q1MjBmOTY1MTA4N2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYyMzUxYTBlNGI3MTliMTA1NDJmYjRmOTMwMWNiYzY4YTYwNzM2MTA4M2RlNmViMWE4NGNhOWU5ODU5YzMwYTQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L73-L106",
+          "version": "repo-lines-v1:sha256:d17d02c7c75de4f23a85b9e57301e2f08ca1e8d60dc810084ffbbc1839d1f453:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiY2M0NDVlYmQyMGQ1ZGYyYjlhMWY3M2JjODdmNjQyZWQ1MTcyYmFmNzc3NzAxNzJhNTczNzJhMTQxOGVlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkOGQ3MmFjMTM0N2NlYzU1MGJhNTY1MjA5ZjZhZjdmODZhYTUwNDM1ZWU5ODBjMGQ3YjM2OTQyY2JjYzZmYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkOTUxMGFmM2RhNjI5MmU0YzdjMWZhYzk2ZDM4NmRmYjM3MDE2NGJlZWYxZTE4M2YzMmJiNzU4NmM4MGNiMGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_950acabbea1546f0b9e5f0a75e3bd6be",
+      "statement": "错误一律文本化降级不抛出：_format_error 递归展开 anyio ExceptionGroup 子异常（否则只见 unhandled errors in a TaskGroup），test_connection/list_tools 返回 (False, 说明)，call_tool 返回 MCP 调用失败（server·tool）前缀字符串作为工具结果；CancelledError 三处均透传。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L109-L120",
+          "version": "repo-lines-v1:sha256:d5d318426af62eb91383abd4fada440dbd0e93c7471d2f6e7b02f2279303b1c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwODI2NTFiMGRlYmFmY2UwY2VhMmJlMjRmZWNmOTlmMjg3MmIzOGIyODI4Yjk1Y2QxODNiY2NlYzg3OGFhNzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmYzZkMzJhZWJjZTc5ZDM0YWM3MDQ4NmJmN2Q1OTY3MjVlYWYwMDY0NTdiMDJmMDc2YjQwNDM0NDIwMjU2MGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZmMGUyNzRlN2JiYWI1ZDhhYzEzODI3MzZkMTI2MGQ0ZmQyODUzZWNmNjQ5ZDdlZjJlOTJjN2I1NzkxODBjNDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5YTM5NjEzZjg1YzIyM2JlMjliYjA3ZTQ1Nzg3YzZmMDA1ZGFmMTljM2I3YzNlZWQwOGU4NzhlZGJiMDNjYmQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L143-L207",
+          "version": "repo-lines-v1:sha256:d23a9933ab4380d17dee1281c06b4a27b528e1ed7eaca4bac02824aa884e0e96:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmNDg0NWYxMjJhYjQ5NzA2ODY1MjM0OWQ4ZDEwMDI5NDk4YTA4NjQwNmE3NDg1NTE5MDUwNGVlNjkxODFiMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhOThhMThlYWUwZjE5ZWE0ZDY1Y2IyMzkyZGY1YmJiOTQyMTQ4ZjcyNzQzY2M0YzFmNWVhNjNhZWMwMTgwOTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjMGJjOGU4NDVhMGQ4OTliODBjMjRiZjIwZDA3ODMxNzBjYzcwYzY0NzdlYjFhYTg3YTE1YmFhNDMzNzFhOWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYwNjYzZDE4NjllYTI0M2NlZmQ5MzE2ODVjZTg2MmEyYzJkN2ExODU1Y2I3NjFhZTdiNzIxZmI2NTZmZmVmNWMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2e59871919884f1dae99b5604129bb77",
+      "statement": "构图时 _probe_mcp_tools 对各 MCP 快照并发 list_tools（8s 内置超时，总耗时约等于单个超时）产出 mcp_tool_index，只用于工具绑定与说明、不落库；连接参数读自保存时写入的 agent.mcp_servers 快照（mcp_server_ids 解析而来，JSONB），运行时零 DB 查询。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L49-L89",
+          "version": "repo-lines-v1:sha256:c04be54bd85c6a2d159d3e1e1c8111ecdf8dae50b8100a37c93614df841f86d1:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkYzdjNGU2NTZkZTE0NmFiN2FlYTYxYjQ5NTBhNTNhNjJiMTEzNjc1YjYyMDZlNzYxNGE2NjI4ZjNkOTg5YWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmYmQ5MTZjNmM4NmIxMGM1ZGMzNjdkN2ZkYzAyYmIxNjllM2JjYzA1MWE4M2Q2ZmU2YTM2ZjFjM2FjMDEwOWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhMzcwOTU2OGZkYTAwYjg4NWZhMGNkMzJhNDRjOTUwNzM3ODhiMjY2NGNlODVjZGY4YjNkZDc0Mzg2YjExYjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI0MjBiN2YzNjRjNWYwYjc2NGFhYmFlMTdkNmQxM2FiYTgwOGEzYWU5MzllNDg1N2I3OWRhNDQ3MjNhM2Q1ZmQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L76-L78",
+          "version": "repo-lines-v1:sha256:692d860265396e14d60986e10962b91c7428ffbfa73c4cc58bc8c6bbacd2e64a:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2ZjZDU1MGFjYzI2M2U5Yjc0MTc5NzM5N2ZiNjkyNzlkNTEwMTE3Y2Q5YTRjM2Q0OGMxYmEzNjBlODQ3MTdiMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODE0MzIyZTgyNTNiZTVlMjMzYjUzNTk1YzljMTVjMzNiYzBlM2JiOTVkNzJkMzUyNzg3YzA1NzlkNTNiMjRkMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzNiYjU5NjBjYzJmN2Q4MDczNGY3YTQxYTdlZWFlMjM3ZDQ2ODk5NDcyYzU4MTVmOWMwMDk2OTlmZTkyZTgzOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDEyMmRhYTNkY2JhNDBlZjdhYzQxYzY5MTJkYjgxZTEwZTE0NDM4YmY1OTVlYWVhNjc2NDljZjMyZWZkMjI5NiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L142-L142",
+          "version": "repo-lines-v1:sha256:6c6200cc6288badcb26e3a711fda961496a29996b038814edc7822452b1296fb:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmM2MjAwY2M2Mjg4YmFkY2IyNmUzYTcxMWZkYTk2MTQ5NmEyOTk5NmIwMzg4MTRlZGM3ODIyNDUyYjEyOTZmYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmM2MjAwY2M2Mjg4YmFkY2IyNmUzYTcxMWZkYTk2MTQ5NmEyOTk5NmIwMzg4MTRlZGM3ODIyNDUyYjEyOTZmYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTE5MGE0NTJjMDg5ZDc1MGE3Y2IwNzdkM2U1YTcxMTM4NTcxYzg0MTFiMjNjMWFlZDBjMzcwNjIzODA0MGEwZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTI5ZTc3ZjcxY2VlMTU3NzU2ZWFmMjJjNjBhZmNiNzBlMmQxYzZhNGFkNWU0ZTQyYTM4YmVhZTI0YjI0MTBiOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a0e988800c534e3ea1340069272131d8",
+      "statement": "绑定决策：任一服务探测到工具则按 make_mcp_tools 绑定为 mcp_<服务名>__<工具名> 独立工具；快照有服务但全部探测失败（服务不可达）则退化为单个通用 mcp_call，至少保留可用能力。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L287-L297",
+          "version": "repo-lines-v1:sha256:641afb4cd9d1d78cb11091a686258d315c47c79dd22fc699e7f039be06567fe8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM3MjMzNDNkYWU3YTE5MjQxZjA1OWZkZDRlZDBlZjI1MzA3ZGVlNTA1NTNiYzIzYzQxNTUxMjdjMmUwNDQzNTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyY2JlYjZhZTNhMzZlMDQ1ZTQ0ODZlNDc3N2Y3Zjk0Y2ZkOGJmNDliNmU3MmUwNDExOGZmOTI4ZGY0ZDAwNDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRlMGQ0MjI3ZTQ5NGVjZTk5MDE3ZDUwOWVmZjkzMmZiNTdmNTg4MTA2NjY5MjY0MmRmMDFhZGU2MmRlYTMwNzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmYjE4MGMwMWIwMDljZGM2ZWRmMmFiYmE0OTMwMTdhMGQwYjFiOWM4NWJjNWVmYTk3ZTE2N2IxNDAwNzllODgifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L311-L340",
+          "version": "repo-lines-v1:sha256:357097ff2020f8d6ec079beef47a2712f1e2109ae1b03797d01c6b11fc01ec27:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZjU1ZjhjZGYzNzY5YTQ1MTY5NzIxODA3NDkwODMwYWE1OTczZDQyYjNhZmEzZDg2YjllZjY0NjVjNWI0NGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNWI0ZjIwNjlkODMzMzlhOTE5Nzc5OGU2ODk4ZjFhYTUwZjQ4ODZlMDMxNTEzZjFiNTI3ZDM4MzQ5ZmVjN2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkzODM5ZWQ0OTNiNzQ4Y2VlODMxMzk3ZWU1NDEyNjdkZTA3Yzk3NTRhODMxMTdhYjhiMmNkMjM0MzY1N2MzNWQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L351-L387",
+          "version": "repo-lines-v1:sha256:f549bd28fc3c48594aaa56e12ada30d6af8ba5890faf97beb75bef006ed7cab0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMDA3Yzk5MzQ5NWViZDQ2M2U2MWNhNTFkMjY2ODFhYWI0NDc5YjZjNzM2YzgzNWE5YWU1YWI0NmE3NjY5NjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOTc0ZGE0MDg2MzJhNGFhN2UyYWU4MGI4NjAzOTFhM2RjZDgyMTFjNzllY2FkN2NhOGU5NTEyOGIwMDE4MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4ZTAyOGU5YTMyMTRkYTdhNTFiMjYzNTc0NmNmNDNmMTUzNDY4Y2Y4ZDEyY2QxZmZmOTM0MDc2Y2UwMWM4NTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ce24776fea1f4cd9827091cf26cf3d56",
+      "statement": "inputSchema 经 json_schema_to_model 转 pydantic 模型，无 properties 或非 object 时退化为单个 arguments 字段保证工具可调用；_build_mcp_tool 必须经工厂函数固化 tool_name/args_model，否则循环闭包晚绑定会使所有工具执行最后一个 tool_name。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L238-L270",
+          "version": "repo-lines-v1:sha256:74e84178395d935e3ceb927803dcf03e068d4c1bf59b094102dfaff0714dad70:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiMjQyN2U1MmZjNjA0MDRhMGY1ODA4ZDQ3YmI3NDNmZTgwNmU4ODg3Nzg1ODgxYmFjM2E3NjRhMzA4NWQ1NjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1ZDVhOTczNzBlYjAxYTZhOGNlNzkyYzVlNzNjNDNkZGEyZjRjNWVjZTI2M2Q5NTFkZTFiMDgyMmZjM2VmYzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzNzliMjY0OWM1N2NkNzNiYjQ4Y2VmODA2N2QzNGI2ZTA1NWViYjUyMjc4ODU0ZmQyOGVlODZlZWU4NzNlOGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1OWYxZTkwNDJkMzQ4ZTg2ODdmODQ4NjMzNWVmYTZlMjk3MzA3MTNkYTNmYWQxMzgyODdkZTY2N2Q0MmZhNTEifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L281-L308",
+          "version": "repo-lines-v1:sha256:e25e511884748f90708fc5d719d4f6615b7d5ff3ceb2f3efc38335669c902e4e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2OWEzODczODY1OTZjZGE0YjI5OWE5ZTZkNDRmN2JlY2VmODVjZGZhNGM0ZmFhYWVhZmJhYmM2OGE0MjcxYmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5NGZlNjE4OGU4NjBmM2I5OTY3ZGFmZGQxOTY5MjAzOGExY2RmN2M0N2I0MTJlZWY2OGUyODJhMWM3MmU3OTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3NzMwNjdhNTI0MDg0ODJmOGYyOTVjOGQ1MTk0OWFlMWY3OTk5NjRkZGRmMDYyZmRjZmJlYWNjOWQ4MTAxMDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_09def36289244297ac8558d115eacc60",
+      "statement": "format_tools_for_prompt 把某服务工具清单渲染进 mcp_call 说明，空列表输出「暂无可用工具（服务可能未启动或工具列表获取失败）」；mcp_call 的 server 未命中时返回可用服务列表文本而非抛错。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/mcp_client.py#L210-L218",
+          "version": "repo-lines-v1:sha256:ae73fb9dac31a8444eb80256584833e95fdc9c311a6bb62e656c3bb627fb29a6:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWUxNDI2MTllOWM4ODgxNGFhNDgzYTY1OWE2NmVhMjY2OWUyZDU0OTU5YTJlNjlhMWFjNjBjYmU1NzIwNWE0MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDA2MDlmMTZkMGIyOTNiOTJiNTg3ZmZkNTY3YzBkMDMyYmEwNzNmYzg0NTc0ZjljNWVhYWEyZGJkOGFmNGM2NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDMyNjRmZTE1Y2JjMmJjNDczMTAwMDE0OWE1ZjFjYmYzZTE2NWJiZTJiMTdiMTFlM2JjZWUyNmMyYmQyOGVmZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L372-L376",
+          "version": "repo-lines-v1:sha256:9b6d5be224871c941c0c773c31730a56b14fe5f00f1853885f71c3ec3462d4d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmQzZDJhMDc4MWU4Y2Q4MjRlZmY5NDVmZDc3ZDdmMDAzNTNmOGE0YmE3NzgyMWFmYWEyOWFiMjMxNTcyYWQ5NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQyZWFhZDQzZjQxNmM0YzA5ODI1OWY3MmNlYmYzN2U2NWJhYjBmOTQ3ZWQ3ZWE2OTRlMzY0MWU0MmVlMDU2ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2U2NTk1YTA3MDdjNmI0MmZmOTM4YzYwYzg1ZWViODlhMmRkZThkYjQ4YzhkN2QzMGNhMWUxNjU0ZWFhNDM1YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjFhZTM3ZTQwNzEwY2RiMTNkZDRlOWI3M2I2NWY4MDFmNjg5YmNlZmM5NzU0MzQyNzMyODNkNTA2OGE3OTA5MCJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:e1a46b8f3dfff6c70f20e246f883321aefae5a5dbb2e8e60dd5c50e07445fb96",
+  "claims": [
+    {
+      "id": "claim_704edfd191eb4f13b7d75f6d6867cbd8",
+      "statement": "SKILL.md 解析要求 YAML frontmatter 以 --- 开头且闭合、name/description 必填，name 仅允许 ASCII 模式且长度不超过 128，正文不超过 32768 字节；全部限额常量集中在 skills.py 供导入、门禁、注入共用。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/skills.py#L1-L30",
+          "version": "repo-lines-v1:sha256:947c5f784846bc3ca63165454a97d26b7c245a35dbf9b35c203b0e67dfa3b35d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxNTRiZDVhMTIzNzdjOWI0OWFiOWZmZGQ5NTgxYzU0NTEwZWE0N2RiNTEwNjMyOTdlMDRjNDBjMDA0M2VjNDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1OTU2MDg2M2QyY2U2ZGE1OTQ0Njc0OTY5YmI2YmUzMDJlOWU2MzI3MDYzNTQ5ZGRmZDAyOTViMmZkZTZhNDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlYjUwOWE4NWY0YWU3ZTYxYzJmOTY5NmI3OTAyYzFjMTNhYzE4MGJiODk0MzQyNmYyZDUzMjdhYWExYzQ4NGQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/skills.py#L75-L105",
+          "version": "repo-lines-v1:sha256:1e5ac21f7554dd31956b7a23242bb627c27a660ae0eea1f4637b8eef96a9aaa1:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0NWEyNWNhNDRlNWYwMjYyZjM4ZGJiOGQ5NWEzMmY1M2MwYjY3ZTAxMmZhNTM2NjAzN2NkYmEyNWYzNzViMjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkOWM5MmY2YTI0NzE2NTY5NjdiNzc2MWM5NGZjMDY0MmMwZWViYjM3MDQ1YWU1NDA0NGFlOTg3MDg0NjEwNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhOGU1MGMwN2QwNzAyODdiYzllMzZmYjk2ODQwY2IyNGY4ZWRhYzBhZDJmYzc3YzVkYzNiYzk2ZjgyMTI3MGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_61412b9baef34f259e15b0905e1e64a8",
+      "statement": "导入采用无服务端预览态的 preview/commit 两段：preview 只解析不写库，commit 重新解析后按 names/overwrite 幂等落库；重名不覆盖计 skipped 且刻意不刷新快照、不失效图缓存，覆盖则重置审核为 pending 并刷新引用 Agent。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/registry.py#L520-L582",
+          "version": "repo-lines-v1:sha256:e1b5d60390959634e252b23925e244591d701ab47b7ebf8821d368abcaf8d04a:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3ZmViYzU5MzQyYmVhOGFjNjBjMDRkN2JhMzk5NjczYmJhOGIzMmZjOGE4MmUwMDI1NjY0NDkxNzdiYzI4ZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ4NWIyY2I3MzAzZDliMzZkZjA3YjBlNzA3NWE2OWI4NzZiM2ZiZWYxMzFlMDk2YmZkZWIyNWIxOWEyYmFhMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMyODdlYTQyMDRiY2YyMzQ3Yjc5MzdkYjQ5ZmUwOWM4MzUxZmI3NTliOWYzZjdmNzU1NGZmZGZmMGQyMmMyMzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_415894968382424eb4636f829e780461",
+      "statement": "审核状态变更端点必须同步触发 refresh_agents_for_skills 快照刷新与 invalidate_agent 图缓存失效，否则已发布 Agent 会继续使用旧技能内容。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/registry.py#L585-L602",
+          "version": "repo-lines-v1:sha256:9737250d046a3847270bfa3d9d29043edc3143fde6559bb99b96b58bd3b0abce:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyNzczMDYzZTkyNTMyODE5M2MyZGRjZjRhMDMwZWQ2ZGQzOWIyYTNkZTM3MTM0OTgwZGNiMzZhNGI4MDkxN2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyZDAyZjFlODQ1ZWY2MzFiMDg3ZTliYmIwM2Y2MWRiZDc4ZDQwNzhmMDAzMWRmNTc0NTkzOThiN2U2N2NlYTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5MzdmYjA3OGMyODFhN2I5NDNhZTNhNzE2YmNjNjNjYjRlZWQ2ZGNiY2E3NTZkNTc2ODNiMWNlMjA4ODUzNjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM4ZTI3MjcxZjRiMGE1NWNkZGFhYmZhMjViYzY4NWMzODk0MTYzMWNmZWUxNDkwMjc3NGZmNDE0MWRjMmFhZGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_881f39563c7a437a8d7dda293fe2eb07",
+      "statement": "技能提示注入分四层：构图时 build_skills_prompt 将 always 正文常驻、on_demand 仅进清单；运行时 load_skill 按 load_mode 返回正文或说明并附附件清单；read_skill_file 白名单读取；pre_model_hook 用 active_skills 记账，对滑出 KEEP_RECENT 窗口且仍绑定的技能按 MAX_INJECT_CHARS 预算重注入，不在绑定中的名字被 stale 逐出。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L98-L188",
+          "version": "repo-lines-v1:sha256:c15fb4de25120b45bb5eef43e0efdf462eb0329d5b1c2daa8e114753e127d638:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiZmIzZjQ5NzU5OGQwYTQyY2JkZDRjYTMyM2FhMjVkM2JkZjRmNDNhNzZjNzA3MTFhNDI3OTlhY2U1ZmIxMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMjRmYWVmODE3YWFjNTdmNWY4OTYyNDIwMGUxMmM3ZmY0YmQxMTE0MGVmNDA0ZGY4MGQ4Mjc4MTVkOWVhYzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJkYTlhY2Q2YjBhOWZhMmE3NzIyNGNiYjYwZDFmYTYyODU2YmJjYjJmYzQ3NzYyMjI0NWJjOWVhMTkyZmEzMzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEzMmQ4M2IzYmRiZTYzMGZmOGI4ODNlZGY4ZDdhZGVkZGYwMDk0NGZiZTVkZmU2M2U0NjRkYjNjNGIyZmVkNWUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L420-L462",
+          "version": "repo-lines-v1:sha256:e9051f112a6584bf6e60767f9301e3adc1a32e1128e855edf193a0fd69e68689:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1MWQwMGQ2ZGVhZjhjOTE1NGVlM2NmMjE5NzRiNjc2ODAyZTYxOTc2MzQ0MjkzYjE1MjM0ZGYwNjEyMjA0MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhOWY4YzJiYzdhMTQxYTAyMmFmM2ZlYjhhYjUwMDhlYzI1NzU3ZWYyNGFjZDA0OWY1MDg5YTc0YjdjOWFlODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4OGRjNDM3MDVhNjU0ZTk2MTQ5ZjgzZTVlMmUyYzYwNzM0ZGE2NzFhOGMwNWVjYWUxNDc1ZDBjMDI5ZWNlYzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4NjFhZTA5OTc0NWE3OTAxZDBjYWM5Mzc1NmJmOGExMzI4NjE4MWQ4Y2Y4MWYyMjJhYTg1YWZkMmE5ODRhYTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f8cddcab72634cf796ae1bd787a045e4",
+      "statement": "hook 技能重注入失败只记日志并降级为本轮不注入，绝不打断对话；注入顺序固定为挂起提示、技能正文、历史摘要、最近窗口。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L220-L234",
+          "version": "repo-lines-v1:sha256:d7f6c8d927a712858f58c7a2beda6c5bdeef48d6e67c227fffdc2de34300267e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhOWFiODBlODQ3ZjZkYWZmZDA3ZTIyZTRmYjA4OTc3ZWQ3MmM2MDU4ZjA5MDQwYTgzY2QwYzQ3MjMyMjFmMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1ZGI5MDk4ODMzZmZkYjhjNWU1MDQxYWY0MGZkZTIwNjVmNmUzNGVlMjlmYzBmZDlmMDlhZjBiZjMyYzlmYWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkwMDAyYTFkOWU3MjkzYzMyMWM0MTAzMTk4Y2ZkMmQ0NjYxOGYzZjQzNmJmMTg4NzViYmEwNDE3NzA3Y2ViMjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBmNWJjNGU4ZTUwZTc5ZmI1OWJlZmFiOTZlOGQwZWJiNjJjZGE2N2I4MjVmMWZkY2RlMjlhYjIxZjUyMTA5MjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_88c560e038594e5faae97eaed16162bc",
+      "statement": "make_skill_tools 传入全部绑定技能而不按 load_mode 过滤，否则 always 技能的附件将不可达；load_skill 对 always 只返回常驻说明与附件清单、不重复回正文，未命中时返回可用清单且不回显请求名。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L420-L462",
+          "version": "repo-lines-v1:sha256:e9051f112a6584bf6e60767f9301e3adc1a32e1128e855edf193a0fd69e68689:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1MWQwMGQ2ZGVhZjhjOTE1NGVlM2NmMjE5NzRiNjc2ODAyZTYxOTc2MzQ0MjkzYjE1MjM0ZGYwNjEyMjA0MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhOWY4YzJiYzdhMTQxYTAyMmFmM2ZlYjhhYjUwMDhlYzI1NzU3ZWYyNGFjZDA0OWY1MDg5YTc0YjdjOWFlODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4OGRjNDM3MDVhNjU0ZTk2MTQ5ZjgzZTVlMmUyYzYwNzM0ZGE2NzFhOGMwNWVjYWUxNDc1ZDBjMDI5ZWNlYzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4NjFhZTA5OTc0NWE3OTAxZDBjYWM5Mzc1NmJmOGExMzI4NjE4MWQ4Y2Y4MWYyMjJhYTg1YWZkMmE5ODRhYTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2e857429e1954cfdb7cff10694c493d0",
+      "statement": "run_skill_script 仅对 allow_scripts 快照为 true 的技能挂载且需 SANDBOX_URL 已配置；allow_scripts 由审核侧决定且变更不重置审核，管理端 scripts/run 试跑不校验 review_status/allow_scripts。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/graph.py#L325-L326",
+          "version": "repo-lines-v1:sha256:e328be0dca35532afcebd8cee697f3962b31535364be33c58e2a1dae6c7319ef:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzU3MDU1MjQ5NWYyMTg3NTJkMDM2N2VmOTBmMGVlM2MzMGIzNzRjMjRhMGI3NzZiMzE2MzNhNDBkMmI2YjBkYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTQ4MWY3YTE3MjhiMmM0ZDRkMjA4NjNkYmVlMjdiZDJiZGI2OTdmMjZhMTRkMzQ3OWJjMGI5ZjNiYTNjNGRlNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDEwMTQ3N2I5M2IzZWZiY2U2MzMxN2UyOGMxYjZmMzBhOTE1MzY1NDk5MDJhZGYwNjMxN2IwYzM1ODc3YTM2MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODU4MjllNzJhOGIwMzdkNmQyM2IyZWI1MzE3NzBiZjU0OWRiZGE5YmEyNjVjMDUxYmM0OWQ1ODVmOWMxODNjOSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L175-L176",
+          "version": "repo-lines-v1:sha256:4689d2a735ac322446755ee5d7cdb3d2a1df6de47dc028ebbc99c9c665e8ea14:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWIyNjVkMjE3ZjIxMmY0NmQ4ZDI1ODRmM2Q5NWJiZTE0NGI4M2RjMDE1YTIwZjU2ZTc4Yzk0MTE3YzhkZjM5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjkwZjc0MWVhN2UyZTA1N2U2MDNlODNjMjQ1NmM5OWY4OGVhYWEyMTM2NjBhZmJjYWJmYTg4MjU2ODFmYTc2MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGVjNmU3MGQyMWQ4OWE0M2VmZWM1NzIwMzM1M2Q3NGExZmExODU4NmI0Nzg0OTNhODJhNmY4YzU1YzBlMjQzNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWY4MzUwYjAzZDEzYmQwODQ4ZjBmNDA2Nzg0NzNiOTIwYTAwODUxYWVlOGQ4NzM1OTZiMDg4MWRhZTM3OGRlZSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/schemas.py#L210-L210",
+          "version": "repo-lines-v1:sha256:9bbb82cbc39f006fe01410039e60b932ec31b381ca8434ead27687572dc4be56:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWJiYjgyY2JjMzlmMDA2ZmUwMTQxMDAzOWU2MGI5MzJlYzMxYjM4MWNhODQzNGVhZDI3Njg3NTcyZGM0YmU1NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWJiYjgyY2JjMzlmMDA2ZmUwMTQxMDAzOWU2MGI5MzJlYzMxYjM4MWNhODQzNGVhZDI3Njg3NTcyZGM0YmU1NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmM1OTYzMWU0N2E0YzhmOTk1YTc4YmQxNjUzYTYyY2QyY2RmNzhhOGU3YTNmMGY5ZjMzMzI0NDUzMzdlY2NlNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTFhNWRhNDkwNmUyNzFjZGRmMTgyYWZmMjMwNmZjYzZjZThmYTljMjkxMzFjOTUyMjBlYTgzNTE2NDk1MTkwOSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L522-L533",
+          "version": "repo-lines-v1:sha256:88ddc9fe5c6e73d74489ba5a4e3881d27d063dce6e7dc69af50207742174b5f5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0ZjgwNDExNjZmZGZhZmE5NzgxZTYzZmNkNmU2ZGRiODUyNDI1YTA5Y2E0ZTEyMGFmNTg5Mjg0YmE1OGEwZmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4NThiNzk5M2JiOWQ2ODRjZThkN2M0M2M5MTk1NThiOTRlMWM3MWNlYTEyZTM2Mzg2NWU3MDFiNjgxMzllNmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyNmM2M2Y5ZTNkM2FjYzk1M2MwN2MxMjFkNzM3MTgzNzY5YjNlYTBiY2VmNzVhZDcyOTY1NzE4MjFmYTZiOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMyNDE1NTc0NTdkMGM1MWYwNWMwN2I1ZThlOWE3ZTMzZWNlMjhjZjllYzgwM2E4MDNhMGYxNDc5ZjNlN2M1ODUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:be08b7666a82e2019fc07a6bd2b2153557fc0c12bfe75a80a986448eea62695d",
+  "claims": [
+    {
+      "id": "claim_f35a06488260471bb65a6c70bb2b5034",
+      "statement": "绑定采用双层模型：Agent 表存注册表 id 勾选列表与写时解析的 JSONB 快照，构图路径只读快照不回表；解析按勾选顺序展开并静默跳过已删除或停用条目，技能还必须 review_status=approved 才进入快照。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L76-L91",
+          "version": "repo-lines-v1:sha256:132a17783d616ef148607712a42f91b639551e151fdf749de2ec08ed6149bca6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1NmJkNDI0NjM0ZDVmNDk2MTQwYWM1NTE0Yjg5MzdlMzhmNzIzZDhjYmQ1YmMzNTUwZjkzMDA3Mzg0YzBlOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY0M2ZmMGNiYjBmNTE5MmU5ZmFhZWE2NmVhMGYzNTA4MTMzNDE2YmUzZTgwM2FmODhkYzVkZGZkMTFiMTBiZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwNDNmYzAzMzA3YjgzMTVlZTFlNTM4OGViNzdhYTU3ODE4YmRjNDFmY2RmMjc2ZWNmNDYzZTQ5MWJmZDUyNWIifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L527-L543",
+          "version": "repo-lines-v1:sha256:0836715cf93f8a9178de5f50eae58ff8e1f7c31dfb99fc1fd1592e2aebdb4e6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxMDk3ZGNmYjg0ZTU3MmVkY2QyZDdlMDQzNGVhOGQ4NDMyMzg1ZDdhOGU4NzEwYzYyYWMyY2E2YWZiZTk0ODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxNGIwMzc1YjdkMTg3MmY5ZjBhNjY2ZGU3NzVlMGM4MGNiYTNkNWEzZjRkMTNlMWEyZGU4ODVjYTliOWY3NGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MWJjYjA1YjJlMTBjMDJjODgwZDY2MzQwZDFkNGMyZWYwM2Y5YzVhZDY2ODY4MTZjODJiZmMzMWU5MjgyZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljMDY1N2I2YjdiMTk5NTg3NDc1MmY2NjNkMzVhYzA3YmI1MTVhNjMwNjMwNzIwYjU2NzJjNGJiNTE3MDZlOTMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L86-L111",
+          "version": "repo-lines-v1:sha256:c4c5b2a89c03cf1f5b942248056e53d0c7d2dc57f2e95442715032e8b8ff0da1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmZWRhZTIyYjRkNThjMTlhZjEyZjU2NmY3OGMyZjMyM2FjY2JjNjUyMmM5Yzk3YjgyYzg0OTIyM2ExYWFhNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiZjVlYmRkYzYyY2E5NDI5NjhmNGY5ZTIwNzE3MjU2NTBhMDQzZGRlYjMyYzc3NTQ5MGNjNDQ3ODQ3YjlmNzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5MzdmYjA3OGMyODFhN2I5NDNhZTNhNzE2YmNjNjNjYjRlZWQ2ZGNiY2E3NTZkNTc2ODNiMWNlMjA4ODUzNjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiY2RjYjQ3ZGUzYzI5ZGIyNTQ1MWJlMzBhY2JiNzM2OTU4Y2Q4ZGRkYzZjZTE3MjI2ODc2MDk5MmY3MDdjOTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4c2662171cc841fc98e7e73fe60d688f",
+      "statement": "_merge_bindings 保证注册表解析结果始终保留在快照中：manual 为 None 时保留既有手动条目，显式 manual 列表时按 url/name 去重且与注册表冲突以注册表为准；旧实现丢弃注册表结果曾导致每次保存清空勾选绑定。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L134-L179",
+          "version": "repo-lines-v1:sha256:26aade6c49b061ba304f520bee79ed05c03fd8ada0198e3fb5f8843b5502bf77:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMzZmOTZlN2FkNjBhNWE2ZjNmMzgwZmJhNzE1MjRmZTZkYWEzOGZiMDBjMWZhNjBmYTAzOWMzNjM3OGNiNmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4ODJjYzkxN2JjZjNjNmE2NGY0ZjgwYTdkMTQ0MDBmN2ZmYzQ1ODdlNzcyYzMzMmY0NzYwYjg2MDRmMTUzMzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4NWZmZjM2NWY0ZDRiOGE3NGU4ODY4YWNlYTc4MzMzZTUyZjg0NmE2MjE0M2E2NTViNDZmYmI2ZWZjN2E3MTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        },
+        {
+          "resource": "repo://tests/test_bindings.py#L3-L21",
+          "version": "repo-lines-v1:sha256:58a089db38dcff9d830e99e4518f0bfd9cfb92848e7df7a225c991b0565f4e15:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhMDRhZjkwYmQzOTEyNzM1NmIzZmQ4YjEwOGU0MTJlMmYxODUzMGQ4MGM2Mjg5MzY5ZmQwMTA4YTM3Y2IzNjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4YjdmNWRkODI0ZGI4ZmUyYTNjYzNjZTZkMjQ2Zjg2YmViYzI2MmYyNTRmNWUwZWY5NDAwNGM4NDRkZWIxNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNhN2NmODZlMmVjZTIxM2NhZWMxMWUwZTkzZmFiMGVmYmZlNGI3M2FmN2QxZTk2MTYwNjBiYjY3MmRlMGIxNGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2MjM2NzE2M2M2N2VjYjBiNzljYTBlYjU0MzQxYjhjMzRhZWY0MmRhNDFmNWM1ZjczZmMyMzU2MzU2ODVlZDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d01d61cf78e54f71b521db3e3bc050ca",
+      "statement": "注册表行更新后 refresh_agents_for_* 重解析引用它的 Agent 快照；删除时默认因引用拒绝并提示 ?force=true，force 路径先 detach_* 移除 id 并重解析再删除，随后对受影响 Agent 调用 invalidate_agent。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L409-L469",
+          "version": "repo-lines-v1:sha256:39076f33f69daf62ec8a15e2ff8e497bda04bd536b0678fea60ab2aa4586888f:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjYWVmN2M4Y2JjMzZhMjEwOGJhNTY0MDEwZDU0ZWFhMThjODY3ZTIxYjEzYTZhMjg5OTc1MGUxZWNmY2ExYWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ0Y2I4NDA5OTU1MDZkYzllNzE0ZWZkNzkxNjI3MGEyZTE0MjYzZWU1YzJiOWI5MDI0MTk0NmNmZjkzODcwYWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdjZTQyYTBmOGM1ZTZkM2ZmNjAyNTM5YzhiOTQzYmVkNmI4YTU1YTYxNzA4MDRiZTE5YTNiNjIwMWM1NWU1MWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/registry.py#L116-L138",
+          "version": "repo-lines-v1:sha256:4146e8f776f14df4d2d5b3895e85fa5a324cf2d52e664ff85be16e25e2651b7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjYWQ0NzBhMDNkZDA1ZmY1MzYyNDU3ZjJlODE4ZmFhOTQwZmE2ZGM5Njc4NDg0NzYzZDQyNWU2ODY2NmQzNjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5ZDliMGM2NDRkMGRiY2Q5YWFjZTNhYWVlOTk2MDY3NTFiYTA0ZTI2Y2U2OWY3NDJkMjg0YjFlNjQzMWVmYmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3MmFlYjliZjM3YmQwMjg5MDAzMmIyNGUxYzVmYmU4NDhlMmFmNzY0NWI4NDQ0NzQyMTdjNzZkZmUxZDkzNDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2MjdlOTljMTg4ZmY2NmU2MmVkZWUyNTM3ZGUzM2IwOTgwMDI1M2QzNzg4Zjg2ZmQ0MDIzYjVmMDg1ZTIyYWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_053ee054817b4c4d8e3656aa0866b070",
+      "statement": "技能绑定门禁在创建、更新、发布三处施加：勾选不存在的 id、pending 或 rejected 审核状态、正文总量超 MAX_BINDING_CONTENT_BYTES 均拒绝；enabled 不参与门禁，采用保留勾选、运行时静默跳过的宽松语义。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L497-L524",
+          "version": "repo-lines-v1:sha256:82075bbe5f9260b15ff3f67dd2cf83418951fe6f3d8ad403f9c1fd3d1b0c2f5f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3YzI3NTZlZWE5NzdlNTNhMjQwNTcxOTA0MTJkMzA1YTU5NDZiMThlZjdkNzA0Mzg2MDVlMzYwMGYxYzZlZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYTZiOGI4MWIwMDJiNTViZjIyMzU5ZjUwZTY0M2FhMTNjYmYxZTg3Nzg2Njk4MjVkODRlOWYxZTJkOGUzMmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhNWVhOThlZTE3OTUwYTFhOGNlNTZlNjFhM2E0MjcwMjFiMTRjZGFlYzNjZTJkZGE3YTgzOTUzYjI4NDk4ZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVjMzJlNmNmZWMzMTFkNzNiNDdhOTlkMzhmNWNlMzk5Y2NmNmFmZDlkM2I5ZjIwMTBkYTIwYmQ2MTM2ZDA2MTAifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L149-L203",
+          "version": "repo-lines-v1:sha256:950aa041b35025b7005731fa3c1b7dfe1dad0a1ea2062770a99fc4a3b9b62d73:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzNmE0NzhjYjM2ZTcyZmFjZGI3ZWJiNjdkZjdhY2ZjM2JmYjdkY2ZlYzE0OWI5ODllNjJmYTBjNjk0NTcxMWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlZjY2ZDYzOGM2M2NiNDllOGZjNTY1M2Q3YjAzMWE4Mzg2YjgyOTdmNTU4NjVhYWIyZTYzNzk1ZmRkZDNjNTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI1ZjE4YzY0YjY2YjM1YzhmM2E4ZjliYTY3OTg1Zjg4N2M5YmYzZmEyNjUyNDk2MzBlYzUwZDZhYmVkY2YxNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkOGI4NDZkNTk2NGYyYzJkNTRkNjY4NTZlZjcyMTdhNDJlZjg4ZWU3MWFiMmFmMWQ4ZTUyNDI4NTE3Y2UxNjQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L64-L79",
+          "version": "repo-lines-v1:sha256:fa10a6f00c13b2a3a05fc39537716ac0791995de5cb9057e646771c1e4f7a51f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExNDFjZWFkOGJlMjNkMTM3MzE1M2U3MmI5MTY0NjRiY2M1YzFkNmQ5NDI1YjVjYjZjZmIzZWYwZjYzOGVkYTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMwZjE2MWMxYjgxMDg4ZjdlMTFmMDYwMzUyNWFkZmYzY2EwZjgwNDczNTg3NGQyMzVmZTI0OTRiNTI3MzM1MTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVlNTE5OGIwNDA1MDk4ZWJiMDVkYWVlMjVhNTViYjE4ZmQ4OGQ3ZDBkNzUzZTRhMmFmMGZhODRjY2U4YjQyYzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cac6d4ca72a34003bee20e677bea3179",
+      "statement": "保留 slug 集合为 {\"/\", \"\", \"a2a\"}：自定义 Agent 使用返回 400，slug 已占用返回 409；默认 Agent（slug \"/\"）不可删除也不可下线。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L144-L148",
+          "version": "repo-lines-v1:sha256:c830b4d706c6dbdc23fb554cdc86028e91649248dab50db2d851d2b91dde1c18:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFlMWU1MjU0MWUyODVkZDBjY2YxOGUyMmMwYjgzZTBiYzQ4ZDA0N2FiM2QzN2Q2NzNmNTFmNGRhMDYxNjU0MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDE5N2U1NmFjM2M5MmNjYmNhZWQ3ODc4NDAwZDAwNTA3MmFkNjFmZjg5MTllMDQ4MTlhNjE5MzBmYjUyZGI5OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWYyYzVkYzI1ZDg4ZThmMjY3MmRhZDFhMWRiOTZkZTI5MTQzNmQ5NDFmMTJlMWQ0NzA0ZGZmYzRhNzk2NWVjYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWUyM2NiZjEzMzViMjcxY2E5MTc1MzcxNTliZDgzYmYxMjhkODlhYjY1Nzc3ZDQ0NDdhYjZkZTFjMTc4NTYyYSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L184-L185",
+          "version": "repo-lines-v1:sha256:10d2af9f97ad9c87b9a624f55f8e350ab6522906b8b2f4694b551379b2c09d86:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjlhZmFiZTFjYzlhZGFlNDMxZjMzNDU2NGUxN2Y5NTQzMmUxMzE2ODY4NzE0NDMzYjU2Y2VhMzlkNjAwMzUzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODJlZTA2M2Q5NTkzZWE1Yzc0NDk0MGRhODg1YjNiZTc3ZDAxYzZlNTUwZjYyMTMxM2JlZjI1ODgxOGNlZDdmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGY1ZjQ4YWUxNTM0Y2JhYmE5YWRhMDE2MWY3OTA3YTJiZDI1NTcxZGFlZjdmYWExMjM5NTIxODA4ZGI3Nzc4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjc0NzIyNGQ4MzQwNmY4YWFhYmRjMjIyMTZkOTBhYzlkMDg1NDgxNDM0NWM5ZWE0NGJkMmZjNWExMTE0NmE1OSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L217-L218",
+          "version": "repo-lines-v1:sha256:63fec886cb225351dad9bf3dc815ea2adf54514c7bc662e5094e7570b826da95:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjlhZmFiZTFjYzlhZGFlNDMxZjMzNDU2NGUxN2Y5NTQzMmUxMzE2ODY4NzE0NDMzYjU2Y2VhMzlkNjAwMzUzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWM4ZThlNzhjZjIxMTVjNjYwMDBmYTA3MjY1ZTI5NmIzNzYyNmFmODZjMzAxNzYwYTJkODA5OGI4MWIyNWQ5OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGY1ZjQ4YWUxNTM0Y2JhYmE5YWRhMDE2MWY3OTA3YTJiZDI1NTcxZGFlZjdmYWExMjM5NTIxODA4ZGI3Nzc4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTY2ZTNmZTU1NWU3MWZlODUwNTQyYTZiZjVlZTA2YTkyNWM5NGQzMzJmZmNhYjI1MmQwMmYyZmNiOTIxYWZiNSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L58-L61",
+          "version": "repo-lines-v1:sha256:96f1c752605d84459c7255c96f7f1dfb16523ef10834528affacea7a53bcc6ec:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2UxYmNmODhmNzZhNDRjOGZmMTJlYzgzOWQyYjRlNDUxNTkyYjU4Nzk3NDlkZjNkNTc3NGEzZWM0Njk5MTdhMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmQ0ZmY5YzkwNmMyYjJhMjQyOTZmMTA1MWI4NGU0Mjg4NTVhZjEyOWZkMmQ2MmRjZDdkZDAxY2MyYjUzZmQ3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDA5MDBkNDQ3NjE5NjUzOGUxYTM2MTBlNDI2Y2RjNDY3MzdlMzJhYzEyZTEyNzVmNWFhN2NhOTM4MmJkZDBiNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjg1NTU0NzA1ZTRmYWQ3Y2JiZGY5MGY0MmI4ZGFlYzRlN2NlMzk2YjZmZmU0MTBmNWExODEwZGZkMDVmNTQ4YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d4df05d782f04dc984d2452dadb72b68",
+      "statement": "发布前先执行技能门禁再失效缓存最后置 PUBLISHED，门禁失败（409）不会改变状态；管理/注册表各写路径在变更后统一调用 invalidate_agent 立即关闭旧 wrapper 并移除缓存。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L111-L116",
+          "version": "repo-lines-v1:sha256:db01509ea4ef028643166998b9addca973d7d69a51ed6964347cc1236a570aeb:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDViMGUzY2Q1Y2ZhNTZjMGJkNWZkODJjODlkZTEwNzE2Nzc5N2Q0YjIxOTBlN2I1ZmVlMzIyOGU3ZGRiNzBjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTI5N2RhZDNkMDllZmI0YTk1NTQ4NjI5YzcxZmI0ODUzOWQ3M2FlYjNiNThiNTJkOWRiNmUxYjQ2OGFhNTkzMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGU1MDQ1N2U3Y2QzOWZlN2M1MDY2MzJjNTE5MjRhN2Y4YzU4YjJjODdmZmNiODZjYTNmYThiM2NlNzc4Y2RiNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjYxODk0ZDIwMjc4NmFlMGE5NjU3M2I4ZmFiZTMzMjllOGQzODNjN2RkYjc4ODk2Yjg0ZWYyMDdhYjg3ZDllMCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L191-L205",
+          "version": "repo-lines-v1:sha256:a1a1621a27c3728a9399ea89db1d96f6b0940b1335dfefc90561edfb53c3c7c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkNmQ2NWYyMDlhMTk5ZTM4ZGFhYmUwMjkwMTM2YTE0ODdjZTNiM2U1NjZjNjc2NmJhOGZlNWRmNWY1ZGRkNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhOGNjMjcxOGI4YzQ3ODBkODY2Yjg2YjY0MWI3ZGEwNDc3YjA4NDYwN2NlZjdiZDhlNDNmODI5NTEwNTVkOGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMyZTA2MzAyMTQ4ZWNiODU5MzU4NzEzOWZjMjZkOTM1YTc1YWM3NDkyOTJlNjIzZTg4NjVjMGY3MmJmMGM3OTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4MmE0MTA4ZDBjZjUwNjJkYjZmYjMyODI4ODBlYzc3ZGM5YzBmYjhjY2MwMmYwYzNjNmM0ZDM1ZDY0ZjEyMzEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d7af4667d81f4c03b0c0c45c2e2c196c",
+      "statement": "图实例缓存键为 (agent_id, updated_at.isoformat())：配置行更新后旧键自动未命中，重建时清理同 id 旧条目并关闭其 wrapper；ensure_default_agent 对仅有内嵌 a2a_targets 的历史默认 Agent 自动补登记注册表并回填 a2a_target_ids。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/agent_factory.py#L70-L99",
+          "version": "repo-lines-v1:sha256:f7d2be5bcb200bba2d1be67da21ffe08cea342002b1b795ef071093d5ec273b4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0YTc4MDgxMzAwNjViNzNhZThiZmJmMGM0YzNlZWFhMDdhMjM3NjhjNGYxMWNkYTM0YjJmYWMyNTliZjIyZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0OWUyZTU3YTIxNzE4MzY5M2U0NGZmYzZkNDJmYWJmMWZiYzg5MTM3MjVjMWI0NDQwMTgyMTI1NWFlMjhjMDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVjZjVmMjUzODM0ZTFmN2NjNTc3MmQ4ZWQ5Y2Q4ODJiMjYwY2JkOTkyZGFjZmQ0NGNlYWJmZjk3NWEyYjE1MTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4YWJlODA0MTFiZDhhMTY3MGZmNmZjZDBlYzUzNTRmYjkwYjc1ZDBjOWQ5NmIwMTliYjNmOTYyZTUxZjQ0YzQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L855-L873",
+          "version": "repo-lines-v1:sha256:018048b357262d6f24c39b11768336272dde67b321e0a03218c3e20bc624504d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1OGUzYmMyYzgwNTY1ODk0MjJkMmY5YjZhODIwM2RmNjRhNjJlYmNhNjk0MDRlYWIzNGM0NTBiMGI4ZGU4NzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjNDlmMmQyNDliMmY5ZmJmZDZjOWFmZWZjM2MzZDhlMjA0M2M5NDlhYzFlYmM4MzQwZDY0NzFjNGFkYjBkNjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1NzU1ZTY2ZDc0NjZmN2U2YjVhZjcyY2FlNTU4ZjcwOTE1YzgxOGJjMjEyZjc4YjVlMDc3MTk4MTMxYjE1ZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4MTBlMjQ5N2EyNDY5YzJhMzU2ZTVjN2NhYzczNTg0YmQ5NjRhOWU3ODkwOWZlNmU1NDQ2Y2FkZmI1ODE2ODgifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

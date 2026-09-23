@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b87afea2db6e3311108ac32693f37f0a3506d5b6da3a87b5d0b793568dbeab11",
+  "claims": [
+    {
+      "id": "claim_115d2d3187454a6884ac0385ee6c2b08",
+      "statement": "匿名访客与登录管理员共用一个 httpOnly JWT cookie a2a_identity：typ=visitor 时 sub 为 uuid、typ=user 时 sub 为用户名，前端 JS 无法读写，从而无法伪造他人 visitor_id 窃取会话。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/identity.py#L1-L18",
+          "version": "repo-lines-v1:sha256:3c3d0e5a502fe0e4698a4a0e701201b71fbbb93d3b31f7e50ee7115bba8e33c3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlYWRmY2JmYjQ2Y2I1ZDBkN2E4YmI5OWEzNzJjNzEzNWNhMzdhN2NmNTZlZDI2MzYzNDY2OWY3MGUzZjUyYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjY2I1ODhjZmRlNDc5NjRhYTYyMDczMjkwNTVhYWM4ODJlNjEzNjVmMDk1ZTNiNWY3Njg3OWQ5N2YyMGY2NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVkZjBlYmZkM2Q4MTljOTUzNDdkMTdkOGRlYzhjOThiODRmYjE0N2JkOGQzMDY0Njk4Y2M0MjU4N2M0NTYzNjAifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/identity.py#L86-L124",
+          "version": "repo-lines-v1:sha256:071dde36d5228dc59ed8e27efb0ed97e93761a62e5105063d9ee51adcdf1d9b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzZmZjMGI5OTYyMWM3ODNjNWI2NWI5MGRjOWJlMzhmYTM2MDhiOTkyYWZmNjAzZTRiMjgyNWQ3MTBhNDI2MDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyZjQ0NzMzNjNkYmVkOTZkZmEwMTUyNDEyM2Y5YmU1MmYzNTk3OWY2MDA2YzEzNmFkNjQzYmY1OWQzNjY1M2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzN2E2ZTFkYzU3MDJmMzJjNGI5MWJmNTMxN2ZkMWU3NWVjZjhmZTc0MTdkNzYxYTc3MmI5OTUyZDIwNGY4ZTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhOTQ4MmNkMDdlNjI0MWZlZDM3N2U3Yjk1NDIzNjM4OTM3Yzg1NzNhODU4YjBkMzcxYTI3MTliNTQyNWQ1YjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_621e56c6881941229d8def15d78acb7f",
+      "statement": "EventSourceResponse 是独立 Response，FastAPI 依赖中对注入 Response 的 set_cookie 不会生效，因此身份 cookie 由各路由显式调用 set_identity_cookie 写入最终返回的响应。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/identity.py#L15-L18",
+          "version": "repo-lines-v1:sha256:5d94bccdf6bc71401638f3f42a2e6e27049e824fcdaeafdaefa8586423f5a42b:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTRhZDlhYjY3ZTgxOTBjYTAwNjUxZjZlMDE1NzY1NmNkMjMxZmMyZmM1NmIzMTMxNGQ3OTkzNjJlMTg1MWZkZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2NjYjU4OGNmZGU0Nzk2NGFhNjIwNzMyOTA1NWFhYzg4MmU2MTM2NWYwOTVlM2I1Zjc2ODc5ZDk3ZjIwZjY2YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjUwYjQ2YjlmZGRkNjA4N2UzYzEzZTg3OTI2NzZiOTdhNjJlM2M1MzAzMDg1MGFmNzhjNGNmYTEwMjE2NDAyMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWRmMGViZmQzZDgxOWM5NTM0N2QxN2Q4ZGVjOGM5OGI4NGZiMTQ3YmQ4ZDMwNjQ2OThjYzQyNTg3YzQ1NjM2MCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L290-L294",
+          "version": "repo-lines-v1:sha256:854acc503a767fbf038dd091e658645fab42e3a5041007e3d6ff1677da20d47c:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTE2YWE4OGY3NDRhOGZkOGQ0NjJiMDdlOTEwMDU4M2UzOWU5MDE2YjIzMDM2MGVlY2NiNjc3YzYyNjUyYzFkZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzlkNTk3YWRjYzc4M2RiM2FhYjUwNGEwM2ExZTNiZmFkOGFiYTM2NjY5ZTM3ZTVjYjUyZTk5Mzk2NDA0NDljNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWFiM2E1MjQ4YzhjMDZiMzUzMDFkMTJlYTlhNzFkZjZhNWVmN2VkYWI5MmMwZjY0Y2NiMWU0ZmZmZGNmOWVjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjc5NmQ4Zjg1ZmZhNDM1YWEyNjNjMWU1NGEzOTc5MThlNjNiMTQ5YTJhMGZiMmU2MmMwNDViMzcxOGUwNGFlNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4222c8d7227548898823789320426021",
+      "statement": "登录归并用单条幂等 UPDATE 把 visitor 名下会话过户给用户名并返回 rowcount，消息本体按 thread_id 存于 checkpointer 不搬迁；退出登录签发全新访客 id 而不复用旧 id。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L1028-L1052",
+          "version": "repo-lines-v1:sha256:9a9ed426b009da0697fee9d0ad4ece796cb5f3066fd471bed454ff8097976dff:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQwMTE0ZjFkZjk3OTZiYzZmZTE3MGU1YTQzZjA4YzYzZTFhZTEwYTE4NjgwNDdjODdkMjZhMjhlYmVlY2I1YWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0ODNmOGM4YTk1YzllMDViMTA4YmQ4MjUyYmMwZTUxN2Y0YjU0Yzk3MDQ4MDJhZWVlMTY3MGY3YmQxZjc3ZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk5MzQyYTVjNTg5ZjcyNjVkMTUwZTllZjRjOTdiMjM2MmZiMTdiMWRiMTQ4YzI2MzZlZjcyNGRkMjJkMjQ3YmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdhODZiMWVkZGVjMGU5MzI2M2NmMjViNWU3M2I0NzE2NDBkYjEzYmMwMGI5Yzk3ZGQ3ZWRlNzUyMjAzNDY3ZjAifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/admin.py#L104-L127",
+          "version": "repo-lines-v1:sha256:233c83bb56d5bb2a0e961314342a69609dad8f2ed155ac403b01cf4a0f839462:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzZDdiYTJiOWQ4MDAyOGE4YTVmNjgxY2MzODQzMDdhZThlNmQ2ODFmOTc0N2FiODIzY2ZiMjU4ZGU1NWUzYWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiZjExNDdhMGY5YTliMTZlNWVjYmJhZTcxOTMwNTY5ZjBlYWY2YjAxMDVmNjZlYjQzNjI3MDk1YWQ4Y2NjNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiMTAxY2NiMjgwYzBjMjc4Yzc1YzUwNDgzMmE2MDFkMGNiYTYzYTA4YzZjOGY2OGI0OWYzMTg3NzE1MmFlYmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIyYzNjMTdkNWQ2NzkxZjdmYjZjZjVmMzhiOTNkOTYzYWQ1ZTIxODhjZDI5ODZlZTFmM2E0MTE4ZGMzYzYxY2EifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bf50838d6341413db3fd9089325dcca4",
+      "statement": "upsert 对已归属他人的 thread 返回 null 不抢归属（防分享链接收编）；批量 import 对已存在 thread_id 用 on_conflict_do_nothing 跳过，既不重复插入也不收编。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L1055-L1101",
+          "version": "repo-lines-v1:sha256:32958473de28cc43e7fdc64c5959dae9f3215820138a6f0c08f8e6d7f7ec1d72:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1NTZjMTQ3OGJhM2M4ZjRlNzBhMDBjNzY4M2E1YTU3YTI4Zjk4NmZhNDEyZTZhY2NkZWE1YjcyZWFjZWI3MTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxYjU0ZTJmY2UwN2Y5MDE4MDNhYzA2M2RkMDcwZDI0NDJhMjc1YjMyZWY2OWI1OTg1YmQ3YTc0MGRmOTZhYzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwOTFhYWI3ZWIwZTk5ZGE4NWI2ZWFkOTMzZjYxZGI1ZWYxNTQ2NjE5YTUyOWIyMTY0MzNhMTJmOTM3MDRiM2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmYTQ0ZjNiZjJmZWExM2RjNjJmOWRjOWQ4ZDViNDNiNDEzNjU5Y2FkNmNmOGRjNjkzODlmZmJhYTkwYzBiNWMifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L964-L999",
+          "version": "repo-lines-v1:sha256:343caba80e6369c73fa7efa92f1140e578c1774dd724b1d7e41357cfc0b8ea9c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5Njk1ZTFiZDNkNjMwOGEzM2JlNmI0NWYzNGU1MzNlMDE1ZjdiMTg2ZDJlMTA4ZTg3YjRmNzM0MTc5MzVhNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4ZGFiMjA0YTQxNDIzY2Q1M2FiMGZhNjVmNWQzMzMyM2UwYTUzNDJmMTU2ODdjMjI3NmJhY2IzMDY2NGFlNjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFkODZjMzJiNmRmMjBhZWNlM2NhZjgwM2Q0OTM3YmI1OTFiOWJjZGI4ZDhlNDNkYzdjYWRjY2JlZGVmMDQ1NDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2NWMyOWM1NTljMTEyMTcxMDkxZGMxOTIzNDU3NjY1ZTFlNjBiNGExMDU0ZGEyN2E3Nzg5OTY5YWVmMjkzMTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_40af19ef525c400187880076894e8d4e",
+      "statement": "未登记（get_conversation 为 None）的 thread 在读写与 _ensure_owned 中一律放行，以保证目录表后加的升级过程不打断历史会话；已登记但不属于当前身份则 404。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L950-L961",
+          "version": "repo-lines-v1:sha256:2ae651665f40ea65923e71098cffb7d93be3df51a615dbbf54447d2dd780c5b6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3MmE0NGY3ZGI0NTIzMTA0MDU5ODg1ZDU4MGZmODliNzk0OTBiYmI0ZTU1MzZkMTkxYzU0NjZjOGViZDQ4NTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzYTFhMmI2Nzc2YjdkYjkxN2M5MmQxMWM1OGQyNmJlMjM5MmJjYzcwNzcwMzg4NDU3Y2VmZWM3OTk1YjkyYzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4YWI5ODZhNGVkYzE1YTM5NDM0MmI4YTIyOGEzMjUwNWJiZmI3ZmFlZjZhNTIxM2IzOTI4MTY0MDUyMzNmNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkwNjk5MzNkMzczYzE1MDRlYmVlMTAxN2UzMzBlYzAwYWFlMzg0MDUyZTBiODU0NTY0NjM1OWMxYTc3NTEwMGUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L398-L406",
+          "version": "repo-lines-v1:sha256:bc013be87882271c70f18301d6847d2eb11d6423abd2f87ef0f0fd129ef484bd:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTVmYWEwMTc3YzlhMzBlYWM0YzgyMTMzMzNjMTAzZTlkOGVkNWI3M2Q3MzUyN2ExZDU0YjJlMTliNzczYmY3NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmE5ZjhjMmJjN2ExNDFhMDIyYWYzZmViOGFiNTAwOGVjMjU3NTdlZjI0YWNkMDQ5ZjUwODlhNzRiN2M5YWU4MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTdlOWQ2ZTM5MDYyYjlmYjQxNWJiZDcwZDJiMmYxYzFmZDRiN2VmNGIwODNkMmFmNTEzMGJkN2VmYWI5YWMwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTVmYTQzNTlkNDVlNjgzYjVlNzRlODJmZjEwOThkYzVjYzNjNjgxOWVlZDBhZDZhZjBhNDBiNDY3YWVjZjEyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5df7f1c15d0e4d5392fd4009c381bf93",
+      "statement": "删除会话依次清理目录、pending 挂起任务与 checkpointer 线程：后两步失败仅记日志且不回滚目录删除，避免产生删不掉的幽灵会话。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L251-L275",
+          "version": "repo-lines-v1:sha256:dbbec07db41553915719f76dfd953b9963ec7266912076faf52031a073e9e39e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyZDE2OWZhZTY0Mjc5Y2MxZDYyOWY0Mjg3OWNlYWFiMDA2ZTg2Y2ZkYjM3ZGJmNzJiODU3OTg5M2FiMGIwZmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiZjExNDdhMGY5YTliMTZlNWVjYmJhZTcxOTMwNTY5ZjBlYWY2YjAxMDVmNjZlYjQzNjI3MDk1YWQ4Y2NjNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUxYzIyMmU2MTdiN2ZhOGExYWU3NDg4NTFkZjc0MTUzYmQxM2Y2MDY2ZmMxYTYyNTJhZDE1ZDA2YzlkNzY5NzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a9594ea46ad14c3f912ee7d3b47489b8",
+      "statement": "conversations 目录只存归属与标题，消息本体在 checkpointer；首条消息前 24 字定标题且仅在原标题为空时写入，后续消息不覆盖。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/models.py#L226-L251",
+          "version": "repo-lines-v1:sha256:b9cecda9a5ebc7d2caca176271e3e83b1941a1b3d5371f1f48c30dd2570ff1c2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4NDg4NGUwOTg2MTAwYWJhNDA1N2Y0MjFhZmFhYWQzMmU0ZDM0ZWJlYzMyODZhODg0Y2JhNGJiYTZiY2M0NWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5OWNhODA4MzM1NWI5ZTg1MTc5ZjQyNGI2MGVkNDc2ZWQ2MGY1ODA4ODM3M2FjMWUwMzgwM2FkMWU5ZjljNWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiYjVhNzY1ZjM5ZDMyMTdkNDVjMzI1MGQwZTdmMDE0Mzg2YWZkNWE4MDNjY2U2NTg2Y2ZlYzMyODUwNjhiMjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhODJiYjQwZDhmNzFkZDBlNDBjNzRhY2FiY2ZjNTAyZDE0NjViM2U3NGFmNTI2ZmRhZjQyMDFmMWNhM2JjYzQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L977-L987",
+          "version": "repo-lines-v1:sha256:7de0b1109634d18619d8a046d92c8fd20886cd70ce22fdac134b15008eaedd33:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyZjEzMTE2MDBkY2U0NzMzNjc1NmRmNTJiNjI4NGEyNTc5MGRjYjU3OGU3Nzk1ZDc2YTM3MTIzZmM0OGE1MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjNDlmMmQyNDliMmY5ZmJmZDZjOWFmZWZjM2MzZDhlMjA0M2M5NDlhYzFlYmM4MzQwZDY0NzFjNGFkYjBkNjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYzODlkNjI0ZTNlYjcwMmU3ZTNhOTAxYWFiOWU0OThkNjg3OGQ2NjkzYzZmMmZjNDc2YjI0MmE3NTA2MzQ1MjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUxOTcxYjBkMDg3Y2ZjYzc3MGQ1YmI5NDljMzhiMjYxNTQ0ZTcyYmUwYTQwNGNjYzY1NjQxYjRjM2Y4MDA2NDkifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

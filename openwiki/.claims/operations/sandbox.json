@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:41679693a60c4d3d012f1fb31d15e98077ea82ef221abbd841e9c8c5eff37775",
+  "claims": [
+    {
+      "id": "claim_c25d23a7929d4806aa74a11590371c9f",
+      "statement": "gate 是唯一有网络的沙箱组件：POST /v1/run 校验 Bearer SANDBOX_TOKEN（失败 401）、请求体 8MB 上限（超限 413）、RunRequest 解析（400），经 asyncio.Semaphore(默认 3) 限流后经共享 volume 的 unix socket 转发 runner；runner 容器 network none 彻底无网络。",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.yml#L105-L122",
+          "version": "repo-lines-v1:sha256:e628c018a6b8d16250c3deeb5c8279f8f89de09fd16950f8c15b8a3c72f5cf45:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3MjgwMGE5NzkyNTA0ZjJhZTY1MjJlMDNhODhiZTk2MGM4OWI2OTAyYzBjOTIzN2I2YWNkNjE1M2E1NWJjYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkYWRiZjY5YWU3ZTBlZmU5MDZkZWFhNmU1NThiNWZlZDQzNjkyODdlMGZlMjBmNzQ3YTM5NjhmMDgzMGRjN2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxMjc0MTg2YzM0YTM5MDdiYTdmNTI5ZWQyMTM5MjdjN2FjYjc3YmY3OTgwNmM4MDEzZWVlZmJmN2MwMDhlNWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3YTBkMjRiYTEyYjYyZjIzZWQyMDBkZTMxNjFjMjZlYjU4NzMxZmRiOTZmNjEyY2FmNTg2Mjk0MjdjYTgwZTAifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/gate.py#L1-L23",
+          "version": "repo-lines-v1:sha256:878c9b5b43d1cd592c7f1404f915de282b29ec18d9fa101d1e9723319387cb6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2ZTkzZmYyNDU1NTBkMDAwZDY0OTZhNjQzNjhmYWUwZWU1ODY1MDhlMTE2NzU3MzcyZDE0MWU0MTc3ZTM1NjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2Mzk1YjU0YWQzNTA5MjFhYmMwM2FhY2IyMWRjYmMzNmU2ZjE3MTc5YjQ4NDVlNDAwYjhjNjAxN2NjODUzNmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMyOGI3MzU1NGZmZTE1Y2FjNzJkMWNlMTFlOGJlNTEzZTNjOTA5YzQyNTMxNWUyMWQ1NjkwNzUxZWJjMzc2ZDkifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/gate.py#L26-L70",
+          "version": "repo-lines-v1:sha256:1ee7e217cff050b0fe97af284d41d5d3df3cac17f9991e3f708cd4be2ebc7c6a:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0YjczM2I0YWI3ZjljNzhiY2NmZjI4NjY4MjdmMzY0OGMxZjQ4ZTE0M2QxN2RmMzdlZTNjNWIzMjVmMTkzNWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0ZWFiNWMzN2MwYzM3YmQzZWYyZjM3NjllNDU3N2ZlODE5MmY4M2FkYjI1NmI4YmQzMzI3NDc4NDNhMWJjZDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEyMTg2MmM5YTlmYjAyYjFiYzgxYWJlZjNmNTViZjkxNTYyNzNhNmU4NjQwYmVlNDg5ZGRjZGQ0ZmJlNTQ2MjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhMWI4NDY5Y2QyOTBiYTM1ODZlNTBjM2FiOGE3Y2EzY2FhODAzNDcwMzMwZGNlYzhmOTRmYjQ0NTFhNTJhYjEifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/protocol.py#L16-L16",
+          "version": "repo-lines-v1:sha256:666594a0adf510d9803b3702cfe9a0247960d73b9d74daccf5d3164a3ed023fb:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjY2NTk0YTBhZGY1MTBkOTgwM2IzNzAyY2ZlOWEwMjQ3OTYwZDczYjlkNzRkYWNjZjVkMzE2NGEzZWQwMjNmYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjY2NTk0YTBhZGY1MTBkOTgwM2IzNzAyY2ZlOWEwMjQ3OTYwZDczYjlkNzRkYWNjZjVkMzE2NGEzZWQwMjNmYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTgyMDE2N2M2MWYxYzVjZDNiNTQxMWJjZjg4N2M3ZmE0OTQ0ODg5ZThmNzVmMjlmOGM2OGYzZTFiZjg4ZDA1MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWI1NWEwZGM0ZWE4NDFhZjNjYjI1NzhiNDNkOGVmZjkxMTdiODVlYzRkMjU0ZWUyZDBkY2YyMjNkOGQ2YWI4NyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5e0a8db4781d4eb8b4ee977ef1845466",
+      "statement": "gate 转发超时链：unix socket 连接 5s、读响应 timeout_s+5s；连接失败 503 runner 不可达、读超时 504 runner 执行超时、OSError/ValueError 502 runner 通信失败；backend httpx 客户端超时为 timeout_s+10s，构成 timeout_s+10/+5 三层递进。",
+      "evidence": [
+        {
+          "resource": "repo://sandbox/src/sandbox/gate.py#L20-L55",
+          "version": "repo-lines-v1:sha256:a88b600c4f4755e342865c8ae5e4471d2c1903e9ed5fd59926cac8ecd67b29b7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiMzQ1OWQ3YTViZDk5Yzk0Y2FiYWI2MDBiYmNhNzFhODFkMGFlMzQ5MmJiM2UzNWZhM2ExMmIzMGYwMWJkMDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3MTg5ZmMzM2FjMGU2YzRkN2VlMTFjZjY0ZTJmMTE4ZTQwY2I0M2YzNjcyOTdlZDgyZjRhZjVmZTJkOWRkN2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmZTI1YzI5ZmE0ZjI3MzI5Yjc0YzVjZTM0ZTk0ZDNmOTA3OTljZWYyMWNjM2Q2YTRhZTU4NzlmY2VkMjg4NDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhZTRjZDljOTM0OGEwNzNmNWQ4Y2E2YTU0YzFhMmI1YWZjMzNhOGNmNzJjMmI0MWI3YzhiY2FlNzZmNDYwYzAifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/sandbox_client.py#L75-L89",
+          "version": "repo-lines-v1:sha256:ca4c4d377e3ce8dce270d8a2bac52f282b42395ed109ecc491164e395fedf1fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3NmMyOTg1M2IzMzdiNzRiMTYzYmFmM2VlZmE4NWFjMDY1NTNjNTM4OWZmZjNhYWY2NWRhYWI0OTIzY2M3MDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlOTlhZTg4YWVkN2NjODRlZTM2ZmIwNzc4ODhmMmNmZTdjZWE0MmE0ZjE5NmE4MjlmNGVhZWMxNDE2NWQ3YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwODI4ZWQ4YzQwYzk3NTIwMjI1YjNlZGVkMzY1YzczNDRkYzQzMTQxZGNmYmJkN2YwZTAxNDlkOGEwYWZiYzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJhMjE2Mzk0OTk5Y2QzZjdkMzA2OTM4MzkzN2RkZThmZjZmOWMwNzFkYmZiZmE1MDQ3NzA4ZGNjYWUyZGMxZWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8e3b924968d64eab849460a5b0dcfa8c",
+      "statement": "runner 容器级约束：network_mode none、read_only、cap_drop ALL、pids_limit 64、mem_limit 256m、tmpfs /tmp 64m、no-new-privileges；进程级 rlimit：RLIMIT_AS 256MB 与容器 mem_limit 同水位、RLIMIT_NPROC 64、RLIMIT_FSIZE 16MB、RLIMIT_CPU 与 timeout_s 对齐。",
+      "evidence": [
+        {
+          "resource": "repo://docker-compose.yml#L105-L122",
+          "version": "repo-lines-v1:sha256:e628c018a6b8d16250c3deeb5c8279f8f89de09fd16950f8c15b8a3c72f5cf45:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3MjgwMGE5NzkyNTA0ZjJhZTY1MjJlMDNhODhiZTk2MGM4OWI2OTAyYzBjOTIzN2I2YWNkNjE1M2E1NWJjYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkYWRiZjY5YWU3ZTBlZmU5MDZkZWFhNmU1NThiNWZlZDQzNjkyODdlMGZlMjBmNzQ3YTM5NjhmMDgzMGRjN2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxMjc0MTg2YzM0YTM5MDdiYTdmNTI5ZWQyMTM5MjdjN2FjYjc3YmY3OTgwNmM4MDEzZWVlZmJmN2MwMDhlNWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3YTBkMjRiYTEyYjYyZjIzZWQyMDBkZTMxNjFjMjZlYjU4NzMxZmRiOTZmNjEyY2FmNTg2Mjk0MjdjYTgwZTAifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/runner.py#L27-L45",
+          "version": "repo-lines-v1:sha256:83f06160ab14a65ef601717d08910c837373bf2502c0a5c918ba09aca2b81224:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzZTI3Nzk5MmI3NWY3NDRhODY3NDQ1MzhjYWFhMmIxMDMxZDBmOWU3NDlhNTMxZDJkOTdkNjQ2YTc3MTdmOWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwOTY2N2QwYjExYzA5ZjA4ZWJlOGEyYmNmMmVjMTExYjc3NmVhMGVkYzczM2EyYTg3NGRkNmUyNjAzMTAwZTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRkZDJhY2M1MDJlYTkxMDg5NzMyMGNkY2M2Mzk0NzA0NGY1ZDlmZjk4ODBjMTI5ZWMxN2MyMjcwZGU4ODEyYzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2NWY4MTJjMWU2OWJjNDYzYmVjOTMzNzdiYWNhZDljZmEwMjI2YzUzYTYyMDdiNDUzZmYwOTc0YzBhZWI2ODMifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/runner.py#L65-L74",
+          "version": "repo-lines-v1:sha256:53c2fd4196869d7a0bb2d8b65468275a0bb5aa8884b94652403e173c1db1cfa4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyMmUyMDZiYzA5NTJlNGFlNTFiYzUwYmJiNDBlNGE0YWE2ZDI0NWZiYWM4OWMwZjQ0MjNmMzAzYzlhOTdlM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkMDAwNzg3NWRlOGY5MmQ5MmI3ODdhMDE4YzE2YzAwMDQxOGJkNWY5NDk5MjNiOTBmNGQ2M2M3ZWMxNmQ4M2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZmZTI3YjhkMDMwMjVmZWZlYzQ4MGZmNTVjMDA0NWZkNGRiNDNhYjA5OTY2YWNmOTc2YjJmMzM2ZTk0MmJhOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyMWZkMWQ2ZWI0YTFmYjRkMWY5MDhhYTE0YjkzMDBlNDM5YTgxY2RjOGFlMDQ5YmFiZDM0MzkyZGFmMzBlN2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dfecd7d1cfeb440483d4b7c54240768a",
+      "statement": "runner 解释器白名单仅 .py/.sh/.js（python3/bash/node），路径校验拒绝空/绝对/../反斜杠，文件数 ≤100、解码后总量 ≤4MB，timeout_s clamp 到 1..120，stdout/stderr 各截断 32KB。",
+      "evidence": [
+        {
+          "resource": "repo://sandbox/src/sandbox/protocol.py#L14-L26",
+          "version": "repo-lines-v1:sha256:10f662a184aa8c385324a418d313d2ef67b09764a4c464a049ce6820121b6949:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmOWE1NGRhMjRmMzI5YTczYjEzYzVhYTkwNTBmODRmNzE4NDI4NjE3YTMwMjRjM2Q2ZTY3OGVkZGNiOTU4NjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0ODdlOTIwMGZjY2E1ZWRiNDljMzJmZjVhN2RmMzVhNjU5YTlhNTJkYTliNmUzMmI1Zjk5MzIwMWVkNWI2ZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM5ZWNjODYxMGQ5NGNhNWJmNGU5ZGUyNTZjMmEyMmJhYjI0ZDJhYWJmZjA4N2I1ZWRmOTYyM2UwMDhhMmQyN2IifQ"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/protocol.py#L67-L120",
+          "version": "repo-lines-v1:sha256:123aa89b5d67f8ef8ca8225be4757a3180a36d45c9deb3e043555c1d534f8812:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MzRlOTMzNmM3NTgxZTMzOGIxMWUxYzRmN2E1OTY3MmE4MDY3NGRjNmY3YzZjNTgzZDY4MjFlMjRkNjZlNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyMjYwNTkwNTM3ZTJkMTdiODM2MmRhMTYxMGZjMjY0Mjc0MzU2Zjk5YjA3MDkwMzAyNmE5MTY1MmFjYjdlMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyMzViNjZmMTMxNWY5ODUzZmYzNTg1ODAxYzZhMGI4MjhjYTA2N2E1Mzg3YTQyNDE5NTViMzNkY2NkNGE4ZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ca9af95548834eb599caeb2f27c0f945",
+      "statement": "子进程环境为显式白名单 CHILD_ENV（PATH/HOME/TMPDIR/LANG/PYTHONDONTWRITEBYTECODE），绝不继承容器环境；以 start_new_session 独立进程组，超时 killpg(SIGKILL) 整组且不回传半截 stdout/stderr（timeout=True、exit_code=None）。",
+      "evidence": [
+        {
+          "resource": "repo://sandbox/src/sandbox/protocol.py#L28-L36",
+          "version": "repo-lines-v1:sha256:ae4de4b80beca75eb73fb0b52b711b56a9aa4c3c222eaeb7a56ca606180a945c:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGMzNzIxOGQyMTUyMzI5YmNhOTg5NTM2MmU5MGIxZmExYTFjNzg5NmUwMDRiMjU1MzViYjJkYzk4NGJmMGU3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTIyZmFhNTM1YmQyZWEzZDUyZTc0MWVkNDU0NDM1YjdmZTQ5ZTgzNTg2ZTk0M2Q5OGQ4MmJiZmIyNGQxZjVjNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2FhNjZmNWNkZmUzMWU4ZTJkYTUwOTMzMGMxMjdiOTYwNjY1YjUyOWU4NjU0MDRhMjIxMjM4ZmQwMmRiZTc3NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTMxMDQzZjBlYjhiZGQ3NmVmZjdmMTVjMmRkMjE5OTIyZDg1YWIxNDQ0ZTUwMzEyNWM3ZGViYjRhMDdkZTVlZiJ9"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/runner.py#L1-L5",
+          "version": "repo-lines-v1:sha256:aef900a7d38cbadad93b3d6ec15f63b934c5c182e52f4183c3ba368499a784c7:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDYyZTQ3YjRjN2EyNDRjNDg2M2VmNzU5MmJhZDk3MWQ2ZDU0MTMxNzQ5YjAwNWNjM2ZhYWUxNGFiNmE3MzVkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDM0M2I4OGFjNzIxOTE4NmU4YmZiM2U1OTIxYTY2NmVlZjM2NGMzNjNhODQwNmJjOTk4MTcwYTlmYzQ4MzhlNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWIwM2JjODA4Y2M1OGU0MjUwY2NlM2U2ZTY2YjkxYzJiNWUzM2VhMjIxNWU1NjcwZjMyMzkyNGI0ZGExMDlkMyJ9"
+        },
+        {
+          "resource": "repo://sandbox/src/sandbox/runner.py#L65-L96",
+          "version": "repo-lines-v1:sha256:e4e3ddb02ac454200a7d6dc594b3f9ecf1e771b2522a206e34f5ffc65883eaba:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyMmUyMDZiYzA5NTJlNGFlNTFiYzUwYmJiNDBlNGE0YWE2ZDI0NWZiYWM4OWMwZjQ0MjNmMzAzYzlhOTdlM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxNTUwNTU0ZGFlZWY5NDJhZDM2MWRkYzAwNjNkZmFjYWMxYzEzYjA2MWQ2ZDRiYWY3NzRiY2Q0NTIzOWI5ZTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZmZTI3YjhkMDMwMjVmZWZlYzQ4MGZmNTVjMDA0NWZkNGRiNDNhYjA5OTY2YWNmOTc2YjJmMzM2ZTk0MmJhOTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhMDE4YzhhMzY1NTY5NzkyYWU2MDZjZGY3Y2QwM2Q4MzA1OTZkNzc1YjFlMjU1MWIzZmM4MmFhMjUxYjg3ODIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bb663e3473e945b6aee70b51c2f6d402",
+      "statement": "runner execute 对任何内部错误收敛进 RunResult.error 不向外抛异常（ProtocolError 保留原文案，其它异常回执行器内部错误），handle_client 读请求 300s 且异常回 RunResult 不断连，finally 恒清理工作目录。",
+      "evidence": [
+        {
+          "resource": "repo://sandbox/src/sandbox/runner.py#L48-L126",
+          "version": "repo-lines-v1:sha256:ea7508f41ff1eecf3cad8de2ae4e069b2305f54a5ff728b79622e5247d2a4717:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3ODZhZTZiNmZhMmFiMTNhMjNjZDA4NDg2OTQwMjhhMzc4MjMwNGVlNzc4OGU1OTg5OTE1YjBiYTNhNmI2YjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwNjQ3MDRiM2RjNGVjZDc1YjM4ODRjMjM0ODM5MjNlOWY5MjY0YWI3YTc3N2Q4MzM2YzBlODA0NDUxN2YxZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZmMDI0ZGYzNDYxM2UxMmNiNmE0MTZhMGJkMTE1MjI3YmRkZDIzZTExYjA1ZWFkZGY1ZjRmOGViNzllODNlNDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmYWNlNjk0YTE4NWE3ZGZhYmZiYzQxZTQ0MGRmYzg0ODRhZjJmOThmMjY2YmRkZmNjZDJmNTE3YTQwNTg0OWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_29f2320014f94b51b0e555f23a60c8bc",
+      "statement": "客户端三类错误映射：SandboxTimeout 对应 gate 504；SandboxRejected 对应 401 鉴权失败与其它非 200；SandboxUnavailable 对应 SANDBOX_URL 为空（功能关闭）与 httpx 连接/超时异常；SANDBOX_URL 为空时 make_script_exec_tools 构图直接返回 []，run_skill_script 工具整体不挂载。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/sandbox_client.py#L3-L39",
+          "version": "repo-lines-v1:sha256:e8dd46d69ac90a53a63414ad2443f3326984bdebb5853721d744b12a56b2059c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVjZjdjMmZlOTZkZDk1YWI3ODYyMGU4ZjE0MDUyY2Q2YzNjM2QwYjRkNzczY2YwMDgyNGYwNTc4NzlkM2ZlZTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjYzA3MzY4ZWQ1YzRhNDg4NzM2YWJiNGE2NjFiZDY1OTY1NDc5ODg0NTNmN2M5ZTI3NjIwMWFhMWY5Y2JhZjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjNjE5NmYxNGQzODlkM2ZkMWM2M2E3ZDY0OTZkZTBlYTY5NTQyOTg1YTA0OTIxM2NlZWZjNWU4ODg2ZTZiNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlMGRmZGM4ZDljNWRlMjk5NGU3NTQwMzViOTBmNjYzYTQ1MDE4OTdhYmRkY2ZiNmJmZjFjMjc5ZWNiOGZhYTUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/sandbox_client.py#L64-L89",
+          "version": "repo-lines-v1:sha256:c9e502731c708e9021806be34dd693d3ff89421436c1e5b1a0340bf5fccc5ce1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0ODZjOTk4MGQ0ZWUyZDhjY2FlOGRhOTRjODYzNzY4OGVjZTg0ZDA5MzllMzg0ZGM1ODNlYWY5MWM4MDk5YzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlOTlhZTg4YWVkN2NjODRlZTM2ZmIwNzc4ODhmMmNmZTdjZWE0MmE0ZjE5NmE4MjlmNGVhZWMxNDE2NWQ3YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4MDk2ZjM3NjA5ZjEwMTRhNGM1MWU2OTE1YmZmZGI4NmE3YWNlNzJkZjE0NDMyYThmMGYzMjJjN2MxNmFjNDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJhMjE2Mzk0OTk5Y2QzZjdkMzA2OTM4MzkzN2RkZThmZjZmOWMwNzFkYmZiZmE1MDQ3NzA4ZGNjYWUyZGMxZWUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L522-L535",
+          "version": "repo-lines-v1:sha256:6285f28ea941e33111fb0d3f262f9fd90fd323db38934c244e3c2510221ce37b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0ZjgwNDExNjZmZGZhZmE5NzgxZTYzZmNkNmU2ZGRiODUyNDI1YTA5Y2E0ZTEyMGFmNTg5Mjg0YmE1OGEwZmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzOWJiYWM4MGI3YzZkZjVhNmQyNjdkZTllY2M2ZTM4ZjAxZTY3ZDU0NzZkM2ZjMjAzMDVkNjJkNTcxZjk5MWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyNmM2M2Y5ZTNkM2FjYzk1M2MwN2MxMjFkNzM3MTgzNzY5YjNlYTBiY2VmNzVhZDcyOTY1NzE4MjFmYTZiOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc4YjU2MjBjYTBjZTNhMGM3ZjBhN2MzMWM4MzU1ZDgzZDRhYzIwMjc3ZmQ0MjYzYzViY2FiNWI2ZTU2OWQwNjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ba5afc6f8a3b4d4db964d52378cc465d",
+      "statement": "run_skill_script 门禁在构图时闭包判定（运行时零 DB）：沙箱未配置返回 []、仅 allow_scripts 快照参与、描述静态列出脚本清单；执行中 SandboxError 收敛为工具文本输出，绝不打断对话；调用经模块属性 sandbox_client.run_script 以便测试 monkeypatch。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/tools.py#L522-L603",
+          "version": "repo-lines-v1:sha256:0efb3bf55233f783f28b2f1f89ae7ff2d6265f00a4f24a49e4e822a13dcc1974:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0ZjgwNDExNjZmZGZhZmE5NzgxZTYzZmNkNmU2ZGRiODUyNDI1YTA5Y2E0ZTEyMGFmNTg5Mjg0YmE1OGEwZmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyOWQ0NTI5OThhZWE2YTYyY2MxMTA4ODgyNzk3Y2VmNmE1YTFiN2NlYTAzNjZlZWVmNTkxN2EzZDA3YTJjOWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyNmM2M2Y5ZTNkM2FjYzk1M2MwN2MxMjFkNzM3MTgzNzY5YjNlYTBiY2VmNzVhZDcyOTY1NzE4MjFmYTZiOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

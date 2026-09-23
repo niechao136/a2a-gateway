@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c52c388600493f6e64dba65ba06a76d5b733371827ea69511e57f271e4dd51c4",
+  "claims": [
+    {
+      "id": "claim_aaf0520ddbf84ccbac8514e3c3a71e84",
+      "statement": "路由注册顺序约束：带字面量的路径 identity/conversations 必须注册在 /api/chat/{slug} 之前，且 /api/chat/retry 必须先于 /api/chat/{slug} 注册，否则 \"retry\" 会被当作 slug 解析。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L14-L15",
+          "version": "repo-lines-v1:sha256:4a7d4d3fd1b908f3a3dc1bccae70cbcb8025df51bd708c17a171806d284141e2:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzgwYTQ3Y2QzNmY1Mzk1ZGI4YWQ4ODRlYTYwOTZhYjMwMmMzODUzYjZmZmVkNGUyNmU3NmZiMzIxYjFkZGNiMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGE5YzRmZDM0ZTUyNWU2YzA5M2FmYTZhYzA0YjZiNzNmYWU2ZTI3MzhjNTNhNTAyZDE2ZmE4OTc3NzY5ODgwNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2ZiODYwZGZhNzM0YTZhNDJmNGJiNzExOGE3NzQ4ZDc0M2VkZmRjMDJmOGJjZmUyMTRkYmVhMTMyYWM3OGY1MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzBiZTczMzk5MjE0ZGFmOGExZDM5MGEwZTQ4MTdlNzI5NjkzODBlNzFhZjlhNjUyZWVmZDQ0NDJhNDQyMjQ2OSJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L314-L314",
+          "version": "repo-lines-v1:sha256:fc038f572d78b16ba368b095cafd79172a4813399abebbf520d1f562798e2ce8:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmMwMzhmNTcyZDc4YjE2YmEzNjhiMDk1Y2FmZDc5MTcyYTQ4MTMzOTlhYmViYmY1MjBkMWY1NjI3OThlMmNlOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmMwMzhmNTcyZDc4YjE2YmEzNjhiMDk1Y2FmZDc5MTcyYTQ4MTMzOTlhYmViYmY1MjBkMWY1NjI3OThlMmNlOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjc5NmQ4Zjg1ZmZhNDM1YWEyNjNjMWU1NGEzOTc5MThlNjNiMTQ5YTJhMGZiMmU2MmMwNDViMzcxOGUwNGFlNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzA5OWE0NGY5OGUwYTlkODFiNmQyNDg0NThmOWYyM2I4NDkzMjEzMTc1MWYwMzcwMTc0NzYxNTY4MjQ2MDk4NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ef2cd563762441bba92fbca48da9ae85",
+      "statement": "slug 解析规则：空串、\"/\"、\"default\" 统一归一为库内默认 Agent 的 \"/\"；get_agent_by_slug 未找到或 status 非 PUBLISHED 时返回 HTTP 404 \"对话 Agent 不存在或未发布\"。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L58-L71",
+          "version": "repo-lines-v1:sha256:c7d5507878a62803cca2a2c303a2b2fadf24ff832bd96a40dd2ad484bc850b44:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ZDExMGYxMmM5ZDZhNTdhMzZiMzY1M2MwZTBkNmM5Zjc2ZDZmNjRjMWU3YmExNmUwOThlNWViNzNkZWE5NzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0OWMxNDQ1NWU1Y2JiYzcwZjFmNjYyYjdjN2I1OTFhNWFhNDhiMGE4MWRlMjFlNTdhODExMjMzZmRmOTNmZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ0ZjE5YTUxNmU5MzA5NGJkNjMzNzhjYTc2ZWY1OTk2Mzg5YzgzN2U3YmY5ZWQ5NjYwNmNiYTA0OTk0NGY5NzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2YzM2YmFjOTlmMzg0NmVlZjI5MTljNDE4Yzk4YzA5Y2E4OWJmZDA1NDJlOTdjNzY4ZTdmZDc2OTY3ZWY5OGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a5193a083214c5ab6337965ed4ad4a1",
+      "statement": "SSE 事件契约固定六种：token（仅 langgraph_node==\"agent\" 的 on_chat_model_stream，过滤 pre_model_hook 摘要调用）、tool_start、tool_end、interrupt（流结束后复查 pending_store 命中才发）、done（正常轮末恒发）、error（终态，不再发 done；detail 恒为友好文案）。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L74-L116",
+          "version": "repo-lines-v1:sha256:83a95dd750f1522783e287e839f5b553df40106a5e2e7329a8ec183cb29b44ad:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNlYTI1MTdlZGI2YjdkMGM0OWIyYmVhZmZhNjMwM2Q5NTAwNTY5MmQ2NjRmMDRhYTc4NmViNDEyNGM3MmI2MzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlMjIxNGJlMGQ5ZjE2M2RjOTIwMmY5ODA5OGFmNjRlOGNlMjk0YTRkNjI4M2QxMDE4NDNiOGU0YTRhMWQ3MTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM5OTcwZGU0ZjdkY2IyM2RiZjY3ZDA5NThkM2Y5NzA2ZGVkYTMxODY3MjBlMWMwNmJmMDE2OGQyODZhYTAzMWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkODVhMmIwMjQ5MTMyOWMyM2QwYWVjOTllNWMzMGM0MWQ1ZTlmN2IzZTJiOWU4MDk3ZjRjZWJjZGY5YmZhODgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_56029daef4d54ff6b75e9db0a6aa44d0",
+      "statement": "time-travel 重试机制：倒序扫描 aget_state_history，选中「最新一个以 HumanMessage 结尾且 snapshot.next 非空」的 checkpoint 作 target，取其 checkpoint_id 构造 retry_config 并以 graph_input=None 回放，其后的旧回复随之分叉丢弃。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L139-L172",
+          "version": "repo-lines-v1:sha256:7143a8d3e900ea2210e26dd5d24d09c1d83d4dc9ee4d95bcd3bea21490cdc2f3:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5NjJhMDEyN2RhYmFlOGI3YzQ5N2IzYTk2ODYzYzVkYjdlNjc4NWQzODNiM2M3YzRmOWMwNmVhNDI0ZGFjY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5NWI4YTNlMmM1NWI0OWFiMjdiODE1Zjk2NTUwMjU1OTQ4NmZlMGY5NWZjYzhmOTVkMmQ2NWZmM2VkMTFlNGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM5NDQwMWJlMmE3YTcyODNiMDhkYTIyNWVlYzA4YTliYzQ4NThmOTg4NmFlY2QwYTA2YjE1NWIwZTMxOGQ4ZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L78-L84",
+          "version": "repo-lines-v1:sha256:3c2fceb248df8c038c0f596fe2382e7be7a7c2416be37803b4e46354726e0793:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDY4ZjRmZTUyMDQyN2RhMjUzNWYzNzdjZjUyNTY5MDljZjI2ODIxM2NjZjdjMmM1MDE2MWIyNWM5YmQ4ODQ1YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWY4NzNlOGVkMDU3ZGJmYzlkYmRlMDc1YjVlNDcyZTk1YTcyMzNmYmM4MGJjNjg0Mjc5MmEyZDIxYmJmY2ZmYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODBhZjNmOTE0M2IyN2RhMGE5OTczN2IwYjI5YzY2MGE5NGZhOWI0M2Y1ZjcyYWVkYTk2N2Q3ZWIxNTI1NjYyZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWY4MjNkMWUyMTgyZjRjM2ZiOTVlOTM3Y2NlM2Y4MDc3ZTMzYTc4NzY5Y2Q1ZjhkODc2ZmFlNGFmZDdjNTUwYyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_13f78aa117bb4b438e17333393265f79",
+      "statement": "归属校验 _ensure_owned：会话存在且 identity.owns(conv) 为假时返回 HTTP 404 \"会话不存在\"（不区分他人会话）；未登记会话放行以兼容回填前的历史数据；retry 与 history 路由必经此校验。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L398-L406",
+          "version": "repo-lines-v1:sha256:bc013be87882271c70f18301d6847d2eb11d6423abd2f87ef0f0fd129ef484bd:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTVmYWEwMTc3YzlhMzBlYWM0YzgyMTMzMzNjMTAzZTlkOGVkNWI3M2Q3MzUyN2ExZDU0YjJlMTliNzczYmY3NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmE5ZjhjMmJjN2ExNDFhMDIyYWYzZmViOGFiNTAwOGVjMjU3NTdlZjI0YWNkMDQ5ZjUwODlhNzRiN2M5YWU4MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTdlOWQ2ZTM5MDYyYjlmYjQxNWJiZDcwZDJiMmYxYzFmZDRiN2VmNGIwODNkMmFmNTEzMGJkN2VmYWI5YWMwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTVmYTQzNTlkNDVlNjgzYjVlNzRlODJmZjEwOThkYzVjYzNjNjgxOWVlZDBhZDZhZjBhNDBiNDY3YWVjZjEyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d52bcc80b2134fa49a9d6c870f9b84c4",
+      "statement": "发消息时 _register 登记会话目录（message 截取前 24 字作标题）：归属不成立时静默跳过不阻断对话，异常仅 logger.exception 不回滚请求；delete_conversation 后顺带清 pending 与 adelete_thread，两者失败不回滚目录删除。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L264-L274",
+          "version": "repo-lines-v1:sha256:e6a0589b0ccce42a022b8e08bba4d6d4817e6726a9c5095ed30f725296bfda31:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkOTc0NWM0ODhiZTRjZTAwYWI1ZjdiY2MxNWRkMDhjMzk0MzZjNzJjNDcyOWNiOTJlYmM1MWZlMWNiMGIzZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5MjZlNjk2OTIyZGNjOTc4ODA2NzZkZTNlY2ExNGU0NTZmY2U4ZDg0NmJlYmJlOTY0NjQzYmNhYjhkM2NiMDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlYWZkYmY2ZDUyODhhZDU5ODBjYTlkOTNiMTc4ZmIxOGFmMWQ1NTllYmMwYWFiZTNkMWNmNGQyZmE2YTE2MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU1OWYwYWU5YzVjYWI5NGEyNzRlMjRkMDA4ZDE0MGI1ODkyNzY3MmI2MjgxZjA1N2U0NmM4OTAxMDg3ZjRlZDcifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L379-L395",
+          "version": "repo-lines-v1:sha256:e5a9343f463ec6db8f24f3c42a39a0eb2e9836fbe533543dc508a36f14c7c62f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4NzliYjI1N2QwY2M2YWI4ZWVmMzcwOTFkZjZjZDE2NjViNGY0YmE5MDUwNjQ1Y2ViYjdiZTE5MmU2ZTA0MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmYzczZjUyOTYwZTYyMDA3ZDFiOWQ5NzMwNGI3OGI5YTBlMjEwNDc5YzQ1ZDcxNGRhZDhmZTY5ZGYyYmU2NGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzYTYwNTVhYzcyZGZkOTVjZDNiNGNmOTljMmI2MTNjNzJkZmQ4YzEwOGIxZDI1NDNhYzc5MTMxN2U3MDAzMzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzZTg2MjM0MDdmZjhhOTFkZDMyMDM4ZmZiMzFhOTRjNzNiMWJlYzQ2NWRjNjNjZTc0N2IwY2RmNmMyYWM1NzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cfb0a582b2d44ba0af6b8dad262809db",
+      "statement": "错误与告警路径：构图失败发 error 并 notify_alert(\"Agent 加载失败\")，图执行异常发 error 并 notify_alert(\"对话流式失败\")，轮末 pending 查询失败降级为无 interrupt 照常发 done，历史读取失败返回 HTTP 500。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L105-L116",
+          "version": "repo-lines-v1:sha256:d60b76cc05081fecb56c9a22f7d4cd490355c1d850efe15489e8570302710f71:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhOWFiODBlODQ3ZjZkYWZmZDA3ZTIyZTRmYjA4OTc3ZWQ3MmM2MDU4ZjA5MDQwYTgzY2QwYzQ3MjMyMjFmMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlMjIxNGJlMGQ5ZjE2M2RjOTIwMmY5ODA5OGFmNjRlOGNlMjk0YTRkNjI4M2QxMDE4NDNiOGU0YTRhMWQ3MTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3ZTEyMjRjMDJjZTdmMzZiOWY3MTE4NzcwYTQyMDczOTViMmRkMTg1NjM5MTVhMTdkYWZkODUxMWY0NWFiZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkODVhMmIwMjQ5MTMyOWMyM2QwYWVjOTllNWMzMGM0MWQ1ZTlmN2IzZTJiOWU4MDk3ZjRjZWJjZGY5YmZhODgifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L125-L131",
+          "version": "repo-lines-v1:sha256:ae9f2cccab22c5decd9ad150f5b45f0471997f9293b1b152654e5f3a3fec4174:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM2YTQ3OGNiMzZlNzJmYWNkYjdlYmI2N2RmN2FjZmMzYmZiN2RjZmVjMTQ5Yjk4OWU2MmZhMGM2OTQ1NzExZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmQ4ZWM0ZTg0Mjg5NWFiZmYxMjRhOGRjODk3NTQ1N2M1MmM4MGYzYWNmMGQ4ZmU3ODhkYWQwODNhNmRiMDZjOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTQyYzAzNmViNTU4NjJjMDlkNGUyOWIxODY4YzUwMWM4MGU1YTA4MmVjN2UxZDA4ZWFhOTMwMzljN2RjY2VlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWRkMmVlZjUwOTY3MjkwMzlkYTIzNDhmMzJjYjZhNDMyYTUxMDRjY2Y4NzY5MGM0ZDg2OThlY2Q2YTI5M2QxMiJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L418-L422",
+          "version": "repo-lines-v1:sha256:ac7302678343589d6cd082664a87bb67d8c2f7eafeac296b029823279f7ae2bb:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM2YTQ3OGNiMzZlNzJmYWNkYjdlYmI2N2RmN2FjZmMzYmZiN2RjZmVjMTQ5Yjk4OWU2MmZhMGM2OTQ1NzExZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTQ1MTZkNDIxODQzZTM2YmI4YTBkZmNiMjQ3MGVkNGZlMjNkMWEwYTRiNWZlMDQyY2ZiZGEzNjI1MThjNDZjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjM2YzM1NDNmMTAzMDdlOTQ2N2Y3NjM5ZTgxNTA2YjZmMDNmM2FiMzQ2Y2Q3NWM5Yjc4YTY4MmI1YTcxNTBlMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWI1OWVjOTM3ZTczYzUyZDBlYTFjNjUwY2FjN2Q4NjQ4YmFlOWU1YjE1ZWFlODI0ZjU2NjcwMTE1NWFhMWI2NiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_35b147ca1f484490b9a059bac0d34bbe",
+      "statement": "历史读取 _get_history 从 checkpointer 的 channel_values.messages 映射：human→role=user、tool→role=tool 带 toolName/toolOutput（刷新后还原工具卡片不折叠成助手文本）、ai/system 仅有文本内容时→role=assistant。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/chat.py#L409-L454",
+          "version": "repo-lines-v1:sha256:ea965d83445910505e2288dc4bd4a0e663107d185550350796d17790f132ee74:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlNzBlZjgxMWYyOTI5YmVmY2UzZTk4YmNkZDQzYzc3MjNkMmVjMWFlNjMxN2VjYjc0YTFjZWMzMzM3OTE0YzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2OTU3YWRkNDQ2M2M0YWY2NzhlM2MxYjk5NmNiMDQ5OTRmOTJhNGQyOTJkNmYwNmYyYWJmOWUyYTI4NjY1MmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI2YWQyMzM1ZDM5NGEwMTE2NjAyYjcyMGNiNzJjNDdmN2NiNDk5YTM3MzM0MzMzMmEwNGU4OTRjMDE3MjkxMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}

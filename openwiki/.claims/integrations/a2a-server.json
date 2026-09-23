@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:5be52ba32fa85e080123512bb0662ba36127baddd8c282f4f646a230985412b1",
+  "claims": [
+    {
+      "id": "claim_da132570b931423db3eaf8c2066a6f1b",
+      "statement": "JSON-RPC 方法经 METHOD_ALIASES 同时接受 1.0 与 0.3 别名：SendMessage/message/send、SendStreamingMessage/message/stream、GetTask/tasks/get、CancelTask/tasks/cancel；别名未命中返回 MethodNotFound。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L278-L295",
+          "version": "repo-lines-v1:sha256:1c9de190376dc92611d0034300049444b05cc59fac71ca1aa6ae790aa04fbc66:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlMDM5NmE5MzBhOTM0MzQ0YTkwZjM3OTU0MmYyNGIwMzJmMjNjZmNmYzc3MWY0NjUyZTZlZmYwMGUwOTk0NDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzOWE0ZjNiMTQ0MGRiNTZmYWUwZDFmNTIzY2QxMzY5Y2YxNjJlZjcyYzlhNzkwZjg2Njk4YzdmZmZjYTRiYTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1ZDc2YjgwY2JmNDZmNjE1ODgzOWM2ZjM1MDgwNmQ2MWJlNjkxMTg5ZGE3MjExNTQ0ZWFjZGQ0NmJkMGE2MzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlY2RmOTg5ZDJlYzFlZTFlOTE5MmIyYWM3NWQzNmRkMGExZTAyYmM0YmE3ZGFiNjIxOTQzY2NlYjQyNzQ4Y2EifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L82-L93",
+          "version": "repo-lines-v1:sha256:69b2b84c4ac5534e8ef409e744fb5c3ccb581d68611d1d636df12121061d6540:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNWVmODJiODQ3NTllMTllMzU0MTVjMTQ2MWRiZjY3YmE0MWRlYmY2NTY2MjMxMTVhMTVjMTQ4MTFiMzNjNTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhYmY3N2RlNWY3MjFmZTEwNjdkNjk0NzE1ZDQ2ZjQ2YmRlZThjYjQ2M2M1ZWJiOWE3NzRkYTVkOWEwZDNmZDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY5ODdhYWFkNWRiMTZhNTYwN2I2MTRmNzEzMjI1MTk1MWVkODkzMDk3YzlkMDc1YjcxZjYwMGM5MGJmZjViNjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlYWIyNzk1ZThhNjcwMjA1OGU3Njc0M2FkMmIyOWE2MThlZjM2ZjczN2UwYTU4OWExZjY5YjE5OTk5MjlhYTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b9abe675a22e4163af47beff1ee9421c",
+      "statement": "网关不持久化 A2A 任务：GetTask/CancelTask 参数仍经 ParseDict 校验但恒返回 TaskNotFoundError，其余非消息方法返回 MethodNotFound。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L286-L295",
+          "version": "repo-lines-v1:sha256:a62f602bcadb9648eb527a06812db3973443dd5ddd41efdf4bebb67492f08b20:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxNjk4MjhlYjJiYWJkMTRkOWMzMzZlMTQ4NTA3OWI2MDg2ZDZlNGRlZGNkMDE5MzlhMGIyZWNlOTAxNDJiMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzOWE0ZjNiMTQ0MGRiNTZmYWUwZDFmNTIzY2QxMzY5Y2YxNjJlZjcyYzlhNzkwZjg2Njk4YzdmZmZjYTRiYTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc1NGExNmYzZDFmYjQ4MjJjMTI1NTU1ZDIxMjFkNTllNzRmMGJiYjE0Mzc5ZTBmYjk4NTUzNjRkMDUxNTdkOGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlY2RmOTg5ZDJlYzFlZTFlOTE5MmIyYWM3NWQzNmRkMGExZTAyYmM0YmE3ZGFiNjIxOTQzY2NlYjQyNzQ4Y2EifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_705019223180437c95bd06e3d364bace",
+      "statement": "新任务生成规则为 task_id = context_id = 请求 context_id 或 uuid4().hex；带 task_id 的恢复请求沿用该 id 并以它查询挂起表（主键在链路 A/B 同值可命中），挂起缺失或 agent_id 不匹配则 TaskNotFound。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L1-L6",
+          "version": "repo-lines-v1:sha256:840fc930479198742309c63dbc7c55a8559090c543a8eeff24211d4561a087f9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWIxODJmZjllYzExODZkMTZhZWJlYmQ2MTRlMjE1NzYyNmNiMDAwNzg3MGQwYmIzODQ4YTc5YjA5Mjc3YmZiZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWEyZmUzYjk0YjRhNzJkNzc3NDQyOTQyNTk5YWZkODdjOTQ2OTY4MWY4NzIyYTczNWRkNzA1MDMyYTJjYTFmYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWRmMGViZmQzZDgxOWM5NTM0N2QxN2Q4ZGVjOGM5OGI4NGZiMTQ3YmQ4ZDMwNjQ2OThjYzQyNTg3YzQ1NjM2MCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L320-L337",
+          "version": "repo-lines-v1:sha256:9fe56fca55e2bead8f594eb36664a95fdab0237f5daf4aabaa88d46c659f7825:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxYzY3NmE1ZWI0NjQyMGY5MzU2ZWYyMzNkZDU1YjdjMDdiNmRlMDg2YWZmODAzMzM0MmM5NWI2NGJmZDJkZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjZDU2NGE2YzgwZmFhZGRiYTUzNTkzMGI5ZjhmYWI2NjMxMDFlYzFhZjViNGEzNTQ3YWE2MWMzOWY4MWYxNWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlY2Q4MTIzMGIwMGY1Y2Y2MmY4NTgzNTQ1N2I1ZTY1NjYyMTQxZmE4ZjZkODM3MjQ4MDNlMjgxZjcxOTM3N2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxYzExNDZiMDAxOTQ3Njk2MDM3ZGEyZjhmM2ZjOGI3ZmZlYmI0ZmMwOGI0OGNjMWMzNjViMzc1ZTBkZjVjZWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4e536b9628fb4bf39c8ffbf9862750e2",
+      "statement": "POST /a2a 需 X-Api-Key 或 Authorization: Bearer，且密钥必须存在、enabled、agent_id 等于被调用 Agent，否则 401；GET Agent Card 端点公开不鉴权，仅 status=PUBLISHED 的 Agent 可解析否则 404。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L111-L145",
+          "version": "repo-lines-v1:sha256:8ad94ef7b479bd26a0e23c38cd534a66a722417f2c6aff402b90fe1ad3f58aa9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiZTUyMDQxMTdlZWM0NTk1YjM0ODQzOWEyMTU3ODM1M2QxNTVhMDMwNjllOTE0MDRlYjUzMTA0OTJkMGYxMTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0OWMxNDQ1NWU1Y2JiYzcwZjFmNjYyYjdjN2I1OTFhNWFhNDhiMGE4MWRlMjFlNTdhODExMjMzZmRmOTNmZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlNzNmYzE3MmUwODI5YWM2MmVkNzA2ZjE3MDQxZDY1YjlhOTgzMmZjZTM2NTIwMTQzYjIxZGU0MTE3NjUwNjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L267-L269",
+          "version": "repo-lines-v1:sha256:4da9dbb5e8435ceca756964c2765d24d196fd8f3259e17215b5bca4646ac9025:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjU0YzYzZGJjNmI1ZWViOGZkYmI4MWIzZDVhYzA4YTY1OTQ3YzZiODQ0NWVkMmIzMmZhOWJiODdjN2JjMTU1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTAxYTg4ZTcxZDA4YzFhZWJmOTEyMGVmMjdjNWVkYTkxMmI0NjIxOTkwZDcwZGZlMjc1OTExMmU1OTJjZmJkNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmZmMmY2NjVkZTBiN2Y1M2M4MzdmZjE5YmJmYzAwOWRhZDFjYTAwY2RmMjQ0MDhmYzg0ZDE0YTFiZTJiNzllYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjY2NjI0ODVmOTM0MTQ5NWI1MTk0ODU2NGRkNzc3NGZiZWU3NjY0M2VhZDhmMmQ4ZDc2N2I3M2I1ZjJlNTg3OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_90621863855b49c7bdedbc68fa4e4c80",
+      "statement": "Agent Card 回连地址由 public_base_url 从 X-Forwarded-Proto/Host/Port 与 Host 头入口自适应推导（多级代理取首个值，直连保留端口）；nginx 对 /a2a 与 /a2a/ 均转发后端并关闭 SSE 缓冲，map 保证上游声明过 X-Forwarded-* 则透传。",
+      "evidence": [
+        {
+          "resource": "repo://nginx/default.conf#L17-L44",
+          "version": "repo-lines-v1:sha256:bc780f9d56992e4b9bb7390a54be84ff33426e886dde6596325d84c872c464bf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2NGJlMjNhZGRkZTUxYWRmMzFlMGZlNTViMDBmMGE5NWM1YzJmNGQxYmRhYmI1Y2E5YWI1M2E4NWRkYThhY2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjMDI0ODY4MGRjY2ZiNTQzM2NhOGE3ODg2OWMzMTU3Nzk4NjhjYmUxMDlkNzFiZTkwZjZkNzA2OGNmZTA0OGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5MDUxMzcwOTQ1MzA5MGVjMjgyNWE1N2JhOGVmN2EwNTNlMWE3MzQxM2U2NzAwM2NiMjQxMzVjMjdlZDdmZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhYjM2M2ViOTg4ODA4ZDAyMTcxMDYwODNjZjNkZDM0Zjk1NmQyNmNhM2Y1ZGY4MGVjNDcwNTdhNDllZTc3OTQifQ"
+        },
+        {
+          "resource": "repo://nginx/default.conf#L63-L85",
+          "version": "repo-lines-v1:sha256:afbc46ec3935db7caf6109ffeab197b7a6f7850b72964d24a3bb63936bd30508:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI2Yzg2NGFlNDlmMzkyNmU3ZjI3NjkyNGRlODk2ZGIxZWY0NjdkYWU5YzAyM2Y0NmQ5MTAzYzEyOWQ1ZmRkZGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0MTlhNmRjYzA0ZTIxM2EzYzdhNzdhNDU2YjAxZTc2ZDFlZjc4Y2QwMGJiZWMxZDhmODE0NThmZTkzZWRjNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NjU1YjE5MThiNmQyMTBiYTViMjA4ZjViM2IwYzhjMzJmYWUwMmNjODc3NzgxY2FiYTYyYjcxYjc0YmUyZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2N2VhYjBkOTg0YWE5MjI1ZjllYTU1Y2JmMmVkMmFiZDgwY2ZhMTJjMThlYWM1NzhjMmNkOTc3ZDU3ZjFiYTgifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/public_url.py#L29-L47",
+          "version": "repo-lines-v1:sha256:3b0f62d7bf1c3cde0d469ff838ba660ef592086a52a411762a881496e912dd6d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzMDViNzVjNTVhM2UwZGRjNWQ4NzNlODg0MGZkZWQxODM5YjE2M2IzM2VjMjNjMTdhMjI0OTY4MWI4YjE5MGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY3MWUzMDEwNDQ1NzNhNzMyNmJhMGYxNGU1ZWM1MGYyNTQ3ZGE2ZDJiNmJhZTEyNjA4MmEyN2RkMjI5NGVmM2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NjI2YmJjNDkwMTlmMThmNDRkOGJjNjgwODhiNzY5MWVlZWQwMzIxZTVhNjg3ODdhMjAxNjQ1OTQ1M2M4MWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b19bf9e4e70d4cac8a004ed997805cf0",
+      "statement": "流式帧协议：首帧为 Task(WORKING) 快照（裸 message 帧会被标准客户端视为最终回复而关流），增量文本走 status_update(WORKING+message)，轮末复查挂起表后发 INPUT_REQUIRED（含追问）或 COMPLETED；挂起表查询异常降级为 COMPLETED。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L423-L494",
+          "version": "repo-lines-v1:sha256:62dcfef6a26c91ee7db4d30b320f90155c02409c300e203f47fed0dcb6809d63:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzOGMxZjc0NGRmMDA1MDk2ZmI4N2NkMmFjZGFiZmVhZjdkMzA1Zjk3YzcyNjhiZDNhMGNjMzY3ZGRhOGQxZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyNTFiZmFiY2ZiNmQ4OWZkOWY0ZTNiN2JjNGExNzRmZDkwYzk5ODE4NmU0ZmRlMmM4ZmEzNGU2ZDVjMjkzYWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5MzdmYjA3OGMyODFhN2I5NDNhZTNhNzE2YmNjNjNjYjRlZWQ2ZGNiY2E3NTZkNTc2ODNiMWNlMjA4ODUzNjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZTQ3MjhkNmY0NmI2MWRlZDdkYjQ3ZmVlOWNkYTAxMzJiZjlkMDIzNDE2YWQ0OGNhYWU2YzRlOTA1ZTFhMTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_434e366ae65445f3b2b25b741c143392",
+      "statement": "恢复分支按 pending.target_url 匹配 Agent 当前 wrapper，失败即删挂起并报配置变化；转发成功后 _settle_pending 二次中断则 upsert 刷新、完成则 delete，再经 graph.aupdate_state(as_node=agent) 把恢复轮 Human/AI 消息回写 LangGraph 线程，回写失败仅记日志不影响主流程。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L500-L541",
+          "version": "repo-lines-v1:sha256:29505719af3cac6c018f2441c1d8f5171c581eb73a16b9ee130c6d827ec3a015:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZTRiYTQ4MDcxODJjNjI2NWRjMGRmZmZkNzU5MmU5YmY5YzYwNDM0ZmU1MjJkMWFlMmI4ODBlMjJkYmUzOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5NzdmOWY2YjI2ZTYzNGI1OTE1MGM3Y2I0MzJlZTc2ZjAxYzlkZDU4YThlYzQ1ZmE5YTFmZjE4YmU2MDlhYmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNlNjRjMzZjMjE0ZWMwMWYyYWNlYmQ4ZDgzMzdmZWYwNDU0ZDJiYTc5MzEzN2QwMTRjZWVjZjgzZDA4MWFkN2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0YzgxNGUxMTMxNTMyNzRjYzkwYTZlMjRlN2Y2NTllYzE3MDMwZTYzMjhmYTNhMTY2ODc1ZWNjZWRlNzhhOGQifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/a2a_server.py#L553-L615",
+          "version": "repo-lines-v1:sha256:f2d146e0a5628148398b286e20192d8ab68eba6172e6b1f62c8288790385363b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2NTU3OTI0NGM5Y2FiMWEwYjUzNmRhMmU5MjRkMDBjMzkyZDkyZDI2MjhkZDIyMzViY2EzODE3ZjBhYzZhNzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhOWY4YzJiYzdhMTQxYTAyMmFmM2ZlYjhhYjUwMDhlYzI1NzU3ZWYyNGFjZDA0OWY1MDg5YTc0YjdjOWFlODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0NDU2YjU0OGUzNjEwZjNjYjVlMDllYmRkOWZhMTY4OTYxOTU3M2RkNzc3OGM0MTEwNWZmYmUxODMzNmZiYzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRkNWIyOTcwZGU1Y2MyZTdjZDRmZTIxYjdlNGM3MzEyMzhmNDBjMjc4ODJkNDkzNjA5Y2U3ZTk3ODU5YjI4OWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d7c484df436a4e41bbc8ab87ccb33993",
+      "statement": "挂起表 DbPendingStore 落 PostgreSQL pending_a2a_tasks，default_pending_store 为路由与工具共用单例，TTL 默认 86400 秒且过期读取即删除记录。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/config.py#L96-L96",
+          "version": "repo-lines-v1:sha256:4d2a1e5cd14765474106e1c7d3670b2c9544584aff1ec02ff746030247a2c8e6:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQyYTFlNWNkMTQ3NjU0NzQxMDZlMWM3ZDM2NzBiMmM5NTQ0NTg0YWZmMWVjMDJmZjc0NjAzMDI0N2EyYzhlNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQyYTFlNWNkMTQ3NjU0NzQxMDZlMWM3ZDM2NzBiMmM5NTQ0NTg0YWZmMWVjMDJmZjc0NjAzMDI0N2EyYzhlNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGU1MzAxOTAxMDRlZWYyMzU2NWYzYjMwMDlkOTRjMTcyYTliY2VjNjMwMjNkZTc0YmJiMGU4OGNmZDQyZjhiZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmU4OTRjYzBmMmQ5YzUxNWRiOGE5NzdmZjhmOWU3Y2Y5N2U1MDMyNzA1MWZmMzMyNTQ0ZTU2MzAyNDhmYjNlZCJ9"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/pending_store.py#L67-L132",
+          "version": "repo-lines-v1:sha256:dd805b68d83b43489ecac8069e13ed813b81e7cf9ea177dd36f26a56227050e8:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5ZmYxZTFlNTRlMmRhYmU5OTgyZDY3NmNiZGU2N2RlOTE3OTdlYWExMmE0ZWU5NWIyY2EzMDA4YmVmMWIyMjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0MTRkODIwMmM0Y2MyZTJlOGRhOWVjYTQ0N2I3MTc4YThlYThhYzEyNGJkNzAyZDFiOGUzMThlNmY0MmY0MmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdlNzI1YjIwMWU5NWJiMGEyM2JlM2U0ZmZiZmNlNjIxMjgwMTgwYWI5YTdiZGMxZjg2N2ExNjA4ZDIzY2M1YWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-23T05:12:56.927Z"
+  }
+}
