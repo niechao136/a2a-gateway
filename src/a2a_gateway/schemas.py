@@ -147,6 +147,64 @@ class McpServerOut(McpServerBase):
 
 
 # ---------------------------------------------------------------------------
+# 模型注册表（「模型管理」维护，Agent 单选绑定）
+# ---------------------------------------------------------------------------
+LLM_PROVIDERS = ("openai", "anthropic")
+
+
+def validate_llm_model(provider: str, base_url: str, model: str) -> None:
+    """按 provider 校验必填项；不合法抛 ValueError（中文）。"""
+    if provider not in LLM_PROVIDERS:
+        raise ValueError(f"不支持的模型供应商：{provider}")
+    if not model.strip():
+        raise ValueError("模型标识不能为空")
+    if provider == "openai" and not base_url.strip():
+        raise ValueError("OpenAI 兼容端点必须填写 base_url（通常以 /v1 结尾）")
+
+
+def mask_secret(value: str) -> str:
+    """API Key 出参脱敏：保留前 3 后 4，其余打码。"""
+    if not value:
+        return ""
+    if len(value) <= 8:
+        return "***"
+    return f"{value[:3]}****{value[-4:]}"
+
+
+class LLMModelCreate(BaseModel):
+    name: str = Field(description="展示名，全局唯一")
+    provider: Literal["openai", "anthropic"] = "openai"
+    base_url: str = ""
+    api_key: str = ""
+    model: str = Field(description="模型标识，如 deepseek-chat")
+    description: str = ""
+
+
+class LLMModelUpdate(BaseModel):
+    name: str | None = None
+    provider: Literal["openai", "anthropic"] | None = None
+    base_url: str | None = None
+    # 留空/不传 = 保持原值（配合出参脱敏：前端不回显明文 key）
+    api_key: str | None = None
+    model: str | None = None
+    description: str | None = None
+
+
+class LLMModelOut(BaseModel):
+    """出参不含明文 api_key，只给脱敏形式。"""
+
+    id: int
+    name: str
+    provider: str
+    base_url: str
+    model: str
+    description: str
+    api_key_masked: str
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # Skill 注册表（「Skill 管理」维护）
 # ---------------------------------------------------------------------------
 SKILL_LOAD_MODES = ("always", "on_demand")

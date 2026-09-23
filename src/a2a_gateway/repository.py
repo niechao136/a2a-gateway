@@ -38,6 +38,7 @@ from .models import (
     ConnectorConversation,
     ConnectorPlatform,
     Conversation,
+    LLMModel,
     McpServer,
     PendingA2ATask,
     Skill,
@@ -50,6 +51,8 @@ from .schemas import (
     AgentUpdate,
     ApiKeyCreate,
     ConnectorCreate,
+    LLMModelCreate,
+    LLMModelUpdate,
     McpServerCreate,
     McpServerUpdate,
     SkillUpdate,
@@ -129,6 +132,41 @@ def mcp_server_snapshot(server: McpServer) -> dict[str, Any]:
 
 async def resolve_mcp_snapshot(session: AsyncSession, ids: list[int]) -> list[dict[str, Any]]:
     return [mcp_server_snapshot(s) for s in await resolve_mcp_servers(session, ids)]
+
+
+def llm_model_snapshot(
+    m: Any, temperature: float | None = None, max_tokens: int | None = None
+) -> dict[str, Any]:
+    """模型注册表 → 运行时快照（build_llm_from_snapshot 的唯一输入）。
+
+    兼容 ORM 对象（provider 为枚举）与 SimpleNamespace 替身（provider 为字符串）。
+    """
+    provider = m.provider.value if hasattr(m.provider, "value") else str(m.provider)
+    return {
+        "provider": provider,
+        "name": m.name,
+        "base_url": m.base_url or "",
+        "api_key": m.api_key or "",
+        "model": m.model or "",
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+
+async def resolve_model_binding(
+    session: AsyncSession, data: Any
+) -> tuple[int | None, dict[str, Any] | None]:
+    """解析 Agent 的模型绑定载荷 → (model_id, model_snapshot)。
+
+    data 为 None 或 model_id 为空 → (None, None)（回落全局 LLM_* 环境变量）。
+    所选模型不存在时抛 ValueError（由路由层转 400）。
+    """
+    if data is None or getattr(data, "model_id", None) is None:
+        return None, None
+    m = await session.get(LLMModel, data.model_id)
+    if m is None:
+        raise ValueError(f"所选模型不存在（id={data.model_id}）")
+    return m.id, llm_model_snapshot(m, data.temperature, data.max_tokens)
 
 
 def _merge_bindings(
@@ -392,6 +430,51 @@ async def delete_mcp_server(session: AsyncSession, server: McpServer) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 模型注册表 CRUD
+# ---------------------------------------------------------------------------
+async def list_llm_models(session: AsyncSession) -> list[LLMModel]:
+    result = await session.execute(select(LLMModel).order_by(LLMModel.id))
+    return list(result.scalars().all())
+
+
+async def get_llm_model(session: AsyncSession, model_id: int) -> LLMModel | None:
+    return await session.get(LLMModel, model_id)
+
+
+async def get_llm_model_by_name(session: AsyncSession, name: str) -> LLMModel | None:
+    result = await session.execute(select(LLMModel).where(LLMModel.name == name))
+    return result.scalar_one_or_none()
+
+
+async def create_llm_model(session: AsyncSession, data: LLMModelCreate) -> LLMModel:
+    m = LLMModel(**data.model_dump())
+    session.add(m)
+    await session.commit()
+    await session.refresh(m)
+    return m
+
+
+async def update_llm_model(
+    session: AsyncSession, m: LLMModel, data: LLMModelUpdate
+) -> LLMModel:
+    for field in ("name", "provider", "base_url", "model", "description"):
+        value = getattr(data, field)
+        if value is not None:
+            setattr(m, field, value)
+    # api_key 特殊语义：None 或空串都表示"保持原值"（前端编辑时不回显明文）
+    if data.api_key:
+        m.api_key = data.api_key
+    await session.commit()
+    await session.refresh(m)
+    return m
+
+
+async def delete_llm_model(session: AsyncSession, m: LLMModel) -> None:
+    await session.delete(m)
+    await session.commit()
+
+
+# ---------------------------------------------------------------------------
 # 引用关系：Agent ↔ 注册表
 # ---------------------------------------------------------------------------
 async def agents_using_a2a_endpoint(
@@ -467,6 +550,38 @@ async def detach_mcp_server_from_agents(session: AsyncSession, server_id: int) -
     if changed:
         await session.commit()
     return changed
+
+
+async def agents_using_model(session: AsyncSession, model_id: int) -> list[AgentConfig]:
+    result = await session.execute(
+        select(AgentConfig).where(AgentConfig.model_id == model_id).order_by(AgentConfig.id)
+    )
+    return list(result.scalars().all())
+
+
+async def refresh_agents_for_model(session: AsyncSession, model_id: int) -> list[AgentConfig]:
+    """模型记录变更后刷新引用方快照（保留各自的 temperature/max_tokens 覆盖）。"""
+    m = await session.get(LLMModel, model_id)
+    if m is None:
+        return []
+    agents = await agents_using_model(session, model_id)
+    for agent in agents:
+        snap = agent.model_snapshot or {}
+        agent.model_snapshot = llm_model_snapshot(
+            m, snap.get("temperature"), snap.get("max_tokens")
+        )
+    await session.commit()
+    return agents
+
+
+async def detach_model_from_agents(session: AsyncSession, model_id: int) -> int:
+    """删除前置空所有引用（model_id/model_snapshot 置 NULL），返回解除数量。"""
+    agents = await agents_using_model(session, model_id)
+    for agent in agents:
+        agent.model_id = None
+        agent.model_snapshot = None
+    await session.commit()
+    return len(agents)
 
 
 # ---------------------------------------------------------------------------
