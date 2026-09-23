@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Alert, Box, Button, Paper, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AgentForm from "@/components/admin/AgentForm";
-import { A2AEndpoint, AgentCreatePayload, McpServer, Skill, adminApi } from "@/lib/adminApi";
+import { A2AEndpoint, AgentCreatePayload, LLMModel, McpServer, Skill, adminApi } from "@/lib/adminApi";
 
 export default function NewAgentPage() {
   const router = useRouter();
@@ -17,6 +17,7 @@ export default function NewAgentPage() {
   const [a2aEndpoints, setA2aEndpoints] = useState<A2AEndpoint[]>([]);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
 
   useEffect(() => {
     // 预取已有 slug，用于提交前的前端冲突提示
@@ -27,11 +28,17 @@ export default function NewAgentPage() {
         /* 预取失败不影响创建（后端仍有唯一性校验） */
       });
 
-    Promise.all([adminApi.listA2AEndpoints(), adminApi.listMcpServers(), adminApi.listSkills()])
-      .then(([endpoints, servers, skillList]) => {
+    Promise.all([
+      adminApi.listA2AEndpoints(),
+      adminApi.listMcpServers(),
+      adminApi.listSkills(),
+      adminApi.listModels(),
+    ])
+      .then(([endpoints, servers, skillList, modelList]) => {
         setA2aEndpoints(endpoints);
         setMcpServers(servers);
         setSkills(skillList);
+        setLlmModels(modelList);
       })
       .catch(() => {
         /* 注册表加载失败时表单显示为空，可稍后刷新重试 */
@@ -78,6 +85,7 @@ export default function NewAgentPage() {
           a2aEndpoints={a2aEndpoints}
           mcpServers={mcpServers}
           skills={skills}
+          llmModels={llmModels}
           submitting={submitting}
           submitLabel="创建 Agent"
           onSubmit={handleSubmit}

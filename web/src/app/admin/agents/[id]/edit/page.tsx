@@ -26,6 +26,7 @@ import {
   A2AEndpoint,
   Agent,
   AgentCreatePayload,
+  LLMModel,
   McpServer,
   Skill,
   adminApi,
@@ -45,6 +46,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   const [a2aEndpoints, setA2aEndpoints] = useState<A2AEndpoint[]>([]);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,17 +57,19 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, endpoints, servers, skillList] = await Promise.all([
+      const [list, endpoints, servers, skillList, modelList] = await Promise.all([
         adminApi.listAgents(),
         adminApi.listA2AEndpoints(),
         adminApi.listMcpServers(),
         adminApi.listSkills(),
+        adminApi.listModels(),
       ]);
       const found = list.find((a) => a.id === agentId) ?? null;
       setAgent(found);
       setA2aEndpoints(endpoints);
       setMcpServers(servers);
       setSkills(skillList);
+      setLlmModels(modelList);
       if (!found) setError("Agent 不存在或已被删除");
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
@@ -199,6 +203,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               a2aEndpoints={a2aEndpoints}
               mcpServers={mcpServers}
               skills={skills}
+              llmModels={llmModels}
               submitting={submitting}
               submitLabel="保存修改"
               onSubmit={handleSubmit}

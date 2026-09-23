@@ -10,7 +10,11 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  FormControl,
   FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -20,6 +24,7 @@ import {
   A2ATargetInput,
   Agent,
   AgentCreatePayload,
+  LLMModel,
   ManualMcpServerInput,
   McpServer,
   Skill,
@@ -49,6 +54,8 @@ interface AgentFormProps {
   mcpServers?: McpServer[];
   /** 「Skill 管理」中的技能，供勾选绑定（只有 approved 的可以勾选） */
   skills?: Skill[];
+  /** 「模型管理」中的模型，供单选绑定 */
+  llmModels?: LLMModel[];
   submitting?: boolean;
   submitLabel?: string;
   onSubmit: (payload: AgentCreatePayload) => void | Promise<void>;
@@ -60,6 +67,7 @@ export default function AgentForm({
   a2aEndpoints = [],
   mcpServers = [],
   skills = [],
+  llmModels = [],
   submitting = false,
   submitLabel = "保存",
   onSubmit,
@@ -84,6 +92,18 @@ export default function AgentForm({
   // 手动绑定（未在注册表登记）：与勾选并存
   const [manualTargets, setManualTargets] = useState<A2ATargetInput[]>([]);
   const [manualMcp, setManualMcp] = useState<ManualMcpServerInput[]>([]);
+  // 模型绑定：单选；null = 回落全局 LLM_* 环境变量
+  const [modelId, setModelId] = useState<number | null>(initial?.model_id ?? null);
+  const [modelTemperature, setModelTemperature] = useState<string>(
+    typeof initial?.model_snapshot?.temperature === "number"
+      ? String(initial.model_snapshot.temperature)
+      : "",
+  );
+  const [modelMaxTokens, setModelMaxTokens] = useState<string>(
+    typeof initial?.model_snapshot?.max_tokens === "number"
+      ? String(initial.model_snapshot.max_tokens)
+      : "",
+  );
   const [errors, setErrors] = useState<{ slug?: string; name?: string; manualA2a?: string }>({});
 
   /**
@@ -205,6 +225,12 @@ export default function AgentForm({
       a2a_targets: targets,
       mcp_servers: mcps,
       system_prompt: systemPrompt.trim() ? systemPrompt : null,
+      // 模型绑定：整体替换语义（model_id 为 null = 清除绑定回落全局）
+      model: {
+        model_id: modelId,
+        temperature: modelTemperature === "" ? null : Number(modelTemperature),
+        max_tokens: modelMaxTokens === "" ? null : Number(modelMaxTokens),
+      },
     });
   };
 
@@ -505,6 +531,77 @@ export default function AgentForm({
             onChange={(e) => setSystemPrompt(e.target.value)}
             placeholder="留空则使用默认的人设与行为约束"
           />
+        </Box>
+
+        {/* 模型：从注册表单选（不选则使用全局配置） */}
+        <Box>
+          <Typography variant="subtitle1" gutterBottom>
+            模型
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            绑定后该 Agent 使用指定模型，可覆盖推理参数；不选则回落全局 LLM_* 配置。模型在
+            「模型管理」中统一维护。
+          </Typography>
+          <Stack spacing={2} sx={{ mt: 1.5 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="agent-model-label">模型</InputLabel>
+              <Select
+                labelId="agent-model-label"
+                label="模型"
+                value={modelId === null ? "" : String(modelId)}
+                onChange={(e) => setModelId(e.target.value === "" ? null : Number(e.target.value))}
+              >
+                <MenuItem value="">不指定（使用全局配置）</MenuItem>
+                {llmModels.map((m) => (
+                  <MenuItem key={m.id} value={String(m.id)}>
+                    {m.name}（{m.model}）
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {modelId !== null && (
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  label="Temperature 覆盖"
+                  type="number"
+                  size="small"
+                  fullWidth
+                  inputProps={{ step: "0.1", min: 0, max: 2 }}
+                  value={modelTemperature}
+                  onChange={(e) => setModelTemperature(e.target.value)}
+                  helperText="留空使用运行时默认"
+                />
+                <TextField
+                  label="Max Tokens 覆盖"
+                  type="number"
+                  size="small"
+                  fullWidth
+                  inputProps={{ min: 1 }}
+                  value={modelMaxTokens}
+                  onChange={(e) => setModelMaxTokens(e.target.value)}
+                  helperText="留空使用运行时默认"
+                />
+              </Stack>
+            )}
+            {modelId !== null && !llmModels.some((m) => m.id === modelId) && (
+              <Alert severity="warning">
+                已绑定的模型不在当前列表中（可能已被删除）；保存后将回落全局配置。
+              </Alert>
+            )}
+          </Stack>
+          {llmModels.length === 0 && (
+            <Alert
+              severity="info"
+              sx={{ mt: 1.5 }}
+              action={
+                <Button component={Link} href="/admin/models" size="small">
+                  前往模型管理
+                </Button>
+              }
+            >
+              尚未登记任何模型，当前 Agent 将使用全局 LLM_* 配置。
+            </Alert>
+          )}
         </Box>
 
         {/* 工具集已移除：能力扩展统一由「MCP 管理」勾选服务后自动绑定工具 */}
