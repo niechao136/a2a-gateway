@@ -150,7 +150,11 @@ async def create_new_agent(
         await _validate_skill_bindings(session, data.skill_ids)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    return await create_agent(session, data)
+    try:
+        return await create_agent(session, data)
+    except ValueError as exc:
+        # 模型绑定校验失败（如所选模型不存在）
+        raise HTTPException(400, str(exc))
 
 
 @router.put("/agents/{agent_id}", response_model=AgentOut)
@@ -167,7 +171,11 @@ async def update_existing_agent(
         await _validate_skill_bindings(session, data.skill_ids or [])
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    updated = await update_agent(session, agent, data)
+    try:
+        updated = await update_agent(session, agent, data)
+    except ValueError as exc:
+        # 模型绑定校验失败（如所选模型不存在）
+        raise HTTPException(400, str(exc))
     await invalidate_agent(agent_id)
     return updated
 

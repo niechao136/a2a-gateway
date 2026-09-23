@@ -48,6 +48,7 @@ from .schemas import (
     A2AEndpointCreate,
     A2AEndpointUpdate,
     AgentCreate,
+    AgentModelBinding,
     AgentUpdate,
     ApiKeyCreate,
     ConnectorCreate,
@@ -154,14 +155,14 @@ def llm_model_snapshot(
 
 
 async def resolve_model_binding(
-    session: AsyncSession, data: Any
+    session: AsyncSession, data: AgentModelBinding | None
 ) -> tuple[int | None, dict[str, Any] | None]:
     """解析 Agent 的模型绑定载荷 → (model_id, model_snapshot)。
 
     data 为 None 或 model_id 为空 → (None, None)（回落全局 LLM_* 环境变量）。
     所选模型不存在时抛 ValueError（由路由层转 400）。
     """
-    if data is None or getattr(data, "model_id", None) is None:
+    if data is None or data.model_id is None:
         return None, None
     m = await session.get(LLMModel, data.model_id)
     if m is None:
@@ -224,6 +225,7 @@ async def create_agent(session: AsyncSession, data: AgentCreate) -> AgentConfig:
     a2a_ids, a2a_targets, mcp_ids, mcp_snapshot = await _resolve_bindings(session, data)
     skill_ids = list(data.skill_ids or [])
     skills_snapshot = await resolve_skills(session, skill_ids)
+    model_id, model_snapshot = await resolve_model_binding(session, data.model)
     agent = AgentConfig(
         slug=data.slug,
         name=data.name,
@@ -234,6 +236,8 @@ async def create_agent(session: AsyncSession, data: AgentCreate) -> AgentConfig:
         mcp_servers=mcp_snapshot,
         skill_ids=skill_ids,
         skills=skills_snapshot,
+        model_id=model_id,
+        model_snapshot=model_snapshot,
         system_prompt=data.system_prompt,
         status=AgentStatus.DRAFT,
     )
@@ -303,6 +307,12 @@ async def update_agent(
     if data.skill_ids is not None:
         agent.skill_ids = list(data.skill_ids)
         agent.skills = await resolve_skills(session, agent.skill_ids)
+
+    # 模型绑定：整体替换语义（data.model 为 None = 不修改；model_id null = 清除回落全局）
+    if data.model is not None:
+        agent.model_id, agent.model_snapshot = await resolve_model_binding(
+            session, data.model
+        )
 
     await session.commit()
     await session.refresh(agent)

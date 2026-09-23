@@ -357,6 +357,18 @@ class ManualMcpServer(BaseModel):
         return self
 
 
+class AgentModelBinding(BaseModel):
+    """Agent 的模型绑定。
+
+    更新时整体替换语义：字段对象为 null = 不修改绑定；
+    提供对象且 model_id 为 null = 清除绑定（回落全局配置）。
+    """
+
+    model_id: int | None = Field(default=None, description="模型注册表 id；null = 清除绑定")
+    temperature: float | None = Field(default=None, description="留空用运行时默认")
+    max_tokens: int | None = Field(default=None, description="留空用运行时默认")
+
+
 class AgentBase(BaseModel):
     name: str
     description: str = ""
@@ -378,6 +390,8 @@ class AgentBase(BaseModel):
         default_factory=list, description="在「Skill 管理」中勾选的技能 id 列表"
     )
     system_prompt: str | None = None
+    # 模型绑定（可空 = 回落全局 LLM_* 环境变量）
+    model: AgentModelBinding | None = None
 
 
 class AgentCreate(AgentBase):
@@ -394,6 +408,8 @@ class AgentUpdate(BaseModel):
     skill_ids: list[int] | None = None
     system_prompt: str | None = None
     status: Literal["draft", "published"] | None = None
+    # 模型绑定：None = 不修改；提供对象则整体替换（model_id 为 null = 清除）
+    model: AgentModelBinding | None = None
 
 
 class AgentOut(AgentBase):
@@ -403,6 +419,8 @@ class AgentOut(AgentBase):
     slug: str
     a2a_target_ids: list[int] = Field(default_factory=list)
     mcp_server_ids: list[int] = Field(default_factory=list)
+    model_id: int | None = None
+    model_snapshot: dict[str, Any] | None = None
     status: AgentStatus
     created_at: datetime
     updated_at: datetime
