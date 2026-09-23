@@ -71,7 +71,8 @@ class RecordingFakeChatModel(BindeableFakeChatModel):
         return super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
 
 
-def _graph_llm() -> BindeableFakeChatModel:
+def _graph_llm(_snapshot: object = None) -> BindeableFakeChatModel:
+    """resolve_llm 替身：接收 agent.model_snapshot 参数并忽略之。"""
     return BindeableFakeChatModel(messages=iter([AIMessage(content="ok")]))
 
 
@@ -120,7 +121,7 @@ def _pending_record(question="请补充目的地"):
 
 def test_build_graph_requires_remaining_steps_in_state_schema(monkeypatch):
     """回归：图必须能成功构建（state_schema 含 prebuilt 要求的 remaining_steps）。"""
-    monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
+    monkeypatch.setattr(graph_mod, "resolve_llm", _graph_llm)
 
     graph = build_graph(_agent(), [], checkpointer=InMemorySaver())
 
@@ -128,7 +129,7 @@ def test_build_graph_requires_remaining_steps_in_state_schema(monkeypatch):
 
 
 def test_build_graph_uses_agent_system_prompt(monkeypatch):
-    monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
+    monkeypatch.setattr(graph_mod, "resolve_llm", _graph_llm)
 
     graph = build_graph(_agent("你是测试助手"), [], checkpointer=InMemorySaver())
 
@@ -137,7 +138,7 @@ def test_build_graph_uses_agent_system_prompt(monkeypatch):
 
 async def test_graph_runs_a_turn(monkeypatch):
     """图能完整跑一轮（同时验证 pre_model_hook 在真实图内可执行）。"""
-    monkeypatch.setattr(graph_mod, "build_llm", _graph_llm)
+    monkeypatch.setattr(graph_mod, "resolve_llm", _graph_llm)
     # 必须显式注入替身：缺省时 hook 会用 default_pending_store（真实 DbPendingStore，会连库）
     graph = build_graph(
         _agent(),
@@ -293,7 +294,7 @@ async def test_graph_injects_pending_notice_into_model_input(monkeypatch):
     """
     question = "请补充出行城市"
     recorder = RecordingFakeChatModel(messages=iter([AIMessage(content="ok")]))
-    monkeypatch.setattr(graph_mod, "build_llm", lambda: recorder)
+    monkeypatch.setattr(graph_mod, "resolve_llm", lambda _snapshot=None: recorder)
 
     graph = build_graph(
         _agent(),

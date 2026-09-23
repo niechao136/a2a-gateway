@@ -54,7 +54,8 @@ class FakeModel(GenericFakeChatModel):
         return self
 
 
-def _fake_model() -> FakeModel:
+def _fake_model(_snapshot: object = None) -> FakeModel:
+    """resolve_llm 替身：接收 agent.model_snapshot 参数并忽略之。"""
     return FakeModel(messages=iter([AIMessage(content="ok")]))
 
 
@@ -171,8 +172,8 @@ async def test_graph_level_prompt_reaches_model_input(monkeypatch):
             return super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
 
     llm = RecordingModel(messages=iter([AIMessage(content="好的")]))
-    # 必须替换 build_llm：否则构建出真实 ChatOpenAI，测试会发起网络请求
-    monkeypatch.setattr(graph_mod, "build_llm", lambda: llm)
+    # 必须替换 resolve_llm：否则构建出真实 ChatOpenAI，测试会发起网络请求
+    monkeypatch.setattr(graph_mod, "resolve_llm", lambda _snapshot=None: llm)
     graph = build_graph(
         AgentConfig(slug="t", name="t"),
         [],
@@ -192,7 +193,7 @@ async def test_graph_level_prompt_reaches_model_input(monkeypatch):
 
 async def test_graph_persists_active_skills_in_state(monkeypatch):
     """记账真的落入 state：pre_model_hook 的返回值会 merge 进 checkpoint（规格 §6.2）。"""
-    monkeypatch.setattr(graph_mod, "build_llm", _fake_model)
+    monkeypatch.setattr(graph_mod, "resolve_llm", _fake_model)
     graph = build_graph(
         AgentConfig(slug="t", name="t"),
         [],
@@ -232,7 +233,7 @@ async def test_graph_passes_all_bound_skills_to_skill_tools(monkeypatch):
         passed.append(list(skills))
         return []
 
-    monkeypatch.setattr(graph_mod, "build_llm", _fake_model)
+    monkeypatch.setattr(graph_mod, "resolve_llm", _fake_model)
     monkeypatch.setattr(graph_mod, "make_skill_tools", fake_make_skill_tools)
     build_graph(
         AgentConfig(slug="t", name="t"),

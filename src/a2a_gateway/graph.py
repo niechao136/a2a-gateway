@@ -22,7 +22,7 @@ from langchain_core.tools import StructuredTool
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
 
-from .llm import build_llm
+from .llm import resolve_llm
 from .models import AgentConfig
 from .pending_store import PendingStore, default_pending_store
 from .skills import MAX_INJECT_CHARS
@@ -315,7 +315,8 @@ def build_graph(
     @param pending_store 挂起任务存储（缺省用 default_pending_store）
     @param skills 绑定的技能快照（repository 解析 skill_ids 的结果）
     """
-    llm = build_llm()
+    # Agent 绑定了模型快照则按快照构建（provider 分支 + 参数覆盖），否则回落全局配置
+    llm = resolve_llm(agent.model_snapshot)
     bound_skills = list(skills or [])
     tools = build_tools(a2a_tools, mcp_servers=mcp_servers, mcp_tool_index=mcp_tool_index)
     # 全部已绑定技能都挂工具：read_skill_file 的 by_name 索引由入参决定，只传
