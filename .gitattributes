@@ -1,0 +1,4 @@
+# 示例技能包内的脚本会被原样打进 zip 并送进 Linux 沙箱执行（python3 / bash / node）。
+# 强制 LF：Windows 检出（core.autocrlf=true）产生的 CRLF 会破坏 bash 脚本，
+# 且会让 scripts/build_skill_test_packages.py 的「语法自检」直接失败。
+examples/skills-scripts/** text eol=lf

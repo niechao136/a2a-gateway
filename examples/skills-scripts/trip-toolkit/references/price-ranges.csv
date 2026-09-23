@@ -1,0 +1,10 @@
+city,level,hotel_per_night,food_per_day,transport_per_day
+东京,low,300,120,50
+东京,mid,620,260,90
+东京,high,1280,520,160
+巴黎,low,420,180,60
+巴黎,mid,780,320,100
+巴黎,high,1500,620,180
+曼谷,low,180,80,30
+曼谷,mid,380,150,60
+曼谷,high,900,300,120
