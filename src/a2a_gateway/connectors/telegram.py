@@ -90,15 +90,20 @@ class TelegramAdapter(PlatformAdapter):
                 resp.raise_for_status()
 
 
-async def register_webhook(credentials: dict, connector_id: int) -> tuple[dict, str]:
+async def register_webhook(
+    credentials: dict, connector_id: int, base_url: str = ""
+) -> tuple[dict, str]:
     """启用/改凭据后自动注册 webhook 并经 getMe 补全 bot_username。
+
+    base_url 为对外基址（调用方优先传当前访问地址，其次 PUBLIC_BASE_URL）；
+    入参为空时回退 PUBLIC_BASE_URL，两者都没有则不注册、只返回提示。
 
     返回 (更新后的凭据, 警告信息)；成功时警告为空串。
     失败不抛异常：注册失败只提示，不阻断保存。
     """
-    base = _settings.public_base_url.rstrip("/")
+    base = (base_url or _settings.public_base_url).rstrip("/")
     if not base:
-        return credentials, "未配置 PUBLIC_BASE_URL，跳过自动注册（请在 Telegram 手动 setWebhook）"
+        return credentials, "无法确定对外地址（无 PUBLIC_BASE_URL 且请求无 Host），跳过自动注册"
     token = (credentials or {}).get("bot_token") or ""
     if not token:
         return credentials, "缺少 bot_token，无法自动注册"

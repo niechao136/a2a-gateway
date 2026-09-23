@@ -20,6 +20,7 @@ from ..connectors.telegram import register_webhook
 from ..database import get_session
 from ..deps import get_current_admin
 from ..models import AdminUser, ChatConnector
+from ..public_url import public_base_url
 from ..repository import (
     agent_name_map,
     connector_last_active_map,
@@ -49,15 +50,20 @@ admin_router = APIRouter(prefix="/api/admin/connectors", tags=["connectors"])
 webhook_router = APIRouter(prefix="/api/connectors", tags=["connectors"])
 
 
-def _webhook_url(connector: ChatConnector) -> str:
+def _connector_base_url(request: Request) -> str:
+    """Webhook 地址基址：PUBLIC_BASE_URL 优先；未配置时按当前访问地址推导（入口自适应）。"""
+    return _settings.public_base_url.rstrip("/") or public_base_url(request)
+
+
+def _webhook_url(connector: ChatConnector, base_url: str) -> str:
     path = f"/api/connectors/{connector.platform.value}/{connector.id}/webhook"
-    base = _settings.public_base_url.rstrip("/")
-    return f"{base}{path}" if base else path
+    return f"{base_url}{path}" if base_url else path
 
 
 def _connector_out(
     connector: ChatConnector,
     agent_name: str,
+    base_url: str,
     last_active_at: datetime | None = None,
     setup_warning: str = "",
 ) -> ConnectorOut:
@@ -69,7 +75,7 @@ def _connector_out(
         agent_id=connector.agent_id,
         agent_name=agent_name,
         enabled=connector.enabled,
-        webhook_url=_webhook_url(connector),
+        webhook_url=_webhook_url(connector, base_url),
         credentials_masked=mask_connector_credentials(
             connector.platform.value, connector.credentials
         ),
@@ -87,12 +93,14 @@ async def _get_or_404(session: AsyncSession, connector_id: int) -> ChatConnector
     return connector
 
 
-async def _maybe_register_telegram(session: AsyncSession, connector: ChatConnector) -> str:
+async def _maybe_register_telegram(
+    session: AsyncSession, connector: ChatConnector, base_url: str
+) -> str:
     """Telegram 且启用时自动注册 webhook；返回警告（空串 = 成功或不需要）。"""
     if connector.platform.value != "telegram" or not connector.enabled:
         return ""
     old = dict(connector.credentials or {})
-    updated, warning = await register_webhook(old, connector.id)
+    updated, warning = await register_webhook(old, connector.id, base_url)
     if updated != old:
         connector.credentials = updated
         await update_connector(session, connector, {"credentials": updated})
@@ -101,14 +109,16 @@ async def _maybe_register_telegram(session: AsyncSession, connector: ChatConnect
 
 @admin_router.get("", response_model=list[ConnectorOut])
 async def list_all(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _: AdminUser = Depends(get_current_admin),
 ):
     connectors = await list_connectors(session)
     names = await agent_name_map(session, [c.agent_id for c in connectors])
     last_active = await connector_last_active_map(session, [c.id for c in connectors])
+    base_url = _connector_base_url(request)
     return [
-        _connector_out(c, names.get(c.agent_id, ""), last_active.get(c.id))
+        _connector_out(c, names.get(c.agent_id, ""), base_url, last_active.get(c.id))
         for c in connectors
     ]
 
@@ -116,6 +126,7 @@ async def list_all(
 @admin_router.post("", response_model=ConnectorOut, status_code=status.HTTP_201_CREATED)
 async def create(
     req: ConnectorCreate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _: AdminUser = Depends(get_current_admin),
 ):
@@ -127,15 +138,17 @@ async def create(
     credentials = dict(req.credentials)
     if req.platform == "telegram" and not (credentials.get("secret_token") or "").strip():
         credentials["secret_token"] = secrets.token_urlsafe(32)
+    base_url = _connector_base_url(request)
     connector = await create_connector(session, req, credentials)
-    warning = await _maybe_register_telegram(session, connector)
-    return _connector_out(connector, agent.name, setup_warning=warning)
+    warning = await _maybe_register_telegram(session, connector, base_url)
+    return _connector_out(connector, agent.name, base_url, setup_warning=warning)
 
 
 @admin_router.put("/{connector_id}", response_model=ConnectorOut)
 async def update(
     connector_id: int,
     req: ConnectorUpdate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _: AdminUser = Depends(get_current_admin),
 ):
@@ -161,10 +174,14 @@ async def update(
         if merged != dict(connector.credentials or {}):
             changes["credentials"] = merged
     connector = await update_connector(session, connector, changes)
-    warning = await _maybe_register_telegram(session, connector)
+    base_url = _connector_base_url(request)
+    warning = await _maybe_register_telegram(session, connector, base_url)
     agent = await get_agent_by_id(session, connector.agent_id)
     return _connector_out(
-        connector, agent.name if agent is not None else "", setup_warning=warning
+        connector,
+        agent.name if agent is not None else "",
+        base_url,
+        setup_warning=warning,
     )
 
 

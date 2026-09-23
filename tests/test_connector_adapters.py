@@ -417,3 +417,86 @@ def test_registry_returns_all_platforms():
 def test_registry_unknown_platform():
     with pytest.raises(KeyError):
         get_adapter("discord")
+
+
+# ---------------------------------------------------------------------------
+# Telegram webhook 自动注册：基址来源（入参优先，其次 settings）
+# ---------------------------------------------------------------------------
+from types import SimpleNamespace as _SimpleNamespace
+from typing import ClassVar
+
+from a2a_gateway.connectors import telegram as telegram_mod
+
+
+class _FakeResponse:
+    def __init__(self, payload: dict):
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self._payload
+
+
+class _FakeHttpxClient:
+    """记录请求的 httpx.AsyncClient 替身（替换 telegram 模块内的引用，不影响全局）。"""
+
+    calls: ClassVar[list] = []
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def get(self, url, **kwargs):
+        _FakeHttpxClient.calls.append(("GET", url, None))
+        return _FakeResponse({"result": {"username": "mybot"}})
+
+    async def post(self, url, **kwargs):
+        _FakeHttpxClient.calls.append(("POST", url, kwargs.get("json")))
+        return _FakeResponse({"ok": True})
+
+
+async def test_register_webhook_uses_given_base_url(monkeypatch):
+    _FakeHttpxClient.calls = []
+    monkeypatch.setattr(
+        telegram_mod, "httpx", _SimpleNamespace(AsyncClient=_FakeHttpxClient)
+    )
+    monkeypatch.setattr(telegram_mod, "_settings", _SimpleNamespace(public_base_url=""))
+    creds, warning = await telegram_mod.register_webhook(
+        {"bot_token": "123:abc", "secret_token": "sec"}, 7, "https://a2a.example.com/"
+    )
+    assert warning == ""
+    assert creds["bot_username"] == "mybot"
+    method, url, payload = _FakeHttpxClient.calls[-1]
+    assert method == "POST"
+    assert url == "https://api.telegram.org/bot123:abc/setWebhook"
+    assert payload["url"] == "https://a2a.example.com/api/connectors/telegram/7/webhook"
+    assert payload["secret_token"] == "sec"
+
+
+async def test_register_webhook_without_any_base_url_returns_warning(monkeypatch):
+    monkeypatch.setattr(telegram_mod, "_settings", _SimpleNamespace(public_base_url=""))
+    creds, warning = await telegram_mod.register_webhook({"bot_token": "t"}, 1, "")
+    assert creds == {"bot_token": "t"}
+    assert "自动注册" in warning
+
+
+async def test_register_webhook_falls_back_to_settings(monkeypatch):
+    _FakeHttpxClient.calls = []
+    monkeypatch.setattr(
+        telegram_mod, "httpx", _SimpleNamespace(AsyncClient=_FakeHttpxClient)
+    )
+    monkeypatch.setattr(
+        telegram_mod, "_settings", _SimpleNamespace(public_base_url="https://fixed.example.com")
+    )
+    _, warning = await telegram_mod.register_webhook({"bot_token": "t"}, 3, "")
+    assert warning == ""
+    assert _FakeHttpxClient.calls[-1][2]["url"] == (
+        "https://fixed.example.com/api/connectors/telegram/3/webhook"
+    )

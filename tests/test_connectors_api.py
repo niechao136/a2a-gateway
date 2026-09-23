@@ -84,7 +84,7 @@ def captured(monkeypatch):
             )
         ]
 
-    async def fake_register_webhook(credentials, connector_id):
+    async def fake_register_webhook(credentials, connector_id, base_url=""):
         return credentials, ""  # 测试中不触网
 
     monkeypatch.setattr(connectors_mod, "get_connector", fake_get_connector)
@@ -200,6 +200,49 @@ async def test_conversations_endpoint(auth_client, captured):
     assert resp.status_code == 200
     data = resp.json()
     assert data[0]["chat_id"] == "777"
+
+
+# ---------------------------------------------------------------------------
+# Webhook 地址基址：PUBLIC_BASE_URL 优先，未配置时按当前访问地址推导
+# ---------------------------------------------------------------------------
+async def test_webhook_url_falls_back_to_request_host(auth_client, captured, monkeypatch):
+    monkeypatch.setattr(connectors_mod, "_settings", SimpleNamespace(public_base_url=""))
+    resp = await auth_client.post(
+        "/api/admin/connectors",
+        json={"name": "tg-2", "platform": "telegram", "agent_id": 1, "credentials": {}},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["webhook_url"] == "http://test/api/connectors/telegram/1/webhook"
+
+
+async def test_webhook_url_uses_forwarded_headers(auth_client, captured, monkeypatch):
+    monkeypatch.setattr(connectors_mod, "_settings", SimpleNamespace(public_base_url=""))
+    resp = await auth_client.post(
+        "/api/admin/connectors",
+        json={"name": "tg-3", "platform": "telegram", "agent_id": 1, "credentials": {}},
+        headers={"X-Forwarded-Host": "a2a.example.com", "X-Forwarded-Proto": "https"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["webhook_url"] == (
+        "https://a2a.example.com/api/connectors/telegram/1/webhook"
+    )
+
+
+async def test_webhook_url_prefers_public_base_url(auth_client, captured, monkeypatch):
+    monkeypatch.setattr(
+        connectors_mod,
+        "_settings",
+        SimpleNamespace(public_base_url="https://a2a.example.com/"),
+    )
+    resp = await auth_client.post(
+        "/api/admin/connectors",
+        json={"name": "tg-4", "platform": "telegram", "agent_id": 1, "credentials": {}},
+        headers={"X-Forwarded-Host": "internal.local", "X-Forwarded-Proto": "http"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["webhook_url"] == (
+        "https://a2a.example.com/api/connectors/telegram/1/webhook"
+    )
 
 
 # ---------------------------------------------------------------------------
