@@ -99,7 +99,7 @@
 
 - `ModelCreate` / `ModelUpdate`：`provider`, `name`, `base_url`, `api_key`, `model`, `description`
 - `ModelOut`：api_key 输出为脱敏形式（对齐现有 `credentials_masked` 惯例）
-- Agent create/update 请求体新增：`model_id`（可空 int，清空/不传 = 回落全局）与 `model_params`（可空对象，字段 `temperature` float 可空、`max_tokens` int 可空，留空的字段用运行时默认值）；响应附带模型摘要（id/name/provider/model）
+- Agent 请求体新增 `model` 绑定对象：`{model_id: int, temperature?: float, max_tokens?: int}` 或 null。创建时 null = 不绑定（回落全局）；更新时 null = 不修改绑定，提供则**整体替换**（`model_id` 传 null = 清除绑定回落全局，避免"不提供"与"清除"歧义）；响应附带模型摘要（id/name/provider/model）
 - 错误风格：`HTTPException` 中文 detail；测试端点契约 `{"ok": bool, "message": str}`
 
 ### 4.3 连通性探针 `src/a2a_gateway/llm_probe.py`
