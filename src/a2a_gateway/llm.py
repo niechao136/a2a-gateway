@@ -26,6 +26,7 @@
 import logging
 from typing import Any
 
+from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from langchain_openai.chat_models import base as _lc_base
 from pydantic import SecretStr
@@ -148,3 +149,56 @@ def build_llm() -> ChatOpenAI:
         base_url=_settings.llm_base_url,
         streaming=True,
     )
+
+
+def build_llm_from_snapshot(snapshot: dict[str, Any]) -> ChatOpenAI | ChatAnthropic:
+    """按模型快照构造 LLM（provider 分支）；temperature/max_tokens 非空才覆盖。
+
+    快照结构见 repository.llm_model_snapshot：provider/name/base_url/api_key/
+    model/temperature/max_tokens。
+    """
+    provider = (snapshot.get("provider") or "").strip().lower()
+    if provider not in ("openai", "anthropic"):
+        raise ValueError(f"不支持的模型供应商：{provider}")
+    raw_key = snapshot.get("api_key") or ""
+    if not raw_key:
+        # 提前给中文错误：底层 ChatOpenAI/ChatAnthropic 缺 key 时抛英文 OpenAIError
+        raise ValueError("模型未配置 API Key（请在「模型管理」中补充后重试）")
+    api_key = SecretStr(raw_key)
+    model = snapshot.get("model") or ""
+    temperature = snapshot.get("temperature")
+    max_tokens = snapshot.get("max_tokens")
+
+    if provider == "openai":
+        install_thought_signature_patch()
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "api_key": api_key,
+            "base_url": snapshot.get("base_url") or _settings.llm_base_url,
+            "streaming": True,
+        }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        return ThoughtSignatureChatOpenAI(**kwargs)
+
+    if provider == "anthropic":
+        anthropic_kwargs: dict[str, Any] = {"model_name": model, "api_key": api_key}
+        if snapshot.get("base_url"):
+            anthropic_kwargs["base_url"] = snapshot["base_url"]
+        if temperature is not None:
+            anthropic_kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            anthropic_kwargs["max_tokens"] = max_tokens
+        return ChatAnthropic(**anthropic_kwargs)
+
+    # 防御性兜底：开头已校验 provider，此处仅为满足返回类型完备性
+    raise ValueError(f"不支持的模型供应商：{provider}")
+
+
+def resolve_llm(model_snapshot: dict[str, Any] | None) -> ChatOpenAI | ChatAnthropic:
+    """有模型快照按快照构建，否则回落全局 LLM_* 环境变量（零配置兜底）。"""
+    if model_snapshot:
+        return build_llm_from_snapshot(model_snapshot)
+    return build_llm()
