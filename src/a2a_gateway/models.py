@@ -80,6 +80,12 @@ class AgentConfig(Base, BaseMixin):
     skill_ids: Mapped[list[int]] = mapped_column(JSONB, default=list)
     # 由 skill_ids 解析而来的运行时快照（正文全文，供注入与 load_skill 闭包使用）
     skills: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    # 绑定的模型注册表条目（单选；NULL = 回落全局 LLM_* 环境变量）
+    model_id: Mapped[int | None] = mapped_column(
+        ForeignKey("llm_models.id"), nullable=True
+    )
+    # 由 model_id 解析而来的运行时快照（含 temperature/max_tokens 覆盖）
+    model_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[AgentStatus] = mapped_column(
         Enum(
             AgentStatus,
@@ -142,6 +148,43 @@ class McpServer(Base, BaseMixin):
     auth_type: Mapped[str] = mapped_column(String(32), default="bearer")
     auth_name: Mapped[str] = mapped_column(String(128), default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class LLMProvider(str, PyEnum):
+    # openai = OpenAI 兼容协议族（OpenAI/DeepSeek/Qwen/vLLM/Ollama 等），
+    # 具体供应商由 base_url + model 区分；anthropic = Anthropic 原生协议
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+
+
+class LLMModel(Base, BaseMixin):
+    """模型注册表（「模型管理」维护，Agent 单选绑定）。
+
+    与 A2A/MCP 注册表同范式：这里是可复用的模型定义，
+    Agent 侧保存 model_id + 运行时快照（agent_configs.model_snapshot）。
+    """
+
+    __tablename__ = "llm_models"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    provider: Mapped[LLMProvider] = mapped_column(
+        Enum(
+            LLMProvider,
+            name="llmprovider",
+            # 与 AgentStatus 同坑：必须按「成员值」建 PG 枚举
+            values_callable=lambda enum_cls: [m.value for m in enum_cls],
+        ),
+        default=LLMProvider.OPENAI,
+        server_default=LLMProvider.OPENAI.value,
+    )
+    # openai 兼容端点必填（通常以 /v1 结尾）；anthropic 留空用官方默认
+    base_url: Mapped[str] = mapped_column(String(512), default="")
+    # 明文入库（对齐 credentials 惯例）；API 出参只给脱敏形式
+    api_key: Mapped[str] = mapped_column(String(512), default="")
+    # 模型标识，如 deepseek-chat / claude-sonnet-4-5
+    model: Mapped[str] = mapped_column(String(128), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
 
 
 class SkillReviewStatus(str, PyEnum):
