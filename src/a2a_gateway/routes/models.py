@@ -12,6 +12,7 @@ from .. import repository as repo
 from ..agent_factory import invalidate_agent
 from ..database import get_session
 from ..deps import get_current_admin
+from ..llm_probe import probe_llm
 from ..models import AdminUser, LLMModel
 from ..schemas import (
     LLMModelCreate,
@@ -122,3 +123,32 @@ async def delete_model(
             await invalidate_agent(agent.id)
         await repo.detach_model_from_agents(session, model_id)
     await repo.delete_llm_model(session, m)
+
+
+@router.post("/models/{model_id}/test")
+async def test_model_by_id(
+    model_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: AdminUser = Depends(get_current_admin),
+):
+    """测试已保存模型的连通性（发一条极短消息验证三元组）。"""
+    m = await repo.get_llm_model(session, model_id)
+    if m is None:
+        raise HTTPException(404, "模型不存在")
+    provider = m.provider.value if hasattr(m.provider, "value") else str(m.provider)
+    ok, message = await probe_llm(provider, m.base_url, m.api_key, m.model)
+    return {"ok": ok, "message": message}
+
+
+@router.post("/models/test")
+async def test_model_form(
+    data: LLMModelCreate,
+    _: AdminUser = Depends(get_current_admin),
+):
+    """未保存表单直测：请求体复用 LLMModelCreate（api_key 为表单明文）。"""
+    try:
+        validate_llm_model(data.provider, data.base_url, data.model)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    ok, message = await probe_llm(data.provider, data.base_url, data.api_key, data.model)
+    return {"ok": ok, "message": message}

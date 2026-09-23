@@ -495,7 +495,7 @@ import json
 import httpx
 import pytest
 
-from a2a_gateway.llm_probe import test_llm
+from a2a_gateway.llm_probe import probe_llm
 
 
 def _openai_transport(handler):
@@ -512,7 +512,7 @@ async def test_openai_success():
             200, json={"choices": [{"message": {"content": "pong"}}]}
         )
 
-    ok, message = await test_llm(
+    ok, message = await probe_llm(
         "openai", "https://api.deepseek.com/v1", "sk-test", "deepseek-chat",
         transport=_openai_transport(handler),
     )
@@ -530,7 +530,7 @@ async def test_anthropic_success_uses_messages_api():
             200, json={"content": [{"type": "text", "text": "pong"}]}
         )
 
-    ok, message = await test_llm(
+    ok, message = await probe_llm(
         "anthropic", "", "sk-ant", "claude-sonnet-4-5",
         transport=_openai_transport(handler),
     )
@@ -542,7 +542,7 @@ async def test_unauthorized_maps_to_key_error():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"error": {"message": "bad key"}})
 
-    ok, message = await test_llm(
+    ok, message = await probe_llm(
         "openai", "https://x/v1", "bad", "m", transport=_openai_transport(handler)
     )
     assert ok is False
@@ -553,7 +553,7 @@ async def test_not_found_maps_to_url_hint():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={})
 
-    ok, message = await test_llm(
+    ok, message = await probe_llm(
         "openai", "https://x/wrong", "k", "m", transport=_openai_transport(handler)
     )
     assert ok is False
@@ -566,7 +566,7 @@ async def test_unknown_model_maps_to_model_error():
             400, json={"error": {"message": "model not found: nope"}}
         )
 
-    ok, message = await test_llm(
+    ok, message = await probe_llm(
         "openai", "https://x/v1", "k", "nope", transport=_openai_transport(handler)
     )
     assert ok is False
@@ -577,7 +577,7 @@ async def test_connect_error():
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("refused")
 
-    ok, message = await test_llm(
+    ok, message = await probe_llm(
         "openai", "http://127.0.0.1:1/v1", "k", "m", transport=_openai_transport(handler)
     )
     assert ok is False
@@ -585,7 +585,7 @@ async def test_connect_error():
 
 
 async def test_unknown_provider_rejected():
-    ok, message = await test_llm("palm", "", "k", "m")
+    ok, message = await probe_llm("palm", "", "k", "m")
     assert ok is False
     assert "不支持" in message
 ```
@@ -631,7 +631,7 @@ def _error_message(status_code: int, body: str) -> str:
     return f"服务返回错误（HTTP {status_code}）：{_summarize_body(body)}"
 
 
-async def test_llm(
+async def probe_llm(
     provider: str,
     base_url: str,
     api_key: str,
@@ -1315,7 +1315,7 @@ async def test_saved_model_test_endpoint(auth_client, monkeypatch):
         return True, "连接成功"
 
     monkeypatch.setattr(models_mod.repo, "get_llm_model", _async(_model()))
-    monkeypatch.setattr(models_mod, "test_llm", fake_probe)
+    monkeypatch.setattr(models_mod, "probe_llm", fake_probe)
     resp = await auth_client.post("/api/admin/models/1/test")
     assert resp.status_code == 200
     assert resp.json() == {"ok": True, "message": "连接成功"}
@@ -1334,7 +1334,7 @@ async def test_form_model_test_endpoint(auth_client, monkeypatch):
         received.update(provider=provider, model=model)
         return False, "认证失败：API Key 无效"
 
-    monkeypatch.setattr(models_mod, "test_llm", fake_probe)
+    monkeypatch.setattr(models_mod, "probe_llm", fake_probe)
     resp = await auth_client.post(
         "/api/admin/models/test",
         json={"name": "临时", "provider": "anthropic", "base_url": "", "api_key": "k", "model": "m"},
@@ -1362,7 +1362,7 @@ async def test_form_model_test_rejects_invalid(auth_client):
 在 `routes/models.py` 顶部 import 区补：
 
 ```python
-from ..llm_probe import test_llm
+from ..llm_probe import probe_llm
 ```
 
 文件末尾追加（**必须放在 `/models/{model_id}` 动态路由之后无妨，路径段数不同不会遮蔽**）：
@@ -1379,7 +1379,7 @@ async def test_model_by_id(
     if m is None:
         raise HTTPException(404, "模型不存在")
     provider = m.provider.value if hasattr(m.provider, "value") else str(m.provider)
-    ok, message = await test_llm(provider, m.base_url, m.api_key, m.model)
+    ok, message = await probe_llm(provider, m.base_url, m.api_key, m.model)
     return {"ok": ok, "message": message}
 
 
@@ -1393,7 +1393,7 @@ async def test_model_form(
         validate_llm_model(data.provider, data.base_url, data.model)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    ok, message = await test_llm(data.provider, data.base_url, data.api_key, data.model)
+    ok, message = await probe_llm(data.provider, data.base_url, data.api_key, data.model)
     return {"ok": ok, "message": message}
 ```
 

@@ -133,3 +133,57 @@ async def test_delete_force_detaches(auth_client, monkeypatch):
     resp = await auth_client.delete("/api/admin/models/1?force=true")
     assert resp.status_code == 204
     assert detached == [1]
+
+
+async def test_saved_model_test_endpoint(auth_client, monkeypatch):
+    calls: list[tuple] = []
+
+    async def fake_probe(provider, base_url, api_key, model, **kw):
+        calls.append((provider, base_url, api_key, model))
+        return True, "连接成功"
+
+    monkeypatch.setattr(models_mod.repo, "get_llm_model", _async(_model()))
+    monkeypatch.setattr(models_mod, "probe_llm", fake_probe)
+    resp = await auth_client.post("/api/admin/models/1/test")
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "message": "连接成功"}
+    assert calls == [
+        ("openai", "https://api.deepseek.com/v1", "sk-abcdef123456", "deepseek-chat")
+    ]
+
+
+async def test_saved_model_test_not_found(auth_client, monkeypatch):
+    monkeypatch.setattr(models_mod.repo, "get_llm_model", _async(None))
+    resp = await auth_client.post("/api/admin/models/999/test")
+    assert resp.status_code == 404
+
+
+async def test_form_model_test_endpoint(auth_client, monkeypatch):
+    received: dict = {}
+
+    async def fake_probe(provider, base_url, api_key, model, **kw):
+        received.update(provider=provider, model=model)
+        return False, "认证失败：API Key 无效"
+
+    monkeypatch.setattr(models_mod, "probe_llm", fake_probe)
+    resp = await auth_client.post(
+        "/api/admin/models/test",
+        json={
+            "name": "临时",
+            "provider": "anthropic",
+            "base_url": "",
+            "api_key": "k",
+            "model": "m",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is False
+    assert received == {"provider": "anthropic", "model": "m"}
+
+
+async def test_form_model_test_rejects_invalid(auth_client):
+    resp = await auth_client.post(
+        "/api/admin/models/test",
+        json={"name": "X", "provider": "openai", "base_url": "", "model": "m"},
+    )
+    assert resp.status_code == 400
