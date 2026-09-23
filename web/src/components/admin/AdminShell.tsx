@@ -27,6 +27,7 @@ import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import ExtensionOutlinedIcon from "@mui/icons-material/ExtensionOutlined";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import CableOutlinedIcon from "@mui/icons-material/CableOutlined";
+import MemoryOutlinedIcon from "@mui/icons-material/MemoryOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import { adminApi, hasValidAdminToken, readAdminAuth, setAdminToken } from "@/lib/adminApi";
 import { notifyIdentityChanged } from "@/lib/api";
@@ -51,6 +52,12 @@ const NAV_ITEMS = [
     href: "/admin/a2a",
     icon: <HubOutlinedIcon fontSize="small" />,
     isActive: (pathname: string) => pathname.startsWith("/admin/a2a"),
+  },
+  {
+    label: "模型管理",
+    href: "/admin/models",
+    icon: <MemoryOutlinedIcon fontSize="small" />,
+    isActive: (pathname: string) => pathname.startsWith("/admin/models"),
   },
   {
     label: "MCP 管理",

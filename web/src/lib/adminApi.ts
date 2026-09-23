@@ -42,10 +42,21 @@ export interface Agent {
   mcp_servers: ManualMcpServerInput[];
   /** 在「Skill 管理」中勾选的技能 id（只有 approved 的技能可选） */
   skill_ids: number[];
+  /** 绑定的模型注册表 id（null = 回落全局 LLM_* 配置） */
+  model_id: number | null;
+  /** 由后端解析的模型快照（含 temperature/max_tokens 覆盖，只读） */
+  model_snapshot: Record<string, unknown> | null;
   system_prompt: string | null;
   status: "draft" | "published";
   created_at: string;
   updated_at: string;
+}
+
+export interface AgentModelBindingPayload {
+  /** 模型注册表 id；null = 清除绑定（回落全局配置） */
+  model_id: number | null;
+  temperature?: number | null;
+  max_tokens?: number | null;
 }
 
 export interface AgentCreatePayload {
@@ -62,6 +73,8 @@ export interface AgentCreatePayload {
   /** 从「Skill 管理」注册表勾选的技能 id */
   skill_ids?: number[];
   system_prompt?: string | null;
+  /** 模型绑定（缺省/null = 不修改绑定；提供则整体替换） */
+  model?: AgentModelBindingPayload | null;
 }
 
 export type AgentUpdatePayload = Partial<Omit<AgentCreatePayload, "slug">> & {
@@ -165,6 +178,46 @@ export interface McpServerCreatePayload {
 }
 
 export type McpServerUpdatePayload = Partial<McpServerCreatePayload>;
+
+// ---- 模型注册表 ----
+export type LLMProvider = "openai" | "anthropic";
+
+export const LLM_PROVIDER_LABELS: Record<LLMProvider, string> = {
+  openai: "OpenAI 兼容",
+  anthropic: "Anthropic",
+};
+
+export interface LLMModel {
+  id: number;
+  name: string;
+  provider: LLMProvider;
+  base_url: string;
+  model: string;
+  description: string;
+  /** 出参只给脱敏形式（后端不回显明文 key） */
+  api_key_masked: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LLMModelCreatePayload {
+  name: string;
+  provider: LLMProvider;
+  base_url?: string;
+  api_key?: string;
+  model: string;
+  description?: string;
+}
+
+export interface LLMModelUpdatePayload {
+  name?: string;
+  provider?: LLMProvider;
+  base_url?: string;
+  /** 留空/不传 = 保持原值 */
+  api_key?: string;
+  model?: string;
+  description?: string;
+}
 
 export interface McpToolInfo {
   name: string;
@@ -570,6 +623,45 @@ export const adminApi = {
     return request<{ ok: boolean; tools: McpToolInfo[]; message: string }>(
       `/api/admin/mcp-servers/${id}/tools`,
     );
+  },
+
+  // ---- 模型注册表 ----
+  listModels(): Promise<LLMModel[]> {
+    return request<LLMModel[]>("/api/admin/models");
+  },
+
+  createModel(payload: LLMModelCreatePayload): Promise<LLMModel> {
+    return request<LLMModel>("/api/admin/models", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateModel(id: number, payload: LLMModelUpdatePayload): Promise<LLMModel> {
+    return request<LLMModel>(`/api/admin/models/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** 删除模型；被 Agent 引用时后端返回 409，可用 force=true 自动解绑。 */
+  deleteModel(id: number, force = false): Promise<void> {
+    const suffix = force ? "?force=true" : "";
+    return request<void>(`/api/admin/models/${id}${suffix}`, { method: "DELETE" });
+  },
+
+  testModel(id: number): Promise<{ ok: boolean; message: string }> {
+    return request<{ ok: boolean; message: string }>(`/api/admin/models/${id}/test`, {
+      method: "POST",
+    });
+  },
+
+  /** 未保存表单直测（复用创建 payload；api_key 用表单明文）。 */
+  testModelForm(payload: LLMModelCreatePayload): Promise<{ ok: boolean; message: string }> {
+    return request<{ ok: boolean; message: string }>("/api/admin/models/test", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   // ---- Skill 注册表 ----
