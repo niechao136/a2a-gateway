@@ -37,6 +37,8 @@ def make_agent():
             "mcp_server_ids": [],
             "mcp_servers": [],
             "skill_ids": [],
+            "model_id": None,
+            "model_snapshot": None,
             "system_prompt": None,
             "status": AgentStatus.DRAFT,
             "created_at": _now(),

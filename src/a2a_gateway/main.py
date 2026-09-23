@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 
 from .agent_factory import close_all
 from .config import get_settings
-from .database import async_engine
+from .database import AsyncSessionLocal, async_engine
 from .migrations import run_migrations
 from .models import Base
 from .repository import (
@@ -26,7 +26,7 @@ from .repository import (
     ensure_default_agent,
 )
 from .routes import a2a_server, admin, chat, connectors, registry, speech
-from .database import AsyncSessionLocal
+from .routes import models as model_routes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,6 +87,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(registry.router)
+app.include_router(model_routes.router)
 app.include_router(a2a_server.router)
 app.include_router(speech.router)
 app.include_router(connectors.admin_router)
