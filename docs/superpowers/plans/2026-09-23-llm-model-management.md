@@ -16,7 +16,7 @@
 - 模型记录变更后必须 `refresh_agents_for_model` + 逐个 `invalidate_agent`（对齐 registry.py L229-233 的 MCP 模式）
 - PG 枚举列必须 `values_callable=lambda enum_cls: [m.value for m in enum_cls]`（models.py L87-91 注释点名的坑）；迁移用 DO 块幂等创建枚举
 - api_key 明文入库（String(512)），`ModelOut` 出参只给 `api_key_masked`（`mask_secret`），更新时 api_key 留空 = 保持原值
-- pyright standard 0 error；ruff line-length 100；后端测试不连真实 DB / 不发真实网络请求（conftest 模式）
+- 类型检查命令是 `uv run basedpyright`（standard 模式，要求 0 error）；ruff line-length 100（全仓库存在既有告警，门禁按「本次改动文件 0 新增」执行）；后端测试不连真实 DB / 不发真实网络请求（conftest 模式）
 - Python 命令统一用 `uv run`；前端命令在 `web/` 目录下执行
 - 每个任务结束必须 commit；测试先行（TDD）
 
@@ -246,7 +246,7 @@ def downgrade() -> None:
 
 - [ ] **步骤 7：质量门禁 + Commit**
 
-运行：`uv run ruff check src tests && uv run pyright`
+运行：`uv run ruff check <本次改动文件> && uv run basedpyright`
 预期：0 error
 
 ```bash
@@ -411,7 +411,7 @@ def resolve_llm(model_snapshot: dict[str, Any] | None):
 
 - [ ] **步骤 6：质量门禁 + Commit**
 
-运行：`uv run ruff check src tests && uv run pyright`
+运行：`uv run ruff check <本次改动文件> && uv run basedpyright`
 
 ```bash
 git add pyproject.toml uv.lock src/a2a_gateway/llm.py tests/test_llm_build.py
@@ -694,7 +694,7 @@ async def test_llm(
 
 - [ ] **步骤 5：质量门禁 + Commit**
 
-运行：`uv run ruff check src tests && uv run pyright`
+运行：`uv run ruff check <本次改动文件> && uv run basedpyright`
 
 ```bash
 git add src/a2a_gateway/llm_probe.py tests/test_llm_probe.py
@@ -973,7 +973,7 @@ async def detach_model_from_agents(session: AsyncSession, model_id: int) -> int:
 
 - [ ] **步骤 6：质量门禁 + Commit**
 
-运行：`uv run ruff check src tests && uv run pyright`
+运行：`uv run ruff check <本次改动文件> && uv run basedpyright`
 
 ```bash
 git add src/a2a_gateway/schemas.py src/a2a_gateway/repository.py tests/test_repository_model.py
@@ -1287,7 +1287,7 @@ app.include_router(model_routes.router)
 
 - [ ] **步骤 6：质量门禁 + Commit**
 
-运行：`uv run ruff check src tests && uv run pyright`
+运行：`uv run ruff check <本次改动文件> && uv run basedpyright`
 
 ```bash
 git add src/a2a_gateway/routes/models.py src/a2a_gateway/main.py tests/conftest.py tests/test_llm_models_api.py
@@ -2138,8 +2138,8 @@ git commit -m "feat: Agent 表单支持选择模型与参数覆盖"
 
 ```bash
 uv run pytest -q
-uv run ruff check src tests
-uv run pyright
+uv run basedpyright
+uv run ruff check <本次改动文件>
 ```
 预期：全绿 / 0 error
 
