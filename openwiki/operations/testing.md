@@ -5,7 +5,7 @@ description: 说明零外部依赖的测试哲学（dependency_overrides + ASGIT
 tags: [testing, pytest, vitest, e2e, fixtures, quality-gates]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-23T05:12:56.927Z
+    at: 2026-09-24T01:27:47.842Z
 sources:
   - id: openwiki-source-8037e2358a2c4f9b2c722a11
     resource: repo://AGENTS.md
@@ -21,8 +21,22 @@ sources:
     resource: repo://tests/e2e_smoke.py
   - id: openwiki-source-03574e9f9a51ca0c4b19ed5b
     resource: repo://tests/test_a2a_server.py
+  - id: openwiki-source-f323bfddbf3a97fb703edf28
+    resource: repo://tests/test_admin_api.py
   - id: openwiki-source-ab3221bd368b09c365e6536b
     resource: repo://tests/test_chat_api.py
+  - id: openwiki-source-9f96f06bbd9cdd32677cab48
+    resource: repo://tests/test_graph.py
+  - id: openwiki-source-fa957d241a6fb4842d7a22c5
+    resource: repo://tests/test_llm_build.py
+  - id: openwiki-source-494639d234919c508222a9b4
+    resource: repo://tests/test_llm_models_api.py
+  - id: openwiki-source-6afbff39c9cceaa4209f6269
+    resource: repo://tests/test_llm_probe.py
+  - id: openwiki-source-eb7d840435fac53401ffe6dd
+    resource: repo://tests/test_models_schema.py
+  - id: openwiki-source-b0005f476cac0407ee4399e2
+    resource: repo://tests/test_repository_model.py
   - id: openwiki-source-29e8451f8ef027e820ad9114
     resource: repo://tests/test_sandbox_client.py
   - id: openwiki-source-dd522498ad39ed2f45ebe0c9
@@ -41,7 +55,7 @@ sources:
     resource: repo://web/src/lib/skillUtils.test.ts
   - id: openwiki-source-3b6241dfcd4faf1a09f1cced
     resource: repo://web/src/lib/speech.test.ts
-generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
+generated: { by: "opencode", at: "2026-09-24T01:27:47.842Z" }
 ---
 
 # 测试策略与验证
@@ -52,9 +66,9 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 
 - **不连接数据库**：`app.dependency_overrides[get_session] = _fake_session`（假会话仅 `yield None`，路由层已被 monkeypatch 不会真正用它），管理员认证经 `get_current_admin` 覆盖（`conftest.py:80-107`）；
 - **不触发 FastAPI lifespan**：`httpx.ASGITransport(app=app)` 不执行 startup，因此**不会跑迁移、不初始化默认 Agent/管理员**；
-- **不发起真实网络请求**：httpx / A2A / LLM / MCP / 沙箱全部 mock 或 monkeypatch 替身。
+- **不发起真实网络请求**：httpx / A2A / LLM / MCP / 沙箱全部 mock 或 monkeypatch 替身；graph 测试将 `resolve_llm` 换成 `_graph_llm` 假模型。
 
-公共夹具：`anon_client`（仅覆盖 DB 会话）、`auth_client`（再覆盖管理员依赖）、`make_agent` / `make_admin` / `make_api_key`（`SimpleNamespace` 替身，满足序列化字段）。夹具在退出时 `dependency_overrides.clear()` 防泄漏。
+公共夹具：`anon_client`（仅覆盖 DB 会话）、`auth_client`（再覆盖管理员依赖）、`make_agent` / `make_admin` / `make_api_key`（`SimpleNamespace` 替身，满足序列化字段；`make_agent` 默认含 `model_id=None`/`model_snapshot=None`）。夹具在退出时 `dependency_overrides.clear()` 防泄漏。
 
 三件套验证（各设计规格验收条款一致）：`uv run pytest` 全绿 + `uv run basedpyright` 无新增/0 error + `uv run ruff check` 无新增告警；前端 `cd web && npm test` 全绿（`docs/superpowers/specs/*`、`AGENTS.md`）。
 
@@ -79,8 +93,9 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 
 | 文件 | 守护行为 |
 |---|---|
-| `test_admin_api.py` | JWT 登录/登出、Agent CRUD、发布/下线、保留 slug 400、API Key 管理、test-connection |
+| `test_admin_api.py` | JWT 登录/登出、Agent CRUD、发布/下线、保留 slug 400、API Key 管理、test-connection、**模型绑定三态与未知模型 400**（`test_admin_api.py:192-274`） |
 | `test_registry_api.py` | A2A 端点 / MCP 服务 CRUD、探测测试、工具列表 |
+| `test_llm_models_api.py` | 模型列表脱敏（不回明文 key）、openai 必填 base_url、重名 409、更新 refresh+invalidate、删除 409/force detach、已存/表单直测探针端点 |
 | `test_skills_api.py` | 技能 CRUD、重名 409、导入预览→落库、覆盖重置 pending、审核、删除 409/force |
 | `test_chat_api.py` | SSE 事件序列、retry、**`test_chat_stream_error_event_is_friendly`（错误文案不泄漏）**、history |
 | `test_a2a_server.py` | API Key 三态 401、卡片公开/404、`public_base_url` 六则、流式 INPUT_REQUIRED、恢复、TaskNotFound、task/context 同 id |
@@ -94,6 +109,10 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 | `test_skill_import.py` | zip slip、符号链接、解压炸弹、SSRF（私网/环回/元数据/重定向/体积极限）——全离线 |
 | `test_auth_scheme.py` | 五种出站鉴权 header/query/stdio 行为与 `validate_auth` |
 | `test_config.py` | 默认 DB URL、组件 URL 构建、显式 URL 优先 |
+| `test_llm_build.py` | openai/anthropic 分支、temperature/max_tokens 覆盖、中文错误（未知 provider/空 key）、`resolve_llm` 全局回落与非法快照不静默回落 |
+| `test_llm_probe.py` | `httpx.MockTransport` 模拟两端点；401→key 错误、404→base_url 提示、400→模型错误、连接失败、未知 provider |
+| `test_repository_model.py` | `llm_model_snapshot` 字段与枚举/字符串 provider、`mask_secret` 脱敏、`validate_llm_model` 校验 |
+| `test_models_schema.py` | `LLMModel` 列集合、`model_id`/`model_snapshot` 绑定列、`LLMProvider` 成员值 |
 | `test_bindings.py` | 绑定合并：`manual=None` 保留、列表替换去重、MCP 按 name 键 |
 | `test_pending_store.py` | upsert/get/delete、TTL 过期删除、Fake store |
 | `test_notifier.py` | 未配置退化日志、配置后 payload、**推送失败被吞** |
@@ -111,7 +130,7 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 | `test_tools_script_exec.py` | 沙箱门禁（未配置不挂载、allow_scripts 过滤）、错误文本化、monkeypatch |
 | `test_mcp_client.py` | 三传输、8/60s 超时、`_format_error` 展开 ExceptionGroup |
 | `test_sandbox_client.py` | Timeout/Rejected/Unavailable 三类映射、空 URL 禁用 |
-| `test_graph.py` | pre_model_hook 挂起注入、注入顺序、store 异常降级、摘要叠加 |
+| `test_graph.py` | pre_model_hook 挂起注入、注入顺序、store 异常降级、摘要叠加；**`resolve_llm` 换 `_graph_llm` 替身**（`test_graph.py:74-76`）避免真实网络请求 |
 | `test_graph_skill.py` | 清单顺序、always/on_demand 常驻、记账、超窗重注入、stale 过滤、预算截断、**图级回归（注入真的到达模型输入）** |
 | `test_skills_binding.py` | 绑定门禁 pending→400、总量超限、快照只含 approved、enabled=false 跳过、refresh+invalidate |
 | `test_agent_factory.py` | 图缓存复用与失效、MCP 探测注入 |
@@ -160,8 +179,9 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 ```
 
 - **后端单测永不触网/触库**——这是回归速度与可重复性的根基；需要真实 IO 的验证显式分流到 `e2e_smoke.py` 与 `sandbox/tests`。
-- 安全回归重点：`test_skill_import`（SSRF/zip slip）、`test_a2a_server`（API Key 归属）、`test_skills_binding`（审核门禁）、`test_chat_api`（错误不泄漏）、`test_sandbox_client`（三类错误）。
+- 安全回归重点：`test_skill_import`（SSRF/zip slip）、`test_a2a_server`（API Key 归属）、`test_skills_binding`（审核门禁）、`test_chat_api`（错误不泄漏）、`test_sandbox_client`（三类错误）、`test_llm_models_api`（key 脱敏/探针）。
 - fail-soft 回归重点：`test_notifier`、`test_mcp_client`、`test_graph*`（hook 降级）、`test_connector_pipeline`（超时兜底）——见 [故障处理与可观测性](/openwiki/operations/failure-and-observability.md)。
+- 模型管理回归：`test_llm_build`/`test_llm_probe`/`test_repository_model`/`test_models_schema` 守护 [LLM 模型管理](/openwiki/concepts/llm-model-management.md) 的构图与探针语义。
 
 ## 不变量
 
@@ -170,4 +190,4 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 - 三件套 + 前端 `npm test` 是各规格的统一验收口径。
 - 源码与测试是权威（`AGENTS.md`）：brief/设计中的未知项是验证缺口，不自动当需求。
 
-相关页：[架构总览](/openwiki/architecture/overview.md)、[故障处理与可观测性](/openwiki/operations/failure-and-observability.md)、[沙箱执行](/openwiki/operations/sandbox.md)、[聊天生命周期](/openwiki/workflows/chat-lifecycle.md)。
+相关页：[架构总览](/openwiki/architecture/overview.md)、[LLM 模型管理](/openwiki/concepts/llm-model-management.md)、[故障处理与可观测性](/openwiki/operations/failure-and-observability.md)、[沙箱执行](/openwiki/operations/sandbox.md)、[聊天生命周期](/openwiki/workflows/chat-lifecycle.md)。

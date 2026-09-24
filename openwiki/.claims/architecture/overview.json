@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e76ad7b620d42879fcf2bb88afc75a3a591f956f9598ba8be753e9c2d27ab62b",
+  "pageVersion": "sha256:7c07b9ff590ab7a5c860074bd79dc919d4258536aa9344190a23ee76fde3213a",
   "claims": [
     {
       "id": "claim_1e7c2f272f6b4b7e8210e55d380694fe",
@@ -14,11 +14,11 @@
     },
     {
       "id": "claim_c69e49a9c4e041af8611fa7dd7744bc0",
-      "statement": "FastAPI 应用在 lifespan 中依次完成迁移（失败回退 create_all）、播种默认 Agent/管理员/API Key，并挂载 chat、admin、registry、a2a_server、speech、connectors 共 7 个路由器与 /health、CORS、全局 500 兜底。",
+      "statement": "FastAPI 应用在 lifespan 中依次完成迁移（失败回退 create_all）、播种默认 Agent/管理员/API Key，并挂载 chat、admin、registry、models、a2a_server、speech、connectors（admin+webhook）共 8 个 router include，以及 /health、CORS、全局 500 兜底。",
       "evidence": [
         {
-          "resource": "repo://src/a2a_gateway/main.py#L39-L98",
-          "version": "repo-lines-v1:sha256:b3921bedde3a1c2a7236c53d426cc81e0832fe63894715ddb9969de6eab2d8e7:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiY2M0NDVlYmQyMGQ1ZGYyYjlhMWY3M2JjODdmNjQyZWQ1MTcyYmFmNzc3NzAxNzJhNTczNzJhMTQxOGVlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmMGYxNjhiNTcwMGE1MmYyODg4NmFlYjM3YjkwZDM5MzBlMWIxYmEzMjA3N2YyYThjOWQ2MGM0NmQ1ZDFkNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1MzYzZjQxYzIwNDkyMDM0ZTViODkxNTQ5ODhlM2QzYzhlZGI1YWNkNDI4ZTk4MzQ5MDBjOTViMTM1ZTczMmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzZTY0NDc1YTNmMjliMWJmNGMxMWU1NDc1Mzg2YWZmZmZlNDM2ODU2Y2VlZTdkMzIxMTBkZWU4N2JkN2YzYTIifQ"
+          "resource": "repo://src/a2a_gateway/main.py#L39-L99",
+          "version": "repo-lines-v1:sha256:e86b42eb8442155f6a04d4f859c12fe544a4eb4a08050f5cc9bd5191e99a8254:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiY2M0NDVlYmQyMGQ1ZGYyYjlhMWY3M2JjODdmNjQyZWQ1MTcyYmFmNzc3NzAxNzJhNTczNzJhMTQxOGVlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmMGYxNjhiNTcwMGE1MmYyODg4NmFlYjM3YjkwZDM5MzBlMWIxYmEzMjA3N2YyYThjOWQ2MGM0NmQ1ZDFkNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1MzYzZjQxYzIwNDkyMDM0ZTViODkxNTQ5ODhlM2QzYzhlZGI1YWNkNDI4ZTk4MzQ5MDBjOTViMTM1ZTczMmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzZTY0NDc1YTNmMjliMWJmNGMxMWU1NDc1Mzg2YWZmZmZlNDM2ODU2Y2VlZTdkMzIxMTBkZWU4N2JkN2YzYTIifQ"
         }
       ]
     },
@@ -38,11 +38,15 @@
     },
     {
       "id": "claim_0337e087375d4f7da88131e209f87fde",
-      "statement": "共享图由 build_graph 经 create_react_agent 构建：工具集 = 每目标一个 A2A 工具 + 绑定 MCP 工具（探测失败退化为 mcp_call）+ 技能工具 + 条件挂载的沙箱脚本工具，prompt = system_prompt + 技能提示，pre_model_hook 负责历史压缩与挂起/技能再注入。",
+      "statement": "共享图由 build_graph 经 create_react_agent 构建：LLM 经 resolve_llm 按 agent.model_snapshot 选择（绑定快照则按 openai/anthropic 分支构建，否则回落全局 LLM_*）；工具集 = 每目标一个 A2A 工具 + 绑定 MCP 工具（探测失败退化为 mcp_call）+ 技能工具 + 条件挂载的沙箱脚本工具，prompt = system_prompt + 技能提示，pre_model_hook 负责历史压缩与挂起/技能再注入。",
       "evidence": [
         {
-          "resource": "repo://src/a2a_gateway/graph.py#L273-L337",
-          "version": "repo-lines-v1:sha256:e944ee1ef657462c29cf9ae90479f6de602e41339d4762f796321b503a2f0ca3:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNGY0OWQwNTg3M2NlYzM5Zjk3MDI2NzZmYTg0MGNkMDIwNzQxZGMwMDgwNGNmYTQzMDEyMDk3ZDUzOTU4NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhOTJhMGFkYTBjZTJkMjcxN2IzZWMwYTg4MWI1NzI5N2FiZWIyZGZmZWI1ZTQ4ODFmM2Y2OTQwNGY1ZTIzYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/a2a_gateway/graph.py#L273-L338",
+          "version": "repo-lines-v1:sha256:8f98f31c3a00d627fbebf08f1acc3d51cf4476f32bda0021ae1fcba15dcf32c4:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjNGY0OWQwNTg3M2NlYzM5Zjk3MDI2NzZmYTg0MGNkMDIwNzQxZGMwMDgwNGNmYTQzMDEyMDk3ZDUzOTU4NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5MjIwNGM2NWY1MDJkYzE2NDU0YjYyNDA4NTZhOWFiN2FkZTAwM2E4ZTlmODYzMzNlYzBiN2M5ZTQwOTQ5MWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhOTJhMGFkYTBjZTJkMjcxN2IzZWMwYTg4MWI1NzI5N2FiZWIyZGZmZWI1ZTQ4ODFmM2Y2OTQwNGY1ZTIzYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/llm.py#L200-L204",
+          "version": "repo-lines-v1:sha256:52b39ebd913d325863b0bd4953d2a9fd59ee1bae339ae43eea129c0a47a404d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODM0NWEzODI3MjUzNWJmYjY3MDMxNGZkNjY3M2Q4ZjE3Zjc2MWUxOTJiMjM5MTY1MDk0MTllMDA5MmM0ZmI3YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzYzMzk5YjZlM2E1ZmMwODlmNzgyMmY3NjhlYjc2ZDM0ODRjMDUzOWQ1NTIzNzMxMjJiMTBmYjU5YjZkNDcxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjY2MzIyMzIxOTlmZjdmNDc0OTZlZjQzNTQ2NDM2ZDVhMzc4OWVmODQ3ZjI4MTVkZDIwNTIxMGU2ZGFlMTk0ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         }
       ]
     },
@@ -73,10 +77,24 @@
           "version": "repo-lines-v1:sha256:875828ad2d3ab9e41ff830c28f3041445ef2d0223ab4051e1a408dceffce62c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkzMzQ0OGNkZWFiMzY2NjExZmU2NWE3MjY1NDI4ZTY3OWZmZTJiNTA0NDZiZThiZGUxYTQ0MThiMmRjMjIwNDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4N2UxMzIzZDA5ZjZjYWMxYjkzOTg5N2ZkZjkxMzM1YTk1Yzg3MjY5M2VhMjVlMDMyOTJmODBkN2U1ZmNkZDQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNzg3YThkYjVmNWQxZjA2ODUzY2U5NTIwYzMyNmM1YWUyMWZjNTg4MTk1NmY4YjNkNWU1NTQ2NDViN2ViNWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkMDZjMDQ2Y2FkYTQzY2JlMjc5NDY5ZmNhYTVkZDI4N2Q0ZDI3YjZmZTZkNzQ4ZTVjMDZiOTRlNDQ5Njk0YmYifQ"
         }
       ]
+    },
+    {
+      "id": "claim_7174945690224fff9239dab1c406f23b",
+      "statement": "管理端模型更新后经 refresh_agents_for_model 刷新各引用 Agent 的快照（保留 temperature/max_tokens 覆盖）并 invalidate_agent 失效图缓存，无需重启进程。",
+      "evidence": [
+        {
+          "resource": "repo://src/a2a_gateway/repository.py#L572-L584",
+          "version": "repo-lines-v1:sha256:e511b20947bf4d364f606b30caffc9ebb67ba89c13dd5012696ff4e7daf22493:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2Mjk3MDY5ZGQyMDVjNTJkZWVhMWJjYWYyNzQyYzJjZDNhY2EyODg3NWI1ZDE4Mjk4NjA0NTAzMjk2MDJiYTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmZWMyMjUwNzAzNDcxMjYxMjI5MzZiNzFkNDM5MDAzNjZlZjdlMmRmZWRmMjM4MTBlNmNiZTBiYzJlZmRhY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4YWI5ODZhNGVkYzE1YTM5NDM0MmI4YTIyOGEzMjUwNWJiZmI3ZmFlZjZhNTIxM2IzOTI4MTY0MDUyMzNmNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgxOWI4NDY5NDRjOTg5N2E1Y2UzNzRmNDIzNTZkNjRhYTIwOGFkMWMzYjQyY2U2ODRlNTM5ODE4OTlkOGYwODgifQ"
+        },
+        {
+          "resource": "repo://src/a2a_gateway/routes/models.py#L101-L105",
+          "version": "repo-lines-v1:sha256:933cbaf7118a458437723f673ac7ed46a09d14032dceb3137ee262817bd02aaa:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTZiNDVkZDkzZjVlNzcxNzY3NWZiYWUyZmU5NzgwZDhjZjc3ZGM1ZjhlNDMwYTQ2MWE4YTc4Y2Q3ZjYwNmZiZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2Y4ZjNlYWFiZmQxMjk4MmUzMDgyNWRiYzcwMzIxMDdjMmY4YTZmNzZiZmNhOWY0NTAxMjRiODZhZjFmMTMwYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmY4Mjc0NmE2Y2EwNzUzZjA5OWU0M2RjYTI2OTNhYzZhYzM1NjJjZDIzZmQ3ZDAzZDhlZThhNzFiOTk5OTEzYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjViYzY3YjQ4ZTYzZDVhMDM1M2Q1NDdkNTQ1NjZjNTlmOGI5MmU0NTUyNDllZTExODc4YjdjY2EyYzc5MWI0MiJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-23T05:12:56.927Z"
+    "at": "2026-09-24T01:27:47.842Z"
   }
 }

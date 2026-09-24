@@ -1,23 +1,33 @@
 ---
 type: quickstart
 title: 快速开始与任务路由
-description: a2a-gateway 入口页：项目是什么、本地如何运行与部署，并按任务场景导航到各专题页面。
+description: a2a-gateway 入口页：项目是什么、本地如何运行与部署、LLM_* 与模型注册表关系，并按任务场景导航到各专题页面。
 tags: [quickstart, setup, deploy, navigation, routing]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-23T05:12:56.927Z
+    at: 2026-09-24T01:27:47.842Z
 sources:
   - id: openwiki-source-5f5b95b3d6a215fa02ceb945
     resource: repo://.env.example
   - id: openwiki-source-b79fbbd921df689b4bbdc82f
     resource: repo://docker-compose.yml
+  - id: openwiki-source-cc4b72a84e57b12a4b4b9340
+    resource: repo://docs/superpowers/specs/2026-09-23-llm-model-management-design.md
   - id: openwiki-source-05ccef8d4cf1698187f20464
     resource: repo://pyproject.toml
+  - id: openwiki-source-f53adcab3542f0a7184408f6
+    resource: repo://src/a2a_gateway/llm.py
   - id: openwiki-source-5587127d632cfcdc010b44e9
     resource: repo://src/a2a_gateway/main.py
+  - id: openwiki-source-a9ded1863fe33ba2a953bab4
+    resource: repo://src/a2a_gateway/routes/models.py
   - id: openwiki-source-e74227ee06b16f894c3e3826
     resource: repo://TODO.md
-generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
+  - id: openwiki-source-394d273dff8cb185336e3e7e
+    resource: repo://web/src/app/admin/models/page.tsx
+  - id: openwiki-source-864b3d31b7f5d6dab9260713
+    resource: repo://web/src/components/admin/AdminShell.tsx
+generated: { by: "opencode", at: "2026-09-24T01:27:47.842Z" }
 ---
 
 # 快速开始与任务路由
@@ -48,7 +58,7 @@ cd web && npm run dev       # http://localhost:3000
 ```
 
 - 对话界面：`http://localhost:3000/`（默认 Agent）或 `/{slug}`；
-- 管理中心：`http://localhost:3000/admin`（账号 `ADMIN_USERNAME` / `ADMIN_PASSWORD`）；
+- 管理中心：`http://localhost:3000/admin`（账号 `ADMIN_USERNAME` / `ADMIN_PASSWORD`；子页含「模型管理」`/admin/models`）；
 - 本机直连后端时 `FRONTEND_ORIGIN=http://localhost:3000`（`.env.example:51`）。
 
 ### 全容器部署（推荐）
@@ -75,7 +85,7 @@ docker compose up -d --build
 
 复制 `.env.example` 后至少改：
 
-1. **`LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL`**——OpenAI 兼容端点（可指 ollama 等）；Gemini 3 系列自动受益于内置 `thought_signature` 兼容层；
+1. **`LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL`**——OpenAI 兼容端点（可指 ollama 等），作为**零配置回落**（未绑定模型的 Agent 走此路径）；Gemini 3 系列自动受益于内置 `thought_signature` 兼容层；多模型/按 Agent 差异化可在管理中心「模型管理」登记并绑定，**无需改环境变量**（见 [LLM 模型管理](/openwiki/concepts/llm-model-management.md)）；
 2. **`HERMES_A2A_URL` / `HERMES_A2A_TOKEN`**——默认 Agent 绑定的下游；
 3. **`JWT_SECRET` / `ADMIN_PASSWORD`**——勿用默认值上生产；
 4. 外部数据库时可改用完整 `DATABASE_URL` / `CHECKPOINT_DB_URL` 覆盖组件式 `POSTGRES_*`；
@@ -109,6 +119,7 @@ docker cp tests/e2e_smoke.py a2a-gateway-backend:/tmp/ \
 | 理解表结构、快照 JSONB、挂起表 | [数据模型](/openwiki/architecture/data-model.md) |
 | 上生产 / nginx / 迁移 / 端口清单 | [部署](/openwiki/architecture/deployment.md) |
 | 理解 Agent 配置、slug、绑定模型 | [Agent 配置与绑定](/openwiki/concepts/agents-and-bindings.md) |
+| 配置/测试 LLM 模型、给 Agent 绑定模型 | [LLM 模型管理](/openwiki/concepts/llm-model-management.md)、[Agent 配置与绑定](/openwiki/concepts/agents-and-bindings.md) |
 | 会话、thread_id、匿名身份 cookie | [身份与会话](/openwiki/concepts/identity-and-conversations.md) |
 | 安全基线（JWT、CORS、注入面） | [安全](/openwiki/concepts/security.md) |
 | 导入/绑定 Skills、审核门禁 | [技能系统](/openwiki/concepts/skills.md) |
@@ -130,7 +141,7 @@ docker cp tests/e2e_smoke.py a2a-gateway-backend:/tmp/ \
 |---|---|
 | `POST /api/chat`、`/api/chat/{slug}` | 对话 SSE（事件：token/tool_start/tool_end/interrupt/done/error） |
 | `GET /api/chat/history?thread_id=` | 会话历史 |
-| `/api/admin/...` | 管理中心 API（JWT Bearer，除 login 外全保护） |
+| `/api/admin/...` | 管理中心 API（JWT Bearer，除 login 外全保护；含 `/api/admin/models*` 模型注册表 CRUD/探针） |
 | `/registry` 等 | Agent 注册表路由（见 [架构总览](/openwiki/architecture/overview.md)） |
 | A2A RPC | 网关对外的 A2A Server 端点（见 [A2A 服务端](/openwiki/integrations/a2a-server.md)） |
 
@@ -139,6 +150,7 @@ docker cp tests/e2e_smoke.py a2a-gateway-backend:/tmp/ \
 - Phase 0–7 已完成：后端 342+ 用例、前端 vitest、basedpyright standard 0 error；
 - **待真库验收**：`alembic upgrade head` 尚未在真实 PostgreSQL 跑过（重点核对 skills 相关 JSONB `server_default`）；审核撤回→对话跳过技能链路需真机复核；
 - **下一步**：管理中心表单校验前端用例、云安全组核对、二期（长任务轮询）；
-- Gemini 3（OpenAI 兼容端点）函数调用必须回传 `thought_signature`，已由 `llm.py` 兼容层处理，对其它端点透明。
+- Gemini 3（OpenAI 兼容端点）函数调用必须回传 `thought_signature`，已由 `llm.py` 兼容层处理，对其它端点透明；
+- LLM 可走两条通道：环境变量 `LLM_*`（零配置回落）或管理中心「模型管理」注册表绑定（改配置无需重启，见 [LLM 模型管理](/openwiki/concepts/llm-model-management.md)）。
 
 端口期望策略（安全组）：`10099` 放行、`22` 限源、`9900`（Hermes）仅内网、`5432`/`8000`/`3000` 禁对外（`TODO.md:173-181`）。

@@ -1,11 +1,8 @@
 ---
 type: workflow-guide
 title: Agent 图构建与编排
-description: 解释共享 ReAct 图的构建：pre_model_hook 的历史压缩、pending 提示与技能再注入，工具组装（A2A/MCP/技能），以及 LLM 适配层的 thought_signature 兼容处理。
+description: 解释共享 ReAct 图的构建：resolve_llm 按绑定快照或全局配置选择 LLM，pre_model_hook 的历史压缩、pending 提示与技能再注入，工具组装（A2A/MCP/技能），以及 LLM 适配层的 thought_signature 兼容处理。
 tags: [langgraph, react-agent, pre-model-hook, checkpointer, cache, thought-signature]
-verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-23T05:12:56.927Z
 sources:
   - id: openwiki-source-472b0deb13ce18764b8bb6bc
     resource: repo://src/a2a_gateway/agent_factory.py
@@ -15,12 +12,19 @@ sources:
     resource: repo://src/a2a_gateway/llm.py
   - id: openwiki-source-1157ad22d08962e1ffa75962
     resource: repo://src/a2a_gateway/skills.py
-generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
+  - id: openwiki-source-9f96f06bbd9cdd32677cab48
+    resource: repo://tests/test_graph.py
+  - id: openwiki-source-fa957d241a6fb4842d7a22c5
+    resource: repo://tests/test_llm_build.py
+generated: { by: "opencode", at: "2026-09-24T01:27:47.842Z" }
+verified:
+  - by: openwiki/0.5.2
+    at: 2026-09-24T01:27:47.842Z
 ---
 
 # Agent 图构建与编排
 
-所有 Agent **共用同一套 ReAct 图结构**（`create_react_agent`），差异全部通过 `AgentConfig` 注入：A2A 目标、MCP 服务、`system_prompt`、技能快照（`graph.py:1-8`）。实例由 `agent_factory` 按缓存键构建与失效。
+所有 Agent **共用同一套 ReAct 图结构**（`create_react_agent`），差异全部通过 `AgentConfig` 注入：A2A 目标、MCP 服务、`system_prompt`、技能快照、模型快照（`graph.py:1-8`、`318-319`）。实例由 `agent_factory` 按缓存键构建与失效。
 
 ## checkpointer 单例
 
@@ -30,7 +34,7 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 - 所有 Agent 图共享**同一个** checkpointer 实例——线程隔离靠每对话 `thread_id`，不靠实例隔离；
 - 关停时 `close_all` 调 `_checkpointer_cm.__aexit__` 并清空（`agent_factory.py:119-128`）。
 
-Checkpointer 落 PostgreSQL，`astream_events`/`ainvoke` 的 `configurable.thread_id` 即会话线程；**压缩只改 `llm_input_messages`，checkpoint 里的完整历史保留，time travel 不受影响**（`graph.py:334-335`）。
+Checkpointer 落 PostgreSQL，`astream_events`/`ainvoke` 的 `configurable.thread_id` 即会话线程；**压缩只改 `llm_input_messages`，checkpoint 里的完整历史保留，time travel 不受影响**（`graph.py:335-337`）。
 
 ## 实例缓存：(agent_id, updated_at)
 
@@ -43,7 +47,7 @@ Checkpointer 落 PostgreSQL，`astream_events`/`ainvoke` 的 `configurable.threa
 - `invalidate_agent(agent_id)`：管理中心修改配置后**显式**弹出该 agent 全部键并关 wrappers（`agent_factory.py:111-116`）——技能审核、MCP 删除刷新、绑定变更都调用它；
 - `close_all`：应用 lifespan 关停时清缓存 + 关 checkpointer（`main.py:57`）。
 
-缓存与快照的关系：构图参数（A2A targets、MCP 快照、技能快照）全部来自 ORM 对象上的 JSONB 字段（repository 写时解析），**构图与运行时零 DB 查询**；DB 只在取 `AgentConfig` 行本身与 checkpointer 通道发生。
+缓存与快照的关系：构图参数（A2A targets、MCP 快照、技能快照、**模型快照 `model_snapshot`**）全部来自 ORM 对象上的 JSONB 字段（repository 写时解析），**构图与运行时零 DB 查询**；DB 只在取 `AgentConfig` 行本身与 checkpointer 通道发生。
 
 ## MCP 工具探测（构图时）
 
@@ -53,15 +57,28 @@ Checkpointer 落 PostgreSQL，`astream_events`/`ainvoke` 的 `configurable.threa
 - **尽力而为**：单项失败只让该 name 不进 index（`ok and name` 过滤），`except Exception` 兜底返回 `(name, False, [])`——**探测绝不能影响图实例构建**；
 - 产出 `mcp_tool_index` 注入 `build_graph`；详见 [MCP 集成](/openwiki/integrations/mcp.md)。
 
+## LLM 选择：resolve_llm
+
+`build_graph` 先经 `llm = resolve_llm(agent.model_snapshot)`（`graph.py:318-319`）选择模型：
+
+- **有绑定快照** → `build_llm_from_snapshot`（`llm.py:154-197`）按 provider 分支：
+  - `openai` → `ThoughtSignatureChatOpenAI`（装 thought_signature 补丁 + `streaming=True`，`base_url` 缺省回落全局 `LLM_*`）；
+  - `anthropic` → `ChatAnthropic`（`base_url` 仅在快照提供时传入）；
+  - `temperature`/`max_tokens` **非空才覆盖**；
+  - **失败语义（中文 `ValueError`，不静默回落）**：未知 provider → `不支持的模型供应商：{p}`；`api_key` 为空 → `模型未配置 API Key（请在「模型管理」中补充后重试）`（在进底层客户端前拦截，避免英文 `OpenAIError`）。
+- **无快照**（`model_id` 为 NULL）→ `build_llm()` 读 `Settings.llm_*` 全局回落（零配置兜底）。
+
+测试：`tests/test_llm_build.py` 覆盖两分支、参数覆盖、中文错误与 `resolve_llm` 回落/非法快照不静默回落。
+
 ## 工具组装
 
-`build_graph` 内（`graph.py:318-327`）：
+`build_graph` 内（`graph.py:318-337`）：
 
-1. `build_tools(a2a_tools, mcp_servers, mcp_tool_index)`：A2A 每目标一个工具 + MCP 每工具一个绑定；**有绑定工具则不挂 `mcp_call`，全失败才退化 `mcp_call`**（`graph.py:286-297`）；
-2. `tools.extend(make_skill_tools(bound_skills))`——**全部**已绑定技能（不按 load_mode 过滤），否则 always 技能附件不可读（`graph.py:321-324` 注释）；
-3. `tools.extend(make_script_exec_tools(bound_skills))`——仅 `allow_scripts` + `SANDBOX_URL` 已配（`graph.py:325-326`）；
-4. `prompt = (system_prompt or DEFAULT_SYSTEM_PROMPT) + build_skills_prompt(skills)`——层 1 静态技能清单（`graph.py:327`）；
-5. `create_react_agent(llm, tools, prompt, checkpointer, state_schema=AgentChatState, pre_model_hook=...)`（`graph.py:328-337`）。
+1. `build_tools(a2a_tools, mcp_servers, mcp_tool_index)`（`graph.py:273-299`）：A2A 每目标一个工具 + MCP 每工具一个绑定；**有绑定工具则不挂 `mcp_call`，全失败才退化 `mcp_call`**（`graph.py:293-297`）；
+2. `tools.extend(make_skill_tools(bound_skills))`——**全部**已绑定技能（不按 load_mode 过滤），否则 always 技能附件不可读（`graph.py:322-325`）；
+3. `tools.extend(make_script_exec_tools(bound_skills))`——仅 `allow_scripts` + `SANDBOX_URL` 已配（`graph.py:326-327`）；
+4. `prompt = (system_prompt or DEFAULT_SYSTEM_PROMPT) + build_skills_prompt(skills)`——层 1 静态技能清单（`graph.py:328`）；
+5. `create_react_agent(llm, tools, prompt, checkpointer, state_schema=AgentChatState, pre_model_hook=...)`（`graph.py:329-337`）。
 
 `DEFAULT_SYSTEM_PROMPT` 定义委托/直答/追问转述/`a2a_resume` 的行为基线（`graph.py:45-57`）。A2A 工具命名与描述见 [A2A 客户端](/openwiki/integrations/a2a-client.md)；技能四层注入见 [技能系统](/openwiki/concepts/skills.md)。
 
@@ -133,27 +150,30 @@ Checkpointer 落 PostgreSQL，`astream_events`/`ainvoke` 的 `configurable.threa
 | 入站非流式 | 子类 `ThoughtSignatureChatOpenAI._create_chat_result` 从原始响应提取 |
 | 出站 | 子类 `_get_request_payload` 按 tool_call id 把 signatures 回填 `tool_calls[].extra_content` |
 
-全部捕获/合并/回填包 try——失败 `logger.debug` 静默，**对非 Gemini 端点完全透明**（无该字段时空操作）；安装失败 `logger.exception` 后仍返回 `False` 但 `build_llm` 继续（`llm.py:88-99`、`142-150`）。`build_llm()`：`ChatOpenAI(model, api_key=SecretStr, base_url, streaming=True)` + 先装补丁。测试：`tests/test_llm_thought_signature.py`。
+全部捕获/合并/回填包 try——失败 `logger.debug` 静默，**对非 Gemini 端点完全透明**（无该字段时空操作）；安装失败 `logger.exception` 后仍返回 `False` 但 `build_llm` 继续（`llm.py:88-99`、`142-150`）。`build_llm()`：`ChatOpenAI(model, api_key=SecretStr, base_url, streaming=True)` + 先装补丁；openai 分支的 `build_llm_from_snapshot` 同样装补丁（`llm.py:172-184`），anthropic 分支用 `ChatAnthropic` 不装补丁（`llm.py:186-194`）。测试：`tests/test_llm_thought_signature.py`、`tests/test_llm_build.py`。
 
 文件头对该模块放宽 pyright 私有成员/Any 检查（`llm.py:20-24`）——因需访问 langchain-openai 私有实现。
 
 ## 构图数据流总览
 
 ```
-DB AgentConfig 行 ──(取行)──► ORM 对象（a2a_targets/mcp_servers/skills JSONB 快照）
+DB AgentConfig 行 ──(取行)──► ORM 对象（a2a_targets/mcp_servers/skills/model_snapshot JSONB 快照）
      │
      ▼ get_agent_instance
 缓存 miss ─► make_a2a_tools ─► _probe_mcp_tools(8s 并发) ─► get_checkpointer(单例)
-     ─► build_graph: build_llm + build_tools + make_skill_tools + make_script_exec_tools
-                    + prompt(system+skills) + pre_model_hook(压缩/pending/技能)
+     ─► build_graph: resolve_llm(agent.model_snapshot) + build_tools + make_skill_tools
+                     + make_script_exec_tools + prompt(system+skills) + pre_model_hook
      ─► _cache[(id, updated_at)] = (wrappers, graph)；清同 id 旧键
 ```
+
+`resolve_llm` 分支：有快照 → `build_llm_from_snapshot`（openai/anthropic，缺 key/未知 provider 抛中文 `ValueError`）；无快照 → `build_llm()` 读全局 `LLM_*`（`llm.py:200-204`）。
 
 失效路径：`updated_at` 变化（新键）或 `invalidate_agent(id)`（显式弹出）；两者都关旧 wrappers 防泄漏。
 
 ## 不变量
 
 - 图结构全局唯一，差异只在配置注入；`state_schema` 必须继承 `AgentState`。
+- LLM 经 `resolve_llm(agent.model_snapshot)` 选择：绑定快照走 openai/anthropic 分支，缺 key/未知 provider 中文 `ValueError` 不静默回落；无快照回落全局 `LLM_*`。
 - checkpointer 进程级单例；实例缓存键含 `updated_at`，失效必关 wrappers。
 - hook 只产出 `llm_input_messages` + `active_skills`，不改 checkpoint 历史。
 - 压缩失败/记账失败/pending 查询失败三者独立降级，任何一路失败都不打断本轮对话。
@@ -162,9 +182,10 @@ DB AgentConfig 行 ──(取行)──► ORM 对象（a2a_targets/mcp_servers/
 
 ## 代表性测试
 
-- `tests/test_graph.py`：pending 注入进模型输入但不进 state 历史、store 异常降级、注入与摘要叠加顺序、`pre_model_hook (state, config)` 签名兼容（config 必须注解 `RunnableConfig`）。
+- `tests/test_graph.py`：pending 注入进模型输入但不进 state 历史、store 异常降级、注入与摘要叠加顺序、`pre_model_hook (state, config)` 签名兼容；**`resolve_llm` 换 `_graph_llm` 替身**避免真实网络（`test_graph.py:74-76`）。
 - `tests/test_graph_skill.py`：清单顺序、always 常驻、记账、超窗重注入、stale 过滤、预算截断、图级回归（注入到达模型输入）。
 - `tests/test_agent_factory.py`：`test_graph_cache_reuse_and_invalidation`（缓存复用/updated_at 失效/显式 invalidate）。
+- `tests/test_llm_build.py`：openai/anthropic 分支、参数覆盖、中文错误、`resolve_llm` 回落与非法快照不静默回落。
 - `tests/test_llm_thought_signature.py`：补丁幂等、入站捕获、出站回填。
 
-相关页：[技能系统](/openwiki/concepts/skills.md)、[Agent 配置与绑定模型](/openwiki/concepts/agents-and-bindings.md)、[MCP 集成](/openwiki/integrations/mcp.md)、[聊天生命周期](/openwiki/workflows/chat-lifecycle.md)。
+相关页：[技能系统](/openwiki/concepts/skills.md)、[Agent 配置与绑定模型](/openwiki/concepts/agents-and-bindings.md)、[LLM 模型管理](/openwiki/concepts/llm-model-management.md)、[MCP 集成](/openwiki/integrations/mcp.md)、[聊天生命周期](/openwiki/workflows/chat-lifecycle.md)。

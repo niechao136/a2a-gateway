@@ -5,7 +5,7 @@ description: 梳理管理员 JWT、聊天身份 cookie、按 Agent API Key 三�
 tags: [security, authentication, jwt, api-key, verification, ssrf]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-23T05:12:56.927Z
+    at: 2026-09-24T01:27:47.842Z
 sources:
   - id: openwiki-source-b79fbbd921df689b4bbdc82f
     resource: repo://docker-compose.yml
@@ -23,17 +23,27 @@ sources:
     resource: repo://src/a2a_gateway/connectors/telegram.py
   - id: openwiki-source-4710921338b49a1a39cebe5c
     resource: repo://src/a2a_gateway/deps.py
+  - id: openwiki-source-2f0a5e6928c1db642bc6b674
+    resource: repo://src/a2a_gateway/llm_probe.py
   - id: openwiki-source-5587127d632cfcdc010b44e9
     resource: repo://src/a2a_gateway/main.py
+  - id: openwiki-source-c02a6d45a645df8106612f51
+    resource: repo://src/a2a_gateway/models.py
+  - id: openwiki-source-d3e47f45c8a3dad144965b78
+    resource: repo://src/a2a_gateway/repository.py
   - id: openwiki-source-d38fe19aaef9124307badd98
     resource: repo://src/a2a_gateway/routes/a2a_server.py
   - id: openwiki-source-96e2981cfaad30985f414a47
     resource: repo://src/a2a_gateway/routes/chat.py
+  - id: openwiki-source-a9ded1863fe33ba2a953bab4
+    resource: repo://src/a2a_gateway/routes/models.py
   - id: openwiki-source-47ce9773f0b2e90b200f8634
     resource: repo://src/a2a_gateway/sandbox_client.py
+  - id: openwiki-source-c906c556d0d86b9ccfe8ed8b
+    resource: repo://src/a2a_gateway/schemas.py
   - id: openwiki-source-de2718e1ecc52ece9bb9330b
     resource: repo://src/a2a_gateway/skill_import.py
-generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
+generated: { by: "opencode", at: "2026-09-24T01:27:47.842Z" }
 ---
 
 # 认证与安全面
@@ -47,6 +57,7 @@ generated: { by: "opencode", at: "2026-09-23T05:12:56.927Z" }
 | 按 Agent API Key | `X-Api-Key` 或 Bearer | 对外 `/a2a/{slug}` JSON-RPC | `a2a_server.validate_api_key` + `api_keys` 表 |
 | 出站认证方案 | 目标注册表的 `token`/`auth_*` | 访问上游 A2A / MCP | `auth_scheme.py`（A2A 与 MCP 共用） |
 | 连接器 webhook 凭据 | 平台签名/密钥（`credentials` JSONB，接口脱敏） | 入站平台事件 | `connectors/*` 适配器 |
+| LLM 模型 API Key | `llm_models.api_key` 明文入库 | 上游 LLM 调用与连通性探针 | `routes/models.py`（出参仅 `api_key_masked`） |
 | 沙箱共享令牌 | `SANDBOX_TOKEN` Bearer | backend → gate | `sandbox_client.py` / `gate.py` |
 
 ## 管理员 JWT（bcrypt + HS256）
@@ -69,6 +80,14 @@ httpOnly + 后端 JWT 签名，`samesite=lax`，`secure` 由 `COOKIE_SECURE` 控
 2. 查库：Key 存在、`enabled=true`、**`agent_id` 等于被调用 Agent** —— 任一不满足 → 401 + `WWW-Authenticate: Bearer`。
 
 管理约束：`(agent_id, name)` 唯一；Key 格式 `a2a-<token_urlsafe(24)>`；`is_default=true` 的默认 Key 不可删除（`models.py:202-213`、`admin.py:306-307`）；启动时为每个缺 Key 的 Agent 补默认 Key（`main.py:52-53`）。**信任边界观察**：Key 以明文存储于 `api_keys.key` 并在管理 API `ApiKeyOut` 中返回给已认证管理员（`repository.get_api_key_by_key`、`schemas.ApiKeyOut`）——依赖管理面 JWT 与数据库访问控制，而非哈希验证。
+
+## LLM 模型注册表密钥
+
+- **明文入库**：`llm_models.api_key` 直接存库（对齐连接器 `credentials` 惯例，`models.py:183-184`）；管理 API 出参经 `mask_secret` 只回 `api_key_masked`（前 3 后 4，≤8 打码 `***`，`schemas.py:165-171`），`LLMModelOut` 不含明文字段。
+- **更新语义**：`api_key` 留空或不传 = 保持原值（前端编辑不回显明文，`repository.py:474-476`）。
+- **管理面**：`/api/admin/models*` 全部 `Depends(get_current_admin)`（JWT，`routes/models.py:48-154`）。
+- **探针端点**：`POST /api/admin/models/{id}/test` 与 `POST /api/admin/models/test` 调用 `probe_llm` 发一条 `max_tokens=1` 的极短只读消息验证三元组（`llm_probe.py:52-106`），不写库、不执行工具；失败信息全中文区分 key 无效 / 模型不存在 / 地址不可达 / 超时。
+- 构图侧空 key 在进底层客户端前抛中文错误，不会把 key 泄漏进英文栈（`llm.py:163-166`）。详见 [LLM 模型管理](/openwiki/concepts/llm-model-management.md)。
 
 ## 出站认证方案（A2A 与 MCP 共用）
 
@@ -112,10 +131,11 @@ CORS 单一来源 `FRONTEND_ORIGIN`，`allow_credentials=True`、全方法全头
 ## 信任边界观察（如实记录）
 
 1. **`X-Forwarded-*` 信任**：`public_base_url` 在无外层代理声明时按本层 `Host` 补全；若服务直接暴露而非经 nginx，客户端可影响 Agent Card 回连地址（`public_url.py:29-47`、`nginx/default.conf:17-27`）。部署契约是 nginx 为唯一入口。
-2. **API Key 明文存储**（上文已述）。
+2. **API Key 明文存储**（`api_keys.key` 与 `llm_models.api_key` 均明文；后者出参脱敏、更新留空保持原值，上文已述）。
 3. **聊天路由仅凭 cookie 所有权**（上文已述）。
 4. **`JWT_SECRET`/`ADMIN_PASSWORD` 默认值**适合开发，生产必须覆盖（`.env.example`、`config.py:73-77`）。
 5. 告警 webhook、ONNX Hub、沙箱等密钥均服务端注入，前端只接触代理后的相对接口（`speech.py` 密钥注入）。
+6. **模型探针**：仅管理员可达，只发极短只读请求；`llm_models.api_key` 明文与 `api_keys` 同一信任模型（管理面 JWT + DB 访问控制）。
 
 ## 相关失败语义
 
@@ -129,8 +149,9 @@ CORS 单一来源 `FRONTEND_ORIGIN`，`allow_credentials=True`、全方法全头
 - `tests/test_auth_scheme.py`：五种出站方案与 stdio 环境注入。
 - `tests/test_conversations.py`：cookie 篡改/过期拒绝。
 - `tests/test_a2a_server.py`：API Key 归属与 401 路径。
+- `tests/test_llm_models_api.py`：模型列表脱敏、探针端点、删除 409/force。
 - `tests/test_connector_adapters.py`：Slack 签名/飞书加解密/Telegram 过滤。
 - `tests/test_skill_import.py`：离线安全（zip-slip、SSRF、炸弹）。
 - `tests/test_sandbox_client.py`：三类错误映射。
 
-相关页：[身份、会话与所有权](/openwiki/concepts/identity-and-conversations.md)、[配置体系](/openwiki/architecture/configuration.md)、[部署拓扑](/openwiki/architecture/deployment.md)、[沙箱执行](/openwiki/operations/sandbox.md)。
+相关页：[身份、会话与所有权](/openwiki/concepts/identity-and-conversations.md)、[配置体系](/openwiki/architecture/configuration.md)、[LLM 模型管理](/openwiki/concepts/llm-model-management.md)、[部署拓扑](/openwiki/architecture/deployment.md)、[沙箱执行](/openwiki/operations/sandbox.md)。
